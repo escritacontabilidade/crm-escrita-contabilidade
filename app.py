@@ -8,22 +8,27 @@ supabase = create_client(url, key)
 
 st.set_page_config(page_title="CRM Escrita Contabilidade", layout="wide")
 
-# Estilo para um Dashboard Profissional
 st.markdown("""
     <style>
     .metric-card { background-color: #1a2a44; padding: 20px; border-radius: 10px; color: white; text-align: center; }
+    .stTabs [data-baseweb="tab-list"] { gap: 24px; }
+    .stTabs [data-baseweb="tab"] { height: 50px; white-space: pre-wrap; background-color: #f0f2f6; border-radius: 4px 4px 0px 0px; gap: 1px; padding-top: 10px; padding-bottom: 10px; }
     </style>
     """, unsafe_allow_html=True)
 
 def buscar_segmentos():
-    return [s['nome'] for s in supabase.table("segmentos").select("nome").execute().data]
+    try:
+        res = supabase.table("segmentos").select("nome").execute()
+        return [s['nome'] for s in res.data]
+    except:
+        return []
 
 st.sidebar.image("Logo Escrita.png", width=200)
 menu = st.sidebar.selectbox("Navegação", ["Nova Proposta", "Configurações do Sistema"])
 
 if menu == "Configurações do Sistema":
     st.title("⚙️ Configuração de Preços e Regras")
-    t1, t2 = st.tabs(["Segmentos", "Perguntas e Preços"])
+    t1, t2 = st.tabs(["Gerenciar Segmentos", "Gerenciar Perguntas"])
     
     with t1:
         nome_seg = st.text_input("Novo Segmento:")
@@ -41,10 +46,18 @@ if menu == "Configurações do Sistema":
             pesos = st.text_input("Valores/Pesos correspondentes (separados por vírgula):", help="Ex: 100, 300, 800")
             
             if st.form_submit_button("Salvar Regra"):
-                supabase.table("perguntas").insert({
-                    "segmento": seg, "pergunta": texto, "opcoes": opcoes, "pesos_opcoes": pesos, "tipo_campo": tipo
-                }).execute()
-                st.success("Regra de preço salva!")
+                try:
+                    # Enviando dados exatamente como as colunas do banco
+                    supabase.table("perguntas").insert({
+                        "segmento": seg, 
+                        "pergunta": texto, 
+                        "opcoes": opcoes, 
+                        "pesos_opcoes": pesos, 
+                        "tipo_campo": tipo
+                    }).execute()
+                    st.success("Regra salva com sucesso!")
+                except Exception as e:
+                    st.error(f"Erro ao salvar: Verifique se as colunas no Supabase estão com os nomes corretos. Erro: {e}")
 
 elif menu == "Nova Proposta":
     st.title("📄 Simulador de Honorários")
@@ -56,26 +69,21 @@ elif menu == "Nova Proposta":
         seg_sel = col_seg.selectbox("Segmento:", lista_s)
         
         st.divider()
-        perguntas = supabase.table("perguntas").select("*").eq("segmento", seg_sel).execute().data
+        res = supabase.table("perguntas").select("*").eq("segmento", seg_sel).execute()
+        perguntas = res.data
         
         total_honorario = 0.0
         
         if perguntas:
             for p in perguntas:
-                # Lógica para Múltipla Escolha
-                if "Múltipla Escolha" in p['tipo_campo']:
+                if p['tipo_campo'] == "Múltipla Escolha (Valor Fixo)":
                     lista_ops = [o.strip() for o in p['opcoes'].split(",")]
                     lista_pesos = [float(val.strip()) for val in p['pesos_opcoes'].split(",")]
-                    
-                    escolha = st.selectbox(p['pergunta'], lista_ops)
-                    
-                    # Acha o índice da escolha para pegar o peso certo
+                    escolha = st.selectbox(p['pergunta'], lista_ops, key=p['id'])
                     idx = lista_ops.index(escolha)
                     total_honorario += lista_pesos[idx]
-                
-                # Lógica para Números (Multiplicador)
                 else:
-                    valor_input = st.number_input(p['pergunta'], min_value=0)
+                    valor_input = st.number_input(p['pergunta'], min_value=0, key=p['id'])
                     peso_unitario = float(p['pesos_opcoes'])
                     total_honorario += (valor_input * peso_unitario)
 
@@ -87,6 +95,5 @@ elif menu == "Nova Proposta":
                     <p style="margin:0; opacity: 0.8;">Cliente: {cliente}</p>
                 </div>
             """, unsafe_allow_html=True)
-            
-            if st.button("Salvar Proposta no Histórico"):
-                st.info("Funcionalidade em desenvolvimento...")
+    else:
+        st.info("Cadastre os segmentos primeiro.")
