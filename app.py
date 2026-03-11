@@ -1,58 +1,72 @@
 import streamlit as st
 from supabase import create_client
 
-# 1. Conexão com o seu Banco de Dados (Supabase)
+# 1. Conexão
 url = st.secrets["SUPABASE_URL"]
 key = st.secrets["SUPABASE_KEY"]
 supabase = create_client(url, key)
 
-# 2. Configuração Visual (Estilo Sério e Profissional)
+# 2. Configuração Visual Séria
 st.set_page_config(page_title="Escrita Contabilidade - CRM", layout="wide")
 st.markdown("""
     <style>
     .stApp { background-color: #f4f4f4; }
-    .sidebar .sidebar-content { background-color: #1a2a44; color: white; }
     h1, h2, h3 { color: #1a2a44; }
-    div.stButton > button { background-color: #1a2a44; color: #ffffff; border-radius: 4px; font-weight: bold; }
+    div.stButton > button { background-color: #1a2a44; color: #ffffff; }
     </style>
     """, unsafe_allow_html=True)
 
-# 3. Logo e Menu Lateral
+# 3. Funções para buscar dados vivos do Banco
+def buscar_segmentos():
+    res = supabase.table("segmentos").select("nome").execute()
+    return [item['nome'] for item in res.data]
+
+# 4. Logo e Menu
 st.sidebar.image("Logo Escrita.png", width=200)
-menu = st.sidebar.selectbox("Menu Principal", ["Nova Proposta", "Painel Administrativo", "Indicadores"])
+menu = st.sidebar.selectbox("Menu Principal", ["Nova Proposta", "Painel Administrativo"])
 
-# --- ÁREA ADMINISTRATIVA (Onde você cria as perguntas) ---
+# --- PAINEL ADMINISTRATIVO ---
 if menu == "Painel Administrativo":
-    st.title("⚙️ Gestão de Formulários")
-    st.subheader("Configure as perguntas do sistema aqui")
+    st.title("⚙️ Gestão Estratégica")
     
-    with st.form("cadastrar_pergunta"):
-        segmento = st.selectbox("Segmento", ["Indústria", "Comércio", "Importadora", "Prestador de Serviço", "Clínicas Médicas", "Holding"])
-        enunciado = st.text_input("Escreva a pergunta que o cliente verá:")
-        tipo = st.selectbox("Tipo de Resposta", ["Número", "Texto", "Sim/Não"])
-        peso = st.number_input("Peso/Impacto no Preço (R$)", min_value=0.0)
-        
-        btn_salvar = st.form_submit_button("Salvar Pergunta no Sistema")
-        
-        if btn_salvar:
-            # Comando para salvar no Supabase
-            dados = {"segmento": segmento, "pergunta": enunciado, "peso": peso}
-            supabase.table("perguntas").insert(dados).execute()
-            st.success(f"Pergunta para {segmento} salva com sucesso!")
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.subheader("Cadastrar Novo Segmento")
+        novo_seg = st.text_input("Nome do Segmento (ex: Holding):")
+        if st.button("Salvar Segmento"):
+            supabase.table("segmentos").insert({"nome": novo_seg}).execute()
+            st.success("Segmento adicionado!")
+            st.rerun()
 
-# --- ÁREA DE VENDAS (Onde o formulário aparece) ---
+    with col2:
+        st.subheader("Cadastrar Pergunta")
+        # Aqui o sistema busca os segmentos que já existem no banco!
+        lista_segs = buscar_segmentos()
+        seg_alvo = st.selectbox("Para qual segmento?", lista_segs)
+        pergunta_texto = st.text_input("Pergunta:")
+        peso_valor = st.number_input("Peso no Preço (R$):", min_value=0.0)
+        
+        if st.button("Salvar Pergunta"):
+            supabase.table("perguntas").insert({
+                "segmento": seg_alvo, 
+                "pergunta": pergunta_texto, 
+                "peso": peso_valor
+            }).execute()
+            st.success("Pergunta salva!")
+
+# --- NOVA PROPOSTA ---
 elif menu == "Nova Proposta":
     st.title("📄 Nova Proposta Comercial")
-    seg_escolhido = st.selectbox("Selecione o segmento do cliente:", ["Indústria", "Comércio", "Importadora", "Prestador de Serviço", "Clínicas Médicas", "Holding"])
+    lista_segs = buscar_segmentos()
+    seg_escolhido = st.selectbox("Selecione o segmento do cliente:", lista_segs)
     
-    # Busca no banco apenas as perguntas do segmento selecionado
     res = supabase.table("perguntas").select("*").eq("segmento", seg_escolhido).execute()
-    perguntas_do_banco = res.data
     
-    if perguntas_do_banco:
-        st.write("### Preencha os dados abaixo:")
-        for p in perguntas_do_banco:
-            st.number_input(p['pergunta'], key=p['id'])
-        st.button("Gerar Orçamento e Proposta")
+    if res.data:
+        st.write("### Diagnóstico do Cliente")
+        for p in res.data:
+            st.number_input(p['pergunta'], key=str(p['id']))
+        st.button("Calcular Proposta")
     else:
-        st.info("Ainda não há perguntas cadastradas para este segmento. Vá ao Painel Administrativo.")
+        st.info("Nenhuma pergunta configurada para este segmento.")
