@@ -2,16 +2,18 @@ import streamlit as st
 from supabase import create_client
 from fpdf import FPDF
 import datetime
+import os
 
 # --- CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(page_title="CRM Escrita Contabilidade", layout="wide", page_icon="📄")
 
 # --- CONEXÃO SUPABASE ---
+# Certifique-se de que estas chaves estão configuradas no seu arquivo secrets.toml ou no painel do Streamlit Cloud
 url = st.secrets["SUPABASE_URL"]
 key = st.secrets["SUPABASE_KEY"]
 supabase = create_client(url, key)
 
-# --- ESTILOS CSS ---
+# --- ESTILOS CSS (Interface Streamlit) ---
 st.markdown("""
     <style>
     .metric-card { 
@@ -22,7 +24,7 @@ st.markdown("""
         text-align: center;
         border: 2px solid #d4af37;
     }
-    .metric-card h2 { color: #d4af37 !important; font-size: 3rem !important; }
+    .metric-card h2 { color: #d4af37 !important; font-size: 3rem !important; margin: 10px 0 !important; }
     div.stButton > button { border-radius: 5px; font-weight: bold; }
     .stTabs [data-baseweb="tab"] { font-size: 1.1rem; }
     </style>
@@ -30,7 +32,6 @@ st.markdown("""
 
 # --- FUNÇÕES AUXILIARES ---
 def formatar_moeda(valor):
-    """Formata valor numérico para o padrão brasileiro R$ xx.xxx,xx"""
     return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 def buscar_segmentos():
@@ -41,85 +42,140 @@ def buscar_perguntas():
     res = supabase.table("perguntas").select("*").execute()
     return res.data
 
-# --- GERADOR DE PDF ---
+# --- GERADOR DE PDF (Design Aprimorado) ---
 class PDFProposta(FPDF):
     def header(self):
-        # Tarja superior Azul Escuro
-        self.set_fill_color(26, 42, 68)
-        self.rect(0, 0, 210, 45, 'F')
-        self.set_xy(10, 15)
-        self.set_font("Arial", 'B', 20)
-        self.set_text_color(255, 255, 255)
-        self.cell(0, 10, "PROPOSTA COMERCIAL", 0, 1, 'C')
+        # Tarja lateral decorativa Azul Escuro
+        self.set_fill_color(26, 42, 68) 
+        self.rect(0, 0, 5, 297, 'F')
+        
+        # Logo - Verifica se o arquivo existe para não quebrar o código
+        logo_path = "Logo Escrita.png"
+        if os.path.exists(logo_path):
+            self.image(logo_path, 10, 8, 45)
+        else:
+            # Fallback caso a logo suma: Nome da empresa em texto
+            self.set_font("Arial", 'B', 15)
+            self.set_text_color(26, 42, 68)
+            self.set_xy(10, 10)
+            self.cell(0, 10, "ESCRITA CONTABILIDADE")
+
+        # Título à direita
+        self.set_xy(60, 12)
+        self.set_font("Arial", 'B', 18)
+        self.set_text_color(26, 42, 68)
+        self.cell(140, 10, "PROPOSTA COMERCIAL", 0, 1, 'R')
+        
+        self.set_xy(60, 20)
         self.set_font("Arial", '', 10)
-        self.cell(0, 5, "Escrita Contabilidade - Inteligencia e Gestao", 0, 1, 'C')
+        self.set_text_color(100, 100, 100)
+        self.cell(140, 5, "Inteligencia Contabil e Gestao Estrategica", 0, 1, 'R')
+        
+        # Linha decorativa horizontal (Dourada)
+        self.set_draw_color(212, 175, 55)
+        self.line(10, 38, 200, 38)
+        self.ln(25)
 
     def footer(self):
-        self.set_y(-15)
+        self.set_y(-20)
         self.set_font("Arial", 'I', 8)
-        self.set_text_color(128, 128, 128)
-        self.cell(0, 10, f"Pagina {self.page_no()} | Gerado em {datetime.date.today().strftime('%d/%m/%Y')}", 0, 0, 'C')
+        self.set_text_color(150, 150, 150)
+        # Rodapé centralizado
+        texto_footer = f"Escrita Contabilidade | Gerado em {datetime.date.today().strftime('%d/%m/%Y')} | Pagina {self.page_no()}"
+        self.cell(0, 10, texto_footer.encode('latin-1', 'ignore').decode('latin-1'), 0, 0, 'C')
+        # Linha fina decorativa
+        self.set_draw_color(200, 200, 200)
+        self.line(10, 280, 200, 280)
 
-def gerar_documento_proposta(dados_cliente, total, itens_proposta):
+def gerar_documento_proposta(dados_cliente, total):
     pdf = PDFProposta()
     pdf.add_page()
-    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.set_auto_page_break(auto=True, margin=20)
     
-    # Dados do Cliente (Tratando acentos para evitar erro Unicode)
-    pdf.set_y(55)
-    pdf.set_font("Arial", 'B', 12)
+    # --- BLOCO CLIENTE ---
+    pdf.set_fill_color(245, 245, 245)
+    pdf.rect(10, 50, 190, 28, 'F') # Fundo para destaque
+    
+    pdf.set_xy(15, 53)
+    pdf.set_font("Arial", 'B', 10)
+    pdf.set_text_color(100, 100, 100)
+    pdf.cell(0, 5, "CLIENTE APRESENTADO:", ln=True)
+    
+    pdf.set_font("Arial", 'B', 14)
     pdf.set_text_color(26, 42, 68)
     nome_u = dados_cliente['nome'].upper().encode('latin-1', 'ignore').decode('latin-1')
-    pdf.cell(0, 10, f"PREPARADO PARA: {nome_u}", ln=True)
+    pdf.cell(0, 8, nome_u, ln=True)
+    
+    pdf.set_font("Arial", '', 10)
+    pdf.set_text_color(50, 50, 50)
+    seg_u = dados_cliente['segmento'].encode('latin-1', 'ignore').decode('latin-1')
+    pdf.cell(0, 5, f"Segmento: {seg_u} | Data: {datetime.date.today().strftime('%d/%m/%Y')}", ln=True)
+    
+    # --- CONTEÚDO ---
+    pdf.ln(15)
+    pdf.set_font("Arial", 'B', 12)
+    pdf.set_text_color(26, 42, 68)
+    pdf.cell(0, 10, "1. ESCOPO DOS SERVICOS", ln=True)
     
     pdf.set_font("Arial", '', 11)
     pdf.set_text_color(0, 0, 0)
-    seg_u = dados_cliente['segmento'].encode('latin-1', 'ignore').decode('latin-1')
-    pdf.cell(0, 7, f"Segmento: {seg_u}", ln=True)
-    pdf.cell(0, 7, f"Data de Emissao: {datetime.date.today().strftime('%d/%m/%Y')}", ln=True)
-    
-    # Escopo e Investimento
-    pdf.ln(10)
-    pdf.set_font("Arial", 'B', 14)
-    pdf.cell(0, 10, "1. INVESTIMENTO E HONORARIOS", ln=True)
-    pdf.set_font("Arial", '', 11)
-    texto_intro = "Com base nas informacoes fornecidas e no diagnostico do perfil operacional da empresa, definimos os seguintes honorarios mensais:"
-    pdf.multi_cell(0, 7, texto_intro.encode('latin-1', 'ignore').decode('latin-1'))
-    
-    # Tabela de Preço
-    pdf.ln(5)
-    pdf.set_fill_color(245, 245, 245)
-    pdf.set_font("Arial", 'B', 11)
-    pdf.cell(140, 12, " Descricao do Servico", 1, 0, 'L', True)
-    pdf.cell(50, 12, " Valor Mensal", 1, 1, 'C', True)
-    
-    pdf.set_font("Arial", '', 11)
-    pdf.cell(140, 12, " Assessoria Contabil, Fiscal e Trabalhista Especializada", 1)
-    pdf.set_font("Arial", 'B', 11)
-    pdf.cell(50, 12, f" {formatar_moeda(total)}", 1, 1, 'C')
-    
-    # Instruções de Assinatura (Correção do erro Unicode: removido • e acentos problemáticos)
-    pdf.ln(20)
-    pdf.set_font("Arial", 'B', 12)
-    pdf.cell(0, 10, "2. FORMALIZACAO E ACEITE", ln=True)
-    pdf.set_font("Arial", '', 11)
-    texto_instrucoes = (
-        "Esta proposta e valida por 10 dias. Para formalizacao, utilize o portal GOV.BR "
-        "para assinatura digital e realize o upload do arquivo assinado em nosso sistema."
+    texto_intro = (
+        "Nossa proposta abrange a assessoria contabil completa, focada em garantir a "
+        "seguranca juridica e a otimizacao tributaria da sua empresa. Inclui os departamentos: "
+        "Contabil, Fiscal e Trabalhista (Folha de Pagamento)."
     )
-    pdf.multi_cell(0, 7, texto_instrucoes.encode('latin-1', 'ignore').decode('latin-1'))
+    pdf.multi_cell(0, 6, texto_intro.encode('latin-1', 'ignore').decode('latin-1'))
     
-    # Espaço para Assinatura Digital
-    pdf.ln(20)
-    pdf.cell(0, 0, "", border='T', ln=1, align='C')
+    # --- TABELA DE INVESTIMENTO ---
+    pdf.ln(10)
+    pdf.set_font("Arial", 'B', 11)
+    pdf.set_fill_color(26, 42, 68) 
+    pdf.set_text_color(255, 255, 255)
+    
+    pdf.cell(130, 12, "  Descricao do Investimento", 0, 0, 'L', True)
+    pdf.cell(60, 12, "Valor Mensal  ", 0, 1, 'R', True)
+    
+    pdf.set_font("Arial", '', 11)
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_draw_color(230, 230, 230)
+    
+    pdf.cell(130, 15, "  Honorarios Mensais de Assessoria", 'B')
+    pdf.set_font("Arial", 'B', 12)
+    pdf.cell(60, 15, f"{formatar_moeda(total)}  ", 'B', 1, 'R')
+    
+    # --- CONDIÇÕES ---
+    pdf.ln(15)
+    pdf.set_font("Arial", 'B', 12)
+    pdf.set_text_color(26, 42, 68)
+    pdf.cell(0, 10, "2. CONDICOES GERAIS", ln=True)
+    
+    pdf.set_font("Arial", '', 10)
+    pdf.set_text_color(60, 60, 60)
+    condicoes = (
+        "- Validade: 10 dias corridos.\n"
+        "- Reajuste: Anual pelo IGP-M/FGV.\n"
+        "- Formalizacao: Assinatura digital via GOV.BR ou similar."
+    )
+    pdf.multi_cell(0, 6, condicoes.encode('latin-1', 'ignore').decode('latin-1'))
+    
+    # --- ASSINATURA ---
+    pdf.ln(25)
+    pdf.set_draw_color(26, 42, 68)
+    pdf.line(60, pdf.get_y(), 150, pdf.get_y())
     pdf.ln(2)
-    pdf.set_font("Arial", 'I', 9)
-    pdf.cell(0, 5, "Espaco reservado para Assinatura Digital (GOV.BR)", 0, 1, 'C')
+    pdf.set_font("Arial", 'B', 10)
+    pdf.cell(0, 5, "ACEITE DO CLIENTE", 0, 1, 'C')
+    pdf.set_font("Arial", '', 8)
+    pdf.cell(0, 5, "(Documento assinado digitalmente)", 0, 1, 'C')
     
-    return pdf.output()
+    return pdf.output(dest='S').encode('latin-1')
 
 # --- NAVEGAÇÃO LATERAL ---
-st.sidebar.image("Logo Escrita.png", width=200)
+if os.path.exists("Logo Escrita.png"):
+    st.sidebar.image("Logo Escrita.png", width=200)
+else:
+    st.sidebar.title("Escrita Contabilidade")
+
 menu = st.sidebar.selectbox("Navegação", ["Nova Proposta", "Configurações do Sistema"])
 
 # --- MÓDULO: NOVA PROPOSTA ---
@@ -141,7 +197,6 @@ if menu == "Nova Proposta":
         perguntas = supabase.table("perguntas").select("*").eq("segmento", seg_sel).execute().data
         
         total = 0.0
-        detalhes_proposta = []
 
         if perguntas:
             st.subheader("📋 Questionário de Diagnóstico")
@@ -160,7 +215,6 @@ if menu == "Nova Proposta":
                         valor_item = (n_in * float(p['pesos_opcoes']))
                         total += valor_item
             
-            # Painel de Resultado
             st.divider()
             st.markdown(f'''
                 <div class="metric-card">
@@ -170,33 +224,25 @@ if menu == "Nova Proposta":
                 </div>
             ''', unsafe_allow_html=True)
             
-            st.write("") # Espaçador
+            st.write("") 
             
-            # Botão de PDF
             if nome_cliente:
-                pdf_output = gerar_documento_proposta(
+                pdf_bytes = gerar_documento_proposta(
                     {"nome": nome_cliente, "segmento": seg_sel}, 
-                    total, 
-                    detalhes_proposta
+                    total
                 )
                 
                 c_btn1, c_btn2 = st.columns(2)
                 with c_btn1:
                     st.download_button(
                         label="📥 Baixar Proposta para Assinar",
-                        data=bytes(pdf_output),
+                        data=pdf_bytes,
                         file_name=f"Proposta_Escrita_{nome_cliente.replace(' ', '_')}.pdf",
                         mime="application/pdf",
                         use_container_width=True
                     )
                 with c_btn2:
                     st.link_button("🖋️ Ir para Assinador GOV.BR", "https://www.gov.br/governodigital/pt-br/assinatura-eletronica", use_container_width=True)
-                
-                st.divider()
-                st.subheader("📤 Upload da Proposta Assinada")
-                up_file = st.file_uploader("Arraste aqui o PDF assinado pelo cliente:", type="pdf")
-                if up_file:
-                    st.success("Arquivo recebido com sucesso! A proposta foi salva no histórico.")
             else:
                 st.warning("⚠️ Digite o nome da empresa para habilitar a geração da proposta.")
         else:
