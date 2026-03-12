@@ -8,7 +8,6 @@ import os
 st.set_page_config(page_title="CRM Escrita Contabilidade", layout="wide", page_icon="📄")
 
 # --- CONEXÃO SUPABASE ---
-# Certifique-se de que estas chaves estão configuradas no seu arquivo secrets.toml ou no painel do Streamlit Cloud
 url = st.secrets["SUPABASE_URL"]
 key = st.secrets["SUPABASE_KEY"]
 supabase = create_client(url, key)
@@ -24,7 +23,7 @@ st.markdown("""
         text-align: center;
         border: 2px solid #d4af37;
     }
-    .metric-card h2 { color: #d4af37 !important; font-size: 3rem !important; margin: 10px 0 !important; }
+    .metric-card h2 { color: #d4af37 !important; font-size: 3rem !important; }
     div.stButton > button { border-radius: 5px; font-weight: bold; }
     .stTabs [data-baseweb="tab"] { font-size: 1.1rem; }
     </style>
@@ -45,45 +44,30 @@ def buscar_perguntas():
 # --- GERADOR DE PDF (Design Aprimorado) ---
 class PDFProposta(FPDF):
     def header(self):
-        # Tarja lateral decorativa Azul Escuro
-        self.set_fill_color(26, 42, 68) 
+        # Tarja lateral decorativa (opcional, mas dá um ar moderno)
+        self.set_fill_color(26, 42, 68) # Azul Escuro
         self.rect(0, 0, 5, 297, 'F')
         
-        # Logo - Verifica se o arquivo existe para não quebrar o código
-        logo_path = "Logo Escrita.png"
-        if os.path.exists(logo_path):
-            self.image(logo_path, 10, 8, 45)
-        else:
-            # Fallback caso a logo suma: Nome da empresa em texto
-            self.set_font("Arial", 'B', 15)
-            self.set_text_color(26, 42, 68)
-            self.set_xy(10, 10)
-            self.cell(0, 10, "ESCRITA CONTABILIDADE")
-
+        # Logo (Tenta carregar a imagem, se não existir pula para não quebrar)
+        if os.path.exists("Logo Escrita.png"):
+            self.image("Logo Escrita.png", 10, 10, 40)
+        
         # Título à direita
-        self.set_xy(60, 12)
+        self.set_xy(60, 15)
         self.set_font("Arial", 'B', 18)
         self.set_text_color(26, 42, 68)
         self.cell(140, 10, "PROPOSTA COMERCIAL", 0, 1, 'R')
-        
-        self.set_xy(60, 20)
         self.set_font("Arial", '', 10)
         self.set_text_color(100, 100, 100)
-        self.cell(140, 5, "Inteligencia Contabil e Gestao Estrategica", 0, 1, 'R')
-        
-        # Linha decorativa horizontal (Dourada)
-        self.set_draw_color(212, 175, 55)
-        self.line(10, 38, 200, 38)
-        self.ln(25)
+        self.cell(190, 5, "Inteligencia Contabil e Gestao Estrategica", 0, 1, 'R')
+        self.ln(15)
 
     def footer(self):
         self.set_y(-20)
         self.set_font("Arial", 'I', 8)
         self.set_text_color(150, 150, 150)
-        # Rodapé centralizado
-        texto_footer = f"Escrita Contabilidade | Gerado em {datetime.date.today().strftime('%d/%m/%Y')} | Pagina {self.page_no()}"
-        self.cell(0, 10, texto_footer.encode('latin-1', 'ignore').decode('latin-1'), 0, 0, 'C')
-        # Linha fina decorativa
+        self.cell(0, 10, f"Escrita Contabilidade | Pagina {self.page_no()}", 0, 0, 'C')
+        # Linha fina no rodapé
         self.set_draw_color(200, 200, 200)
         self.line(10, 280, 200, 280)
 
@@ -94,7 +78,7 @@ def gerar_documento_proposta(dados_cliente, total):
     
     # --- BLOCO CLIENTE ---
     pdf.set_fill_color(245, 245, 245)
-    pdf.rect(10, 50, 190, 28, 'F') # Fundo para destaque
+    pdf.rect(10, 50, 190, 25, 'F') # Fundo cinza claro para destaque
     
     pdf.set_xy(15, 53)
     pdf.set_font("Arial", 'B', 10)
@@ -129,7 +113,7 @@ def gerar_documento_proposta(dados_cliente, total):
     # --- TABELA DE INVESTIMENTO ---
     pdf.ln(10)
     pdf.set_font("Arial", 'B', 11)
-    pdf.set_fill_color(26, 42, 68) 
+    pdf.set_fill_color(26, 42, 68) # Cabeçalho azul
     pdf.set_text_color(255, 255, 255)
     
     pdf.cell(130, 12, "  Descricao do Investimento", 0, 0, 'L', True)
@@ -139,6 +123,7 @@ def gerar_documento_proposta(dados_cliente, total):
     pdf.set_text_color(0, 0, 0)
     pdf.set_draw_color(230, 230, 230)
     
+    # Linha do valor
     pdf.cell(130, 15, "  Honorarios Mensais de Assessoria", 'B')
     pdf.set_font("Arial", 'B', 12)
     pdf.cell(60, 15, f"{formatar_moeda(total)}  ", 'B', 1, 'R')
@@ -168,14 +153,10 @@ def gerar_documento_proposta(dados_cliente, total):
     pdf.set_font("Arial", '', 8)
     pdf.cell(0, 5, "(Documento assinado digitalmente)", 0, 1, 'C')
     
-    return pdf.output(dest='S').encode('latin-1')
+    return pdf.output()
 
 # --- NAVEGAÇÃO LATERAL ---
-if os.path.exists("Logo Escrita.png"):
-    st.sidebar.image("Logo Escrita.png", width=200)
-else:
-    st.sidebar.title("Escrita Contabilidade")
-
+st.sidebar.image("Logo Escrita.png", width=200)
 menu = st.sidebar.selectbox("Navegação", ["Nova Proposta", "Configurações do Sistema"])
 
 # --- MÓDULO: NOVA PROPOSTA ---
@@ -194,6 +175,7 @@ if menu == "Nova Proposta":
         
         st.divider()
         
+        # Busca perguntas do segmento selecionado
         perguntas = supabase.table("perguntas").select("*").eq("segmento", seg_sel).execute().data
         
         total = 0.0
@@ -215,6 +197,7 @@ if menu == "Nova Proposta":
                         valor_item = (n_in * float(p['pesos_opcoes']))
                         total += valor_item
             
+            # Painel de Resultado Visual
             st.divider()
             st.markdown(f'''
                 <div class="metric-card">
@@ -226,8 +209,9 @@ if menu == "Nova Proposta":
             
             st.write("") 
             
+            # Botão de Geração de PDF
             if nome_cliente:
-                pdf_bytes = gerar_documento_proposta(
+                pdf_output = gerar_documento_proposta(
                     {"nome": nome_cliente, "segmento": seg_sel}, 
                     total
                 )
@@ -236,7 +220,7 @@ if menu == "Nova Proposta":
                 with c_btn1:
                     st.download_button(
                         label="📥 Baixar Proposta para Assinar",
-                        data=pdf_bytes,
+                        data=bytes(pdf_output),
                         file_name=f"Proposta_Escrita_{nome_cliente.replace(' ', '_')}.pdf",
                         mime="application/pdf",
                         use_container_width=True
@@ -250,7 +234,7 @@ if menu == "Nova Proposta":
     else:
         st.info("Cadastre os segmentos nas configurações primeiro.")
 
-# --- MÓDULO: CONFIGURAÇÕES ---
+# --- MÓDULO: CONFIGURAÇÕES (Mantido igual para não perder dados) ---
 elif menu == "Configurações do Sistema":
     st.title("⚙️ Gestão de Regras")
     t_seg, t_per = st.tabs(["📂 Segmentos", "❓ Perguntas"])
