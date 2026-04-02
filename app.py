@@ -1,33 +1,30 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
 from supabase import create_client
 from fpdf import FPDF
 from streamlit_gsheets import GSheetsConnection
 import datetime
 import os
 
-# --- 1. CONFIGURAÇÃO DA PÁGINA ---
-st.set_page_config(page_title="Sistema Integrado Escrita Contabilidade", layout="wide", page_icon="📄")
+# --- 1. CONFIGURAÇÃO DA PÁGINA (DESIGN CRM) ---
+st.set_page_config(page_title="CRM & Precificação Escrita", layout="wide", page_icon="📄")
 
 # --- 2. CONEXÕES (SUPABASE + GOOGLE SHEETS) ---
-# Supabase (Dados do CRM)
-try:
-    url = st.secrets["SUPABASE_URL"]
-    key = st.secrets["SUPABASE_KEY"]
-    supabase = create_client(url, key)
-except Exception as e:
-    st.error("Erro na conexão com Supabase. Verifique se a restauração do projeto terminou.")
+# Conexão CRM (Supabase)
+url = st.secrets["SUPABASE_URL"]
+key = st.secrets["SUPABASE_KEY"]
+supabase = create_client(url, key)
 
-# Google Sheets (Dados de Custos e Pesos)
+# Conexão Planilha (Google Sheets)
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-# IDs exatos das abas conforme sua imagem (Custos, Pesos, Orcamentos)
-# No Streamlit GSheets, usamos o nome da aba para facilitar
-NOME_ABA_CUSTOS = "Custos"
-NOME_ABA_PESOS = "Pesos"
-NOME_ABA_ORCAMENTOS = "Orcamentos"
+# Nomes exatos das abas das suas imagens
+ABA_CUSTOS = "Custos"
+ABA_PESOS = "Pesos"
+ABA_ORCAMENTOS = "Orcamentos"
 
-# --- 3. ESTILOS CSS ---
+# --- 3. ESTILOS VISUAIS ---
 st.markdown("""
     <style>
     .metric-card { 
@@ -39,26 +36,10 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 4. FUNÇÕES DO CRM (SUPABASE) ---
+# --- 4. FUNÇÕES DE SUPORTE (FORMATAÇÃO E PDF) ---
 def formatar_moeda(valor):
     return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
-def buscar_segmentos():
-    try:
-        res = supabase.table("segmentos").select("*").execute()
-        return res.data
-    except: return []
-
-def buscar_perguntas(segmento=None):
-    try:
-        query = supabase.table("perguntas").select("*")
-        if segmento:
-            query = query.eq("segmento", segmento)
-        res = query.execute()
-        return res.data
-    except: return []
-
-# --- 5. CLASSE DO PDF (DESIGN CRM) ---
 class PDFProposta(FPDF):
     def header(self):
         self.set_fill_color(26, 42, 68)
@@ -74,7 +55,6 @@ class PDFProposta(FPDF):
     def footer(self):
         self.set_y(-20)
         self.set_font("Arial", 'I', 8)
-        self.set_text_color(150, 150, 150)
         self.cell(0, 10, f"Escrita Contabilidade | Pagina {self.page_no()}", 0, 0, 'C')
 
 def gerar_pdf(dados, total):
@@ -82,8 +62,6 @@ def gerar_pdf(dados, total):
     pdf.add_page()
     pdf.set_font("Arial", 'B', 14)
     pdf.cell(0, 10, f"CLIENTE: {dados['nome'].upper()}", ln=True)
-    pdf.set_font("Arial", '', 12)
-    pdf.cell(0, 10, f"Segmento: {dados['segmento']}", ln=True)
     pdf.ln(10)
     pdf.set_fill_color(26, 42, 68)
     pdf.set_text_color(255, 255, 255)
@@ -94,69 +72,88 @@ def gerar_pdf(dados, total):
     pdf.cell(60, 15, f"{formatar_moeda(total)}  ", 'B', 1, 'R')
     return pdf.output()
 
-# --- 6. INTERFACE DE NAVEGAÇÃO ---
+# --- 5. MENU LATERAL ---
 st.sidebar.image("Logo Escrita.png", width=200)
-menu = st.sidebar.selectbox("Navegação", ["Nova Proposta", "Histórico de Orçamentos", "Configurar CRM", "Custos Operacionais"])
+menu = st.sidebar.selectbox("Navegação", ["Nova Proposta (CRM)", "Custos da Operação (Planilha)", "Histórico de Vendas", "Configurações Supabase"])
 
-# --- ABA 1: NOVA PROPOSTA ---
-if menu == "Nova Proposta":
-    st.title("📄 Gerador de Propostas")
-    segs = buscar_segmentos()
+# --- MÓDULO 1: NOVA PROPOSTA (Lógica CRM + Salvar Planilha) ---
+if menu == "Nova Proposta (CRM)":
+    st.title("📄 Elaboração de Proposta Comercial")
+    
+    # Busca segmentos do Supabase
+    segs = supabase.table("segmentos").select("*").execute().data
     lista_s = [s['nome'] for s in segs]
     
     if lista_s:
-        nome_cliente = st.text_input("Nome do Prospecto")
-        seg_sel = st.selectbox("Segmento", lista_s)
+        c1, c2 = st.columns([2, 1])
+        with c1:
+            nome_cliente = st.text_input("Nome da Empresa / Prospecto:")
+        with c2:
+            seg_sel = st.selectbox("Selecione o segmento:", lista_s)
         
-        perguntas = buscar_perguntas(seg_sel)
-        total = 0.0
+        st.divider()
         
+        # Busca perguntas dinâmicas do Supabase
+        perguntas = supabase.table("perguntas").select("*").eq("segmento", seg_sel).execute().data
+        total_proposta = 0.0
+
         if perguntas:
+            st.subheader("📋 Questionário de Diagnóstico")
             for p in perguntas:
                 if "Múltipla Escolha" in p['tipo_campo']:
                     ops = [o.strip() for o in p['opcoes'].split(",")]
                     vls = [float(v.strip()) for v in p['pesos_opcoes'].split(",")]
                     esc = st.selectbox(p['pergunta'], ops, key=f"p_{p['id']}")
-                    total += vls[ops.index(esc)]
+                    total_proposta += vls[ops.index(esc)]
                 else:
                     n_in = st.number_input(p['pergunta'], min_value=0, key=f"p_{p['id']}")
-                    total += (n_in * float(p['pesos_opcoes']))
+                    total_proposta += (n_in * float(p['pesos_opcoes']))
             
-            st.markdown(f'<div class="metric-card"><p>Honorário Sugerido</p><h2>{formatar_moeda(total)}</h2></div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="metric-card"><p>Honorário Estimado</p><h2>{formatar_moeda(total_proposta)}</h2></div>', unsafe_allow_html=True)
             
-            if nome_cliente and st.button("Gerar PDF e Salvar"):
-                pdf_bytes = gerar_pdf({"nome": nome_cliente, "segmento": seg_sel}, total)
-                st.download_button("📥 Baixar PDF", data=bytes(pdf_bytes), file_name=f"Proposta_{nome_cliente}.pdf")
+            if nome_cliente and st.button("💾 Gerar PDF e Salvar na Planilha"):
+                # Geração PDF
+                pdf_bytes = gerar_pdf({"nome": nome_cliente, "segmento": seg_sel}, total_proposta)
+                st.download_button("📥 Baixar Proposta PDF", data=bytes(pdf_bytes), file_name=f"Proposta_{nome_cliente}.pdf")
                 
-                # Salva na Planilha Google
-                df_h = conn.read(worksheet=NOME_ABA_ORCAMENTOS, ttl=0)
-                nova_linha = pd.DataFrame([[nome_cliente, datetime.date.today().strftime('%d/%m/%Y'), total, seg_sel]], columns=df_h.columns)
-                conn.update(worksheet=NOME_ABA_ORCAMENTOS, data=pd.concat([df_h, nova_linha]))
-                st.success("Orçamento registrado na planilha!")
-    else:
-        st.warning("Aguardando o Supabase restaurar os dados ou cadastre um segmento.")
+                # Salvar no Google Sheets (Aba Orcamentos)
+                try:
+                    df_vendas = conn.read(worksheet=ABA_ORCAMENTOS, ttl=0)
+                    nova_venda = pd.DataFrame([[nome_cliente, datetime.date.today().strftime('%d/%m/%Y'), total_proposta, seg_sel]], columns=df_vendas.columns)
+                    df_final = pd.concat([df_vendas, nova_venda], ignore_index=True)
+                    conn.update(worksheet=ABA_ORCAMENTOS, data=df_final)
+                    st.success("✅ Orçamento salvo na Planilha!")
+                except Exception as e: st.error(f"Erro ao salvar na planilha: {e}")
 
-# --- ABA 2: HISTÓRICO (GOOGLE SHEETS) ---
-elif menu == "Histórico de Orçamentos":
-    st.title("📊 Histórico Gravado na Planilha")
-    df_h = conn.read(worksheet=NOME_ABA_ORCAMENTOS, ttl=0)
+# --- MÓDULO 2: CUSTOS (Leitura da Planilha) ---
+elif menu == "Custos da Operação (Planilha)":
+    st.title("💰 Configuração de Custos (Planilha)")
+    try:
+        df_custos = conn.read(worksheet=ABA_CUSTOS, ttl=0)
+        st.write("Dados atuais da aba 'Custos':")
+        st.dataframe(df_custos)
+        
+        # Lógica de Custo Hora (da planilha)
+        pessoal = float(df_custos.iloc[0, 1])
+        gerais = float(df_custos.iloc[1, 1])
+        colab = int(df_custos.iloc[4, 1])
+        horas = float(df_custos.iloc[3, 1])
+        
+        custo_hora = (pessoal + gerais) / (colab * horas) if colab > 0 else 0
+        st.metric("Custo Hora Calculado (Planilha)", formatar_moeda(custo_hora))
+    except: st.error("Erro ao ler aba 'Custos'. Verifique o nome na planilha.")
+
+# --- MÓDULO 3: HISTÓRICO ---
+elif menu == "Histórico de Vendas":
+    st.title("📊 Histórico de Orçamentos Gerados")
+    df_h = conn.read(worksheet=ABA_ORCAMENTOS, ttl=0)
     st.dataframe(df_h, use_container_width=True)
 
-# --- ABA 3: CONFIGURAR CRM (SUPABASE) ---
-elif menu == "Configurar CRM":
-    st.title("⚙️ Gerenciar Segmentos e Perguntas")
-    tab1, tab2 = st.tabs(["Segmentos", "Perguntas"])
-    with tab1:
-        n_seg = st.text_input("Novo Segmento")
-        if st.button("Adicionar"):
-            supabase.table("segmentos").insert({"nome": n_seg}).execute()
-            st.rerun()
-    with tab2:
-        st.write("Configure aqui os pesos de cada pergunta para o cálculo automático.")
-
-# --- ABA 4: CUSTOS (GOOGLE SHEETS) ---
-elif menu == "Custos Operacionais":
-    st.title("💰 Custos da Operação")
-    df_c = conn.read(worksheet=NOME_ABA_CUSTOS, ttl=0)
-    st.write("Dados extraídos da aba 'Custos':")
-    st.table(df_c)
+# --- MÓDULO 4: CONFIGURAÇÕES SUPABASE ---
+elif menu == "Configurações Supabase":
+    st.title("⚙️ Gestão de Segmentos e Regras")
+    # Mantém todas as funções de inserir segmentos e perguntas que você já tinha
+    n_seg = st.text_input("Novo Segmento:")
+    if st.button("Salvar Segmento"):
+        supabase.table("segmentos").insert({"nome": n_seg}).execute()
+        st.rerun()
