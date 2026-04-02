@@ -7,19 +7,26 @@ from streamlit_gsheets import GSheetsConnection
 import datetime
 import os
 
-# --- 1. CONFIGURAÇÃO DA PÁGINA (DESIGN CRM) ---
+# --- 1. CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(page_title="CRM & Precificação Escrita", layout="wide", page_icon="📄")
 
 # --- 2. CONEXÕES (SUPABASE + GOOGLE SHEETS) ---
 # Conexão CRM (Supabase)
-url = st.secrets["SUPABASE_URL"]
-key = st.secrets["SUPABASE_KEY"]
-supabase = create_client(url, key)
+try:
+    url = st.secrets["SUPABASE_URL"]
+    key = st.secrets["SUPABASE_KEY"]
+    supabase = create_client(url, key)
+except Exception as e:
+    st.error(f"Erro ao conectar ao Supabase: {e}")
 
 # Conexão Planilha (Google Sheets)
-conn = st.connection("gsheets", type=GSheetsConnection)
+# Usamos try/except global para capturar erros de link ou permissão
+try:
+    conn = st.connection("gsheets", type=GSheetsConnection)
+except Exception as e:
+    st.error("Erro na conexão com o Google Sheets. Verifique os Secrets e o compartilhamento da planilha.")
 
-# Nomes exatos das abas das suas imagens
+# Nomes exatos das abas conforme suas imagens
 ABA_CUSTOS = "Custos"
 ABA_PESOS = "Pesos"
 ABA_ORCAMENTOS = "Orcamentos"
@@ -62,6 +69,8 @@ def gerar_pdf(dados, total):
     pdf.add_page()
     pdf.set_font("Arial", 'B', 14)
     pdf.cell(0, 10, f"CLIENTE: {dados['nome'].upper()}", ln=True)
+    pdf.set_font("Arial", '', 12)
+    pdf.cell(0, 10, f"Segmento: {dados['segmento']}", ln=True)
     pdf.ln(10)
     pdf.set_fill_color(26, 42, 68)
     pdf.set_text_color(255, 255, 255)
@@ -73,16 +82,20 @@ def gerar_pdf(dados, total):
     return pdf.output()
 
 # --- 5. MENU LATERAL ---
-st.sidebar.image("Logo Escrita.png", width=200)
+if os.path.exists("Logo Escrita.png"):
+    st.sidebar.image("Logo Escrita.png", width=200)
 menu = st.sidebar.selectbox("Navegação", ["Nova Proposta (CRM)", "Custos da Operação (Planilha)", "Histórico de Vendas", "Configurações Supabase"])
 
-# --- MÓDULO 1: NOVA PROPOSTA (Lógica CRM + Salvar Planilha) ---
+# --- MÓDULO 1: NOVA PROPOSTA ---
 if menu == "Nova Proposta (CRM)":
     st.title("📄 Elaboração de Proposta Comercial")
     
-    # Busca segmentos do Supabase
-    segs = supabase.table("segmentos").select("*").execute().data
-    lista_s = [s['nome'] for s in segs]
+    try:
+        segs = supabase.table("segmentos").select("*").execute().data
+        lista_s = [s['nome'] for s in segs]
+    except:
+        lista_s = []
+        st.warning("Não foi possível carregar os segmentos do Supabase.")
     
     if lista_s:
         c1, c2 = st.columns([2, 1])
@@ -93,7 +106,7 @@ if menu == "Nova Proposta (CRM)":
         
         st.divider()
         
-        # Busca perguntas dinâmicas do Supabase
+        # Busca perguntas dinâmicas do Supabase filtradas pelo segmento
         perguntas = supabase.table("perguntas").select("*").eq("segmento", seg_sel).execute().data
         total_proposta = 0.0
 
@@ -123,7 +136,10 @@ if menu == "Nova Proposta (CRM)":
                     df_final = pd.concat([df_vendas, nova_venda], ignore_index=True)
                     conn.update(worksheet=ABA_ORCAMENTOS, data=df_final)
                     st.success("✅ Orçamento salvo na Planilha!")
-                except Exception as e: st.error(f"Erro ao salvar na planilha: {e}")
+                except Exception as e:
+                    st.error(f"Erro ao salvar na planilha: {e}")
+        else:
+            st.info("Nenhuma pergunta de cálculo cadastrada para este segmento.")
 
 # --- MÓDULO 2: CUSTOS (Leitura da Planilha) ---
 elif menu == "Custos da Operação (Planilha)":
@@ -133,27 +149,67 @@ elif menu == "Custos da Operação (Planilha)":
         st.write("Dados atuais da aba 'Custos':")
         st.dataframe(df_custos)
         
-        # Lógica de Custo Hora (da planilha)
+        # Lógica de Custo Hora
         pessoal = float(df_custos.iloc[0, 1])
         gerais = float(df_custos.iloc[1, 1])
         colab = int(df_custos.iloc[4, 1])
         horas = float(df_custos.iloc[3, 1])
         
         custo_hora = (pessoal + gerais) / (colab * horas) if colab > 0 else 0
-        st.metric("Custo Hora Calculado (Planilha)", formatar_moeda(custo_hora))
-    except: st.error("Erro ao ler aba 'Custos'. Verifique o nome na planilha.")
+        st.metric("Custo Hora Calculado", formatar_moeda(custo_hora))
+    except Exception as e:
+        st.error(f"Erro ao ler aba 'Custos': {e}")
 
 # --- MÓDULO 3: HISTÓRICO ---
 elif menu == "Histórico de Vendas":
     st.title("📊 Histórico de Orçamentos Gerados")
-    df_h = conn.read(worksheet=ABA_ORCAMENTOS, ttl=0)
-    st.dataframe(df_h, use_container_width=True)
+    try:
+        df_h = conn.read(worksheet=ABA_ORCAMENTOS, ttl=0)
+        st.dataframe(df_h, use_container_width=True)
+    except Exception as e:
+        st.error(f"Erro ao carregar histórico: {e}")
 
 # --- MÓDULO 4: CONFIGURAÇÕES SUPABASE ---
 elif menu == "Configurações Supabase":
     st.title("⚙️ Gestão de Segmentos e Regras")
-    # Mantém todas as funções de inserir segmentos e perguntas que você já tinha
-    n_seg = st.text_input("Novo Segmento:")
-    if st.button("Salvar Segmento"):
-        supabase.table("segmentos").insert({"nome": n_seg}).execute()
-        st.rerun()
+    
+    t1, t2 = st.tabs(["Cadastrar Segmentos", "Cadastrar Regras de Preço"])
+    
+    with t1:
+        st.subheader("Novos Segmentos")
+        n_seg = st.text_input("Nome do Segmento (Ex: Comércio, Indústria):")
+        if st.button("Salvar Segmento"):
+            if n_seg:
+                supabase.table("segmentos").insert({"nome": n_seg}).execute()
+                st.success("Segmento adicionado!")
+                st.rerun()
+        
+        st.divider()
+        st.subheader("Segmentos Ativos")
+        res_s = supabase.table("segmentos").select("*").execute().data
+        for s in res_s:
+            c1, c2 = st.columns([3, 1])
+            c1.write(s['nome'])
+            if c2.button("Excluir", key=f"del_{s['id']}"):
+                supabase.table("segmentos").delete().eq("id", s['id']).execute()
+                st.rerun()
+
+    with t2:
+        st.subheader("Nova Pergunta de Cálculo")
+        segs = supabase.table("segmentos").select("*").execute().data
+        lista_nomes = [s['nome'] for s in segs]
+        
+        with st.form("nova_regra"):
+            f_seg = st.selectbox("Segmento", lista_nomes)
+            f_tipo = st.selectbox("Tipo", ["Múltipla Escolha (Valor Fixo)", "Número (Multiplicador)"])
+            f_perg = st.text_input("Pergunta (Ex: Qual o regime tributário?)")
+            f_opt = st.text_input("Opções (Separe por vírgula: Sim, Não)")
+            f_pesos = st.text_input("Pesos/Valores (Separe por vírgula: 100, 50)")
+            
+            if st.form_submit_button("Salvar Regra"):
+                supabase.table("perguntas").insert({
+                    "segmento": f_seg, "pergunta": f_perg, "tipo_campo": f_tipo,
+                    "opcoes": f_opt, "pesos_opcoes": f_pesos
+                }).execute()
+                st.success("Regra salva!")
+                st.rerun()
