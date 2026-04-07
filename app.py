@@ -105,13 +105,12 @@ def gerar_pdf(dados, mensal, extras_df):
 query_params = st.query_params
 is_cliente = query_params.get("modo") == "cliente"
 
-is_cliente = query_params.get("modo") == "cliente"
-
 if is_cliente:
     st.image("Logo Escrita.png", width=200)
     st.title("📝 Solicitação de Orçamento")
     st.write("Preencha os dados abaixo para receber nossa proposta comercial.")
     
+    # Busca os segmentos do seu banco
     res_seg = supabase.table("segmentos").select("nome").execute()
     lista_segmentos = [s['nome'] for s in res_seg.data] if res_seg.data else ["Geral"]
 
@@ -140,10 +139,6 @@ else:
     if os.path.exists("Logo Escrita.png"):
         st.sidebar.image("Logo Escrita.png", width=200)
     menu = st.sidebar.selectbox("Navegação", ["Nova Proposta", "Dashboard de Custos", "Histórico de Vendas", "Configurações", "Link para Cliente"])
-    else:
-        if os.path.exists("Logo Escrita.png"):
-            st.sidebar.image("Logo Escrita.png", width=200)
-        menu = st.sidebar.selectbox("Navegação", ["Nova Proposta", "Dashboard de Custos", "Histórico de Vendas", "Configurações", "Link para Cliente"])
         
     if menu == "Nova Proposta":
         st.title("📄 Elaboração de Proposta Precificada")
