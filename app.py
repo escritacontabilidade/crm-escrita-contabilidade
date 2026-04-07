@@ -104,7 +104,7 @@ def gerar_pdf(dados, mensal, extras_df):
 # --- 5. MENU LATERAL ---
 if os.path.exists("Logo Escrita.png"):
     st.sidebar.image("Logo Escrita.png", width=200)
-menu = st.sidebar.selectbox("Navegação", ["Nova Proposta", "Dashboard de Custos", "Histórico de Vendas", "Configurações"])
+menu = st.sidebar.selectbox("Navegação", ["Nova Proposta", "Dashboard de Custos", "Histórico de Vendas", "Configurações","Link para Cliente"])
 
 if menu == "Nova Proposta":
     st.title("📄 Elaboração de Proposta Precificada")
