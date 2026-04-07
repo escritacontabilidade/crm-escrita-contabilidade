@@ -48,6 +48,13 @@ def calcular_custo_hora_real():
     capacidade_horas = horas * equipe
     return custo_total / capacidade_horas if capacidade_horas > 0 else 0.0
 
+def get_peso_esforco(regime, item):
+    try:
+        res = supabase.table("pesos_esforco").select("horas_esforco").eq("regime", regime).eq("item", item).execute()
+        return float(res.data[0]['horas_esforco']) if res.data else 0.0
+    except:
+        return 0.0
+
 class PDFProposta(FPDF):
     def header(self):
         self.set_fill_color(26, 42, 68)
