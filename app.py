@@ -216,7 +216,7 @@ elif menu == "Dashboard de Custos":
             {"chave": "num_colaboradores", "valor": f_equipe}
         ]
         for c in configs:
-            supabase.table("configuracao_operacional").upsert(c).execute()
+            ssupabase.table("configuracao_operacional").upsert(c, on_conflict="chave").execute()
         st.success("Custo-Hora atualizado!")
         st.rerun()
 
