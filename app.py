@@ -175,7 +175,7 @@ if menu == "Nova Proposta":
 
 # --- MÓDULOS DE APOIO (MANTIDOS E INTEGRADOS) ---
 elif menu == "Dashboard de Custos":
-   st.title("💰 Configuração de Custos Operacionais")
+    st.title("💰 Configuração de Custos Operacionais")
     
     col1, col2 = st.columns(2)
     with col1:
