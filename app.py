@@ -224,6 +224,22 @@ elif menu == "Dashboard de Custos":
     st.divider()
     st.markdown(f"""<div class="metric-card"><p>Custo Hora Atual</p><h2>{formatar_moeda(c_hora)}</h2></div>""", unsafe_allow_html=True)
 
+elif menu == "Link para Cliente":
+    st.title("🔗 Coleta Externa de Dados")
+    st.info("Envie o link abaixo para o prospecto preencher as informações iniciais.")
+    st.code("https://seu-app.streamlit.app/?modo=cliente")
+    
+    st.divider()
+    st.subheader("📥 Leads Recebidos")
+    try:
+        res = supabase.table("leads_externos").select("*").order("created_at", desc=True).execute()
+        if res.data:
+            st.dataframe(pd.DataFrame(res.data), use_container_width=True)
+        else:
+            st.write("Nenhum lead preenchido ainda.")
+    except Exception as e:
+        st.error(f"Erro ao carregar leads: {e}")
+        
 elif menu == "Histórico de Vendas":
     st.title("📊 Histórico de Orçamentos")
     res_h = supabase.table("historico_vendas").select("*").order("data_criacao", desc=True).execute()
