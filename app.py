@@ -83,37 +83,43 @@ if os.path.exists("Logo Escrita.png"):
     st.sidebar.image("Logo Escrita.png", width=200)
 menu = st.sidebar.selectbox("Navegação", ["Nova Proposta", "Dashboard de Custos", "Histórico de Vendas", "Configurações"])
 
-# --- MÓDULO 1: NOVA PROPOSTA ---
+# --- MÓDULO 1: NOVA PROPOSTA (RESTAURADO) ---
 if menu == "Nova Proposta":
     st.title("📄 Elaboração de Proposta")
     
-    # Carregar Segmentos do Supabase
+    # Carregar Segmentos
     res_seg = supabase.table("segmentos").select("*").execute()
     lista_s = [s['nome'] for s in res_seg.data] if res_seg.data else []
 
     if lista_s:
         c1, c2 = st.columns([2, 1])
         nome_cliente = c1.text_input("Nome da Empresa:")
-        seg_sel = c2.selectbox("Segmento:", lista_s)
+        seg_sel = c2.selectbox("Selecione o segmento:", lista_s)
         
         st.divider()
         
-        # 1. Honorário Mensal (Perguntas)
+        # --- BLOCO DAS PERGUNTAS DINÂMICAS (RECUPERADO) ---
         total_mensal = 0.0
         res_perg = supabase.table("perguntas").select("*").eq("segmento", seg_sel).execute()
+        
         if res_perg.data:
-            st.subheader("📋 Diagnóstico Mensal")
+            st.subheader("📋 Questionário de Diagnóstico")
             for p in res_perg.data:
+                # Lógica para Múltipla Escolha
                 if "Múltipla Escolha" in p['tipo_campo']:
                     ops = [o.strip() for o in p['opcoes'].split(",")]
                     vls = [float(v.strip()) for v in p['pesos_opcoes'].split(",")]
+                    # Garante que o índice exista
                     esc = st.selectbox(p['pergunta'], ops, key=f"p_{p['id']}")
                     total_mensal += vls[ops.index(esc)]
+                # Lógica para campo Numérico
                 else:
                     n_in = st.number_input(p['pergunta'], min_value=0, key=f"p_{p['id']}")
                     total_mensal += (n_in * float(p['pesos_opcoes']))
+        else:
+            st.info("Cadastre perguntas para este segmento no menu Configurações.")
 
-        # 2. Serviços Avulsos (Busca da tabela servicos_avulsos)
+        # --- BLOCO DE SERVIÇOS AVULSOS ---
         st.subheader("➕ Serviços Avulsos / Retrabalhos")
         res_av = supabase.table("servicos_avulsos").select("*").execute()
         if res_av.data:
@@ -125,16 +131,16 @@ if menu == "Nova Proposta":
             total_extras = 0.0
             df_sel = pd.DataFrame()
 
-        # Resumo Visual
+        # Resumo Financeiro
         total_geral = total_mensal + total_extras
         st.markdown(f"""
             <div class="metric-card">
-                <p>Mensal: {formatar_moeda(total_mensal)} | Extras: {formatar_moeda(total_extras)}</p>
-                <h2>Total Proposta: {formatar_moeda(total_geral)}</h2>
+                <p>Honorário Mensal: {formatar_moeda(total_mensal)} | Extras: {formatar_moeda(total_extras)}</p>
+                <h2>Valor Total: {formatar_moeda(total_geral)}</h2>
             </div>
         """, unsafe_allow_html=True)
 
-        if nome_cliente and st.button("💾 Finalizar Proposta"):
+        if nome_cliente and st.button("💾 Gerar PDF e Salvar Proposta"):
             # Salva no Histórico
             supabase.table("historico_vendas").insert({
                 "cliente": nome_cliente,
@@ -144,53 +150,72 @@ if menu == "Nova Proposta":
             
             # Gera PDF
             pdf_bytes = gerar_pdf({"nome": nome_cliente, "segmento": seg_sel}, total_mensal, df_sel)
-            st.download_button("📥 Baixar PDF", data=bytes(pdf_bytes), file_name=f"Proposta_{nome_cliente}.pdf")
-            st.success("Proposta salva no histórico!")
+            st.download_button("📥 Baixar Proposta PDF", data=bytes(pdf_bytes), file_name=f"Proposta_{nome_cliente}.pdf")
+            st.success("Proposta registrada no sistema!")
 
-# --- MÓDULO 2: CUSTOS ---
+# --- MÓDULOS DE APOIO (MANTIDOS E INTEGRADOS) ---
 elif menu == "Dashboard de Custos":
-    st.title("💰 Custos Fixos da Operação")
+    st.title("💰 Custos Fixos")
     res_c = supabase.table("custos_fixos").select("*").execute()
     if res_c.data:
         df_c = pd.DataFrame(res_c.data)
-        st.table(df_c[['item', 'valor']])
-        st.metric("Custo Total Mensal", formatar_moeda(df_c['valor'].sum()))
-    else:
-        st.info("Nenhum custo cadastrado.")
+        st.dataframe(df_c[['item', 'valor']], use_container_width=True)
+        st.metric("Total de Custos", formatar_moeda(df_c['valor'].sum()))
 
-# --- MÓDULO 3: HISTÓRICO ---
 elif menu == "Histórico de Vendas":
     st.title("📊 Histórico de Orçamentos")
     res_h = supabase.table("historico_vendas").select("*").order("data_criacao", desc=True).execute()
     if res_h.data:
         st.dataframe(pd.DataFrame(res_h.data), use_container_width=True)
-    else:
-        st.info("Nenhum histórico encontrado.")
 
-# --- MÓDULO 4: CONFIGURAÇÕES ---
 elif menu == "Configurações":
-    st.title("⚙️ Painel Administrativo")
-    tab1, tab2, tab3 = st.tabs(["Segmentos/Regras", "Preços Avulsos", "Custos Fixos"])
+    st.title("⚙️ Painel de Controle")
+    t1, t2, t3 = st.tabs(["Segmentos e Perguntas", "Preços Avulsos", "Custos Fixos"])
     
-    with tab1:
-        st.subheader("Gerenciar Segmentos")
-        # (Aqui você mantém aquela lógica de cadastrar segmentos e perguntas que já tínhamos)
-        
-    with tab2:
-        st.subheader("Cadastrar Preço de Serviço Avulso")
-        with st.form("form_avulso"):
-            n_serv = st.text_input("Nome do Serviço (ex: Alteração de Contrato)")
-            n_val = st.number_input("Valor (R$)", min_value=0.0)
-            n_cat = st.selectbox("Categoria", ["Fiscal", "DP", "Contábil", "Legalização"])
-            if st.form_submit_button("Salvar Serviço"):
-                supabase.table("servicos_avulsos").insert({"servico": n_serv, "valor": n_val, "categoria": n_cat}).execute()
+    with t1:
+        # Recuperando a gestão de perguntas que você tinha
+        st.subheader("Cadastrar Novo Segmento")
+        n_seg = st.text_input("Nome:")
+        if st.button("Salvar Segmento"):
+            supabase.table("segmentos").insert({"nome": n_seg}).execute()
+            st.rerun()
+            
+        st.divider()
+        st.subheader("Nova Pergunta de Preço")
+        segs_data = supabase.table("segmentos").select("*").execute().data
+        if segs_data:
+            with st.form("nova_pergunta"):
+                f_seg = st.selectbox("Segmento", [s['nome'] for s in segs_data])
+                f_tipo = st.selectbox("Tipo", ["Múltipla Escolha", "Número (Multiplicador)"])
+                f_perg = st.text_input("Pergunta")
+                f_opt = st.text_input("Opções (Separadas por vírgula)")
+                f_pesos = st.text_input("Pesos (Separados por vírgula)")
+                if st.form_submit_button("Salvar Pergunta"):
+                    supabase.table("perguntas").insert({
+                        "segmento": f_seg, "pergunta": f_perg, "tipo_campo": f_tipo,
+                        "opcoes": f_opt, "pesos_opcoes": f_pesos
+                    }).execute()
+                    st.success("Pergunta salva!")
+    
+    with t2:
+        st.subheader("Serviços Avulsos")
+        with st.form("add_avulso"):
+            st.text_input("Serviço", key="av_n")
+            st.number_input("Valor", key="av_v")
+            st.selectbox("Categoria", ["Fiscal", "DP", "Contábil", "Legalização"], key="av_c")
+            if st.form_submit_button("Adicionar Serviço"):
+                supabase.table("servicos_avulsos").insert({
+                    "servico": st.session_state.av_n, 
+                    "valor": st.session_state.av_v, 
+                    "categoria": st.session_state.av_c
+                }).execute()
                 st.rerun()
 
-    with tab3:
-        st.subheader("Cadastrar Custo Fixo")
-        with st.form("form_custo"):
-            n_item = st.text_input("Item de Custo")
-            n_v_custo = st.number_input("Valor Mensal", min_value=0.0)
-            if st.form_submit_button("Salvar Custo"):
-                supabase.table("custos_fixos").insert({"item": n_item, "valor": n_v_custo}).execute()
+    with t3:
+        st.subheader("Custos Fixos")
+        with st.form("add_custo"):
+            st.text_input("Descrição do Custo", key="c_n")
+            st.number_input("Valor Mensal", key="c_v")
+            if st.form_submit_button("Adicionar Custo"):
+                supabase.table("custos_fixed").insert({"item": st.session_state.c_n, "valor": st.session_state.c_v}).execute()
                 st.rerun()
