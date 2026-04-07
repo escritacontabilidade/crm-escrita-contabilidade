@@ -175,12 +175,36 @@ if menu == "Nova Proposta":
 
 # --- MÓDULOS DE APOIO (MANTIDOS E INTEGRADOS) ---
 elif menu == "Dashboard de Custos":
-    st.title("💰 Custos Fixos")
-    res_c = supabase.table("custos_fixos").select("*").execute()
-    if res_c.data:
-        df_c = pd.DataFrame(res_c.data)
-        st.dataframe(df_c[['item', 'valor']], use_container_width=True)
-        st.metric("Total de Custos", formatar_moeda(df_c['valor'].sum()))
+   st.title("💰 Configuração de Custos Operacionais")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        st.subheader("Custos de Estrutura")
+        f_folha = st.number_input("Total Folha + Encargos (R$)", value=get_config_val('total_folha'))
+        f_fixas = st.number_input("Despesas Fixas (Sistemas/Aluguel) (R$)", value=get_config_val('despesas_fixas'))
+        f_imposto = st.number_input("Imposto Médio s/ Faturamento (%)", value=get_config_val('impostos_faturamento'))
+    
+    with col2:
+        st.subheader("Capacidade Produtiva")
+        f_horas = st.number_input("Horas Úteis por Colaborador/Mês", value=get_config_val('horas_uteis_mes'))
+        f_equipe = st.number_input("Quantidade de Colaboradores", value=get_config_val('num_colaboradores'))
+
+    if st.button("💾 Salvar e Atualizar Custo-Hora"):
+        configs = [
+            {"chave": "total_folha", "valor": f_folha},
+            {"chave": "despesas_fixas", "valor": f_fixas},
+            {"chave": "impostos_faturamento", "valor": f_imposto},
+            {"chave": "horas_uteis_mes", "valor": f_horas},
+            {"chave": "num_colaboradores", "valor": f_equipe}
+        ]
+        for c in configs:
+            supabase.table("configuracao_operacional").upsert(c).execute()
+        st.success("Custo-Hora atualizado!")
+        st.rerun()
+
+    c_hora = calcular_custo_hora_real()
+    st.divider()
+    st.markdown(f"""<div class="metric-card"><p>Custo Hora Atual</p><h2>{formatar_moeda(c_hora)}</h2></div>""", unsafe_allow_html=True)
 
 elif menu == "Histórico de Vendas":
     st.title("📊 Histórico de Orçamentos")
