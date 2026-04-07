@@ -105,12 +105,13 @@ def gerar_pdf(dados, mensal, extras_df):
 query_params = st.query_params
 is_cliente = query_params.get("modo") == "cliente"
 
+is_cliente = query_params.get("modo") == "cliente"
+
 if is_cliente:
     st.image("Logo Escrita.png", width=200)
     st.title("📝 Solicitação de Orçamento")
     st.write("Preencha os dados abaixo para receber nossa proposta comercial.")
     
-    # Busca os segmentos que você já cadastrou no banco
     res_seg = supabase.table("segmentos").select("nome").execute()
     lista_segmentos = [s['nome'] for s in res_seg.data] if res_seg.data else ["Geral"]
 
@@ -119,7 +120,7 @@ if is_cliente:
         f_resp = st.text_input("Seu Nome")
         f_whatsapp = st.text_input("WhatsApp (com DDD)")
         f_regime = st.selectbox("Regime Atual", ["Simples", "Presumido", "Real", "Não sei"])
-        f_segmento = st.selectbox("Segmento de Atuação", lista_segmentos) # Opção de segmento
+        f_segmento = st.selectbox("Segmento de Atuação", lista_segmentos)
         
         c1, c2, c3 = st.columns(3)
         f_func = c1.number_input("Funcionários", min_value=0)
@@ -135,6 +136,10 @@ if is_cliente:
             supabase.table("leads_externos").insert(obj).execute()
             st.success("✅ Recebemos seus dados! Entraremos em contato em breve.")
             st.stop()
+else:
+    if os.path.exists("Logo Escrita.png"):
+        st.sidebar.image("Logo Escrita.png", width=200)
+    menu = st.sidebar.selectbox("Navegação", ["Nova Proposta", "Dashboard de Custos", "Histórico de Vendas", "Configurações", "Link para Cliente"])
     else:
         if os.path.exists("Logo Escrita.png"):
             st.sidebar.image("Logo Escrita.png", width=200)
