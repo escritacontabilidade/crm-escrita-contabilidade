@@ -106,79 +106,78 @@ if os.path.exists("Logo Escrita.png"):
     st.sidebar.image("Logo Escrita.png", width=200)
 menu = st.sidebar.selectbox("Navegação", ["Nova Proposta", "Dashboard de Custos", "Histórico de Vendas", "Configurações"])
 
-# --- MÓDULO 1: NOVA PROPOSTA (CORRIGIDO E TESTADO) ---
 if menu == "Nova Proposta":
-    st.title("📄 Elaboração de Proposta")
+    st.title("📄 Elaboração de Proposta Precificada")
     
-    # 1. Busca Segmentos
-    res_seg = supabase.table("segmentos").select("*").execute()
-    lista_s = [s['nome'] for s in res_seg.data] if res_seg.data else []
+    # 1. Inputs Básicos
+    c1, c2 = st.columns([2, 1])
+    nome_cliente = c1.text_input("Nome da Empresa:")
+    regime_sel = c2.selectbox("Regime Tributário:", ["Simples", "Presumido", "Real"])
+    
+    col_a, col_b, col_c = st.columns(3)
+    qtd_func = col_a.number_input("Nº Funcionários", min_value=0, step=1)
+    qtd_notas = col_b.number_input("Qtd Notas Fiscais", min_value=0, step=1)
+    qtd_lanca = col_c.number_input("Qtd Lançamentos", min_value=0, step=1)
+    
+    possui_filial = st.checkbox("Possui Filial?")
+    
+    st.divider()
 
-    if lista_s:
-        c1, c2 = st.columns([2, 1])
-        nome_cliente = c1.text_input("Nome da Empresa:")
-        seg_sel = c2.selectbox("Selecione o segmento:", lista_s)
-        
-        st.divider()
-        
-        # 2. Busca Perguntas filtrando EXATAMENTE como está na sua imagem
-        # Usamos .ilike para ignorar maiúsculas/minúsculas
-        res_perg = supabase.table("perguntas").select("*").ilike("segmento", seg_sel).execute()
-        
-        total_mensal = 0.0
-        
-        if res_perg.data:
-            st.subheader("📋 Questionário de Diagnóstico")
-            for p in res_perg.data:
-                # Se for Múltipla Escolha
-                if "Múltipla Escolha" in p['tipo_campo']:
-                    ops = [o.strip() for o in str(p['opcoes']).split(",")]
-                    try:
-                        vls = [float(v.strip()) for v in str(p['pesos_opcoes']).split(",")]
-                        
-                        esc = st.selectbox(p['pergunta'], ops, key=f"p_{p['id']}")
-                        indice = ops.index(esc)
-                        total_mensal += vls[indice]
-                    except Exception as e:
-                        st.error(f"Erro nos pesos da pergunta '{p['pergunta']}': {e}")
-                
-                # Se for Número/Multiplicador
-                else:
-                    n_in = st.number_input(p['pergunta'], min_value=0, key=f"p_{p['id']}")
-                    try:
-                        peso = float(p['pesos_opcoes'])
-                        total_mensal += (n_in * peso)
-                    except:
-                        st.error(f"Peso inválido para a pergunta: {p['pergunta']}")
-        else:
-            st.warning(f"Atenção: Não encontrei perguntas para o segmento '{seg_sel}' no banco de dados.")
+    # 2. BUSCA DE PESOS E CÁLCULO DE ESFORÇO
+    # Buscamos os pesos que você carregou no Supabase
+    h_base = get_peso_esforco(regime_sel, 'Base')
+    p_func = get_peso_esforco(regime_sel, 'Funcionario')
+    p_nota = get_peso_esforco(regime_sel, 'Nota Fiscal')
+    p_lanc = get_peso_esforco(regime_sel, 'Lancamento')
+    h_filial = get_peso_esforco('Filial', 'Adicional Base') if possui_filial else 0
 
-        # 3. Serviços Avulsos (Retrabalhos)
-        st.subheader("➕ Serviços Avulsos / Retrabalhos")
-        res_av = supabase.table("servicos_avulsos").select("*").execute()
-        
-        total_extras = 0.0
-        df_sel = pd.DataFrame()
-        
-        if res_av.data:
-            df_av = pd.DataFrame(res_av.data)
-            selecionados = st.multiselect("Selecione extras da Tabela 2026:", df_av['servico'].tolist())
-            df_sel = df_av[df_av['servico'].isin(selecionados)]
-            total_extras = df_sel['valor'].sum()
+    # Cálculo total de horas estimadas
+    total_horas_est = h_base + h_filial + (qtd_func * p_func) + (qtd_notas * p_nota) + (qtd_lanca * p_lanc)
+    
+    # Busca Custo Hora e Impostos das Configurações
+    c_hora_atual = calcular_custo_hora_real()
+    perc_imposto = get_config_val('impostos_faturamento') / 100
+    
+    custo_operacional = total_horas_est * c_hora_atual
 
-        # Resumo Final
-        total_geral = total_mensal + total_extras
-        st.markdown(f"""
-            <div class="metric-card">
-                <p>Mensal: {formatar_moeda(total_mensal)} | Extras: {formatar_moeda(total_extras)}</p>
-                <h2>Total: {formatar_moeda(total_geral)}</h2>
-            </div>
-        """, unsafe_allow_html=True)
+    # 3. EXIBIÇÃO DOS 3 CARDS (BRONZE, PRATA, OURO)
+    st.subheader("💰 Opções de Investimento")
+    res1, res2, res3 = st.columns(3)
+
+    def calcular_venda(margem):
+        # Fórmula: Custo / (1 - Imposto - Margem)
+        margem_decimal = margem / 100
+        divisor = (1 - perc_imposto - margem_decimal)
+        if divisor <= 0: return 0
+        return custo_operacional / divisor
+
+    v_bronze = calcular_venda(20)
+    v_prata = calcular_venda(35)
+    v_ouro = calcular_venda(50)
+
+    res1.markdown(f"""<div class="metric-card"><p>BRONZE (20%)</p><h2>{formatar_moeda(v_bronze)}</h2></div>""", unsafe_allow_html=True)
+    res2.markdown(f"""<div class="metric-card"><p>PRATA (35%)</p><h2>{formatar_moeda(v_prata)}</h2></div>""", unsafe_allow_html=True)
+    res3.markdown(f"""<div class="metric-card"><p>OURO (50%)</p><h2>{formatar_moeda(v_ouro)}</h2></div>""", unsafe_allow_html=True)
+
+    st.caption(f"Estimativa de esforço: {total_horas_est:.2f} horas mensais | Custo Operacional: {formatar_moeda(custo_operacional)}")
+
+    # 4. SALVAMENTO
+    st.divider()
+    opcao_final = st.radio("Selecione a opção para o contrato:", ["Bronze", "Prata", "Ouro"], horizontal=True)
+    
+    if st.button("💾 Salvar Orçamento e Gerar Dados"):
+        valor_final = v_bronze if opcao_final == "Bronze" else v_prata if opcao_final == "Prata" else v_ouro
         
-        # Botão de salvar (mesma lógica anterior)
-        if nome_cliente and st.button("💾 Gerar e Salvar"):
-            # ... (código de salvamento e PDF)
-            st.success("Processado!")
+        # Salva no histórico para a IA auditar depois
+        dados_venda = {
+            "cliente": nome_cliente,
+            "regime": regime_sel,
+            "valor_total": valor_final,
+            "horas_estimadas": total_horas_est,
+            "margem_escolhida": opcao_final
+        }
+        supabase.table("historico_vendas").insert(dados_venda).execute()
+        st.success(f"Orçamento de {nome_cliente} salvo com sucesso!")
 
 # --- MÓDULOS DE APOIO (MANTIDOS E INTEGRADOS) ---
 elif menu == "Dashboard de Custos":
