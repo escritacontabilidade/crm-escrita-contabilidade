@@ -101,10 +101,33 @@ def gerar_pdf(dados, mensal, extras_df):
             
     return pdf.output()
 
-# --- 5. MENU LATERAL ---
-if os.path.exists("Logo Escrita.png"):
-    st.sidebar.image("Logo Escrita.png", width=200)
-menu = st.sidebar.selectbox("Navegação", ["Nova Proposta", "Dashboard de Custos", "Histórico de Vendas", "Configurações","Link para Cliente"])
+# --- 5. LÓGICA DE ACESSO (CLIENTE VS CONTADOR) ---
+query_params = st.query_params
+is_cliente = query_params.get("modo") == "cliente"
+
+if is_cliente:
+    st.image("Logo Escrita.png", width=200)
+    st.title("📝 Solicitação de Orçamento")
+    st.write("Preencha os dados abaixo para receber nossa proposta comercial.")
+    with st.form("form_externo"):
+        f_empresa = st.text_input("Nome da Empresa")
+        f_resp = st.text_input("Seu Nome")
+        f_whatsapp = st.text_input("WhatsApp (com DDD)")
+        f_regime = st.selectbox("Regime Atual", ["Simples", "Presumido", "Real", "Não sei"])
+        c1, c2, c3 = st.columns(3)
+        f_func = c1.number_input("Funcionários", min_value=0)
+        f_notas = c2.number_input("Notas/Mês", min_value=0)
+        f_lanc = c3.number_input("Lançamentos/Mês", min_value=0)
+        if st.form_submit_button("Enviar Solicitação"):
+            obj = {"nome_empresa": f_empresa, "responsavel": f_resp, "whatsapp": f_whatsapp, 
+                   "regime": f_regime, "qtd_func": f_func, "qtd_notas": f_notas, "qtd_lanca": f_lanc}
+            supabase.table("leads_externos").insert(obj).execute()
+            st.success("✅ Recebemos seus dados! Entraremos em contato em breve.")
+            st.stop()
+else:
+    if os.path.exists("Logo Escrita.png"):
+        st.sidebar.image("Logo Escrita.png", width=200)
+    menu = st.sidebar.selectbox("Navegação", ["Nova Proposta", "Dashboard de Custos", "Histórico de Vendas", "Configurações", "Link para Cliente"])
 
 if menu == "Nova Proposta":
     st.title("📄 Elaboração de Proposta Precificada")
