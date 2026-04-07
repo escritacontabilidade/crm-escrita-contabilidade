@@ -279,7 +279,7 @@ else:
     elif menu == "Link para Cliente":
         st.title("🔗 Coleta Externa de Dados")
         st.info("Envie o link abaixo para o prospecto preencher as informações iniciais.")
-        st.code("https://seu-app.streamlit.app/?modo=cliente")
+        st.code("https://crm-escrita-contabilidade.streamlit.app/?modo=cliente")
         
         st.divider()
         st.subheader("📥 Leads Recebidos")
