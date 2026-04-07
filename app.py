@@ -110,27 +110,45 @@ if is_cliente:
     st.title("📝 Solicitação de Orçamento")
     st.write("Preencha os dados abaixo para receber nossa proposta comercial.")
     
-    # Busca os segmentos do seu banco
+    # 1. Busca os segmentos
     res_seg = supabase.table("segmentos").select("nome").execute()
     lista_segmentos = [s['nome'] for s in res_seg.data] if res_seg.data else ["Geral"]
 
+    # 2. O cliente escolhe o segmento FORA do formulário para as perguntas carregarem
+    f_segmento = st.selectbox("Selecione seu Segmento de Atuação", lista_segmentos)
+    
+    # 3. Busca as perguntas específicas desse segmento
+    res_perg = supabase.table("perguntas").select("*").ilike("segmento", f_segmento).execute()
+    
     with st.form("form_externo"):
         f_empresa = st.text_input("Nome da Empresa")
         f_resp = st.text_input("Seu Nome")
         f_whatsapp = st.text_input("WhatsApp (com DDD)")
         f_regime = st.selectbox("Regime Atual", ["Simples", "Presumido", "Real", "Não sei"])
-        f_segmento = st.selectbox("Segmento de Atuação", lista_segmentos)
         
         c1, c2, c3 = st.columns(3)
         f_func = c1.number_input("Funcionários", min_value=0)
         f_notas = c2.number_input("Notas/Mês", min_value=0)
         f_lanc = c3.number_input("Lançamentos/Mês", min_value=0)
+
+        # 4. Mostra as perguntas dinâmicas aqui dentro
+        respostas_extras = {}
+        if res_perg.data:
+            st.divider()
+            st.subheader("Informações Adicionais")
+            for p in res_perg.data:
+                if "Múltipla Escolha" in p['tipo_campo']:
+                    ops = [o.strip() for o in str(p['opcoes']).split(",")]
+                    respostas_extras[p['pergunta']] = st.selectbox(p['pergunta'], ops, key=f"ext_{p['id']}")
+                else:
+                    respostas_extras[p['pergunta']] = st.number_input(p['pergunta'], min_value=0, key=f"ext_{p['id']}")
         
         if st.form_submit_button("Enviar Solicitação"):
             obj = {
                 "nome_empresa": f_empresa, "responsavel": f_resp, "whatsapp": f_whatsapp, 
                 "regime": f_regime, "segmento": f_segmento, 
-                "qtd_func": f_func, "qtd_notas": f_notas, "qtd_lanca": f_lanc
+                "qtd_func": f_func, "qtd_notas": f_notas, "qtd_lanca": f_lanc,
+                "respostas_segmento": respostas_extras # Salva as respostas das perguntas
             }
             supabase.table("leads_externos").insert(obj).execute()
             st.success("✅ Recebemos seus dados! Entraremos em contato em breve.")
