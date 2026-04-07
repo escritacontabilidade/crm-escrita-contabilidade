@@ -30,7 +30,8 @@ st.markdown("""
 
 # --- 4. FUNÇÕES DE SUPORTE (FORMATAÇÃO E PDF) ---
 def formatar_moeda(valor):
-    # --- NOVAS FUNÇÕES DE CUSTO (COLAR AQUI) ---
+    return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
 def get_config_val(chave):
     try:
         res = supabase.table("configuracao_operacional").select("valor").eq("chave", chave).execute()
@@ -46,7 +47,6 @@ def calcular_custo_hora_real():
     custo_total = folha + fixas
     capacidade_horas = horas * equipe
     return custo_total / capacidade_horas if capacidade_horas > 0 else 0.0
-# --------------------------------------------
 
 class PDFProposta(FPDF):
     def header(self):
