@@ -109,47 +109,66 @@ menu = st.sidebar.selectbox("Navegação", ["Nova Proposta", "Dashboard de Custo
 if menu == "Nova Proposta":
     st.title("📄 Elaboração de Proposta Precificada")
     
-    # 1. Inputs Básicos
+    # 1. Inputs de Identificação e Regime
     c1, c2 = st.columns([2, 1])
     nome_cliente = c1.text_input("Nome da Empresa:")
     regime_sel = c2.selectbox("Regime Tributário:", ["Simples", "Presumido", "Real"])
     
+    # 2. Seleção de Segmento para carregar as Perguntas
+    res_seg = supabase.table("segmentos").select("*").execute()
+    lista_s = [s['nome'] for s in res_seg.data] if res_seg.data else []
+    seg_sel = st.selectbox("Selecione o segmento do cliente:", lista_s)
+    
+    st.divider()
+
+    # 3. Inputs de Volume (Esforço Contábil)
     col_a, col_b, col_c = st.columns(3)
     qtd_func = col_a.number_input("Nº Funcionários", min_value=0, step=1)
     qtd_notas = col_b.number_input("Qtd Notas Fiscais", min_value=0, step=1)
     qtd_lanca = col_c.number_input("Qtd Lançamentos", min_value=0, step=1)
-    
     possui_filial = st.checkbox("Possui Filial?")
     
+    # 4. Perguntas Dinâmicas do Segmento (Complexidade)
+    total_pergunta_segmento = 0.0
+    res_perg = supabase.table("perguntas").select("*").ilike("segmento", seg_sel).execute()
+    
+    if res_perg.data:
+        st.subheader(f"📋 Diagnóstico Específico: {seg_sel}")
+        for p in res_perg.data:
+            if "Múltipla Escolha" in p['tipo_campo']:
+                ops = [o.strip() for o in str(p['opcoes']).split(",")]
+                vls = [float(v.strip()) for v in str(p['pesos_opcoes']).split(",")]
+                esc = st.selectbox(p['pergunta'], ops, key=f"p_{p['id']}")
+                total_pergunta_segmento += vls[ops.index(esc)]
+            else:
+                n_in = st.number_input(p['pergunta'], min_value=0, key=f"p_{p['id']}")
+                total_pergunta_segmento += (n_in * float(p['pesos_opcoes']))
+
     st.divider()
 
-    # 2. BUSCA DE PESOS E CÁLCULO DE ESFORÇO
-    # Buscamos os pesos que você carregou no Supabase
+    # 5. CÁLCULO DE HORAS (PESOS DO SUPABASE)
     h_base = get_peso_esforco(regime_sel, 'Base')
     p_func = get_peso_esforco(regime_sel, 'Funcionario')
     p_nota = get_peso_esforco(regime_sel, 'Nota Fiscal')
     p_lanc = get_peso_esforco(regime_sel, 'Lancamento')
     h_filial = get_peso_esforco('Filial', 'Adicional Base') if possui_filial else 0
 
-    # Cálculo total de horas estimadas
     total_horas_est = h_base + h_filial + (qtd_func * p_func) + (qtd_notas * p_nota) + (qtd_lanca * p_lanc)
     
-    # Busca Custo Hora e Impostos das Configurações
     c_hora_atual = calcular_custo_hora_real()
     perc_imposto = get_config_val('impostos_faturamento') / 100
     
-    custo_operacional = total_horas_est * c_hora_atual
+    # O Custo Operacional é (Horas * Custo Hora) + Adicionais fixos das perguntas
+    custo_operacional = (total_horas_est * c_hora_atual) + total_pergunta_segmento
 
-    # 3. EXIBIÇÃO DOS 3 CARDS (BRONZE, PRATA, OURO)
+    # 6. EXIBIÇÃO DOS 3 CARDS
     st.subheader("💰 Opções de Investimento")
     res1, res2, res3 = st.columns(3)
 
     def calcular_venda(margem):
-        # Fórmula: Custo / (1 - Imposto - Margem)
         margem_decimal = margem / 100
         divisor = (1 - perc_imposto - margem_decimal)
-        if divisor <= 0: return 0
-        return custo_operacional / divisor
+        return custo_operacional / divisor if divisor > 0 else 0
 
     v_bronze = calcular_venda(20)
     v_prata = calcular_venda(35)
@@ -159,25 +178,18 @@ if menu == "Nova Proposta":
     res2.markdown(f"""<div class="metric-card"><p>PRATA (35%)</p><h2>{formatar_moeda(v_prata)}</h2></div>""", unsafe_allow_html=True)
     res3.markdown(f"""<div class="metric-card"><p>OURO (50%)</p><h2>{formatar_moeda(v_ouro)}</h2></div>""", unsafe_allow_html=True)
 
-    st.caption(f"Estimativa de esforço: {total_horas_est:.2f} horas mensais | Custo Operacional: {formatar_moeda(custo_operacional)}")
-
-    # 4. SALVAMENTO
-    st.divider()
-    opcao_final = st.radio("Selecione a opção para o contrato:", ["Bronze", "Prata", "Ouro"], horizontal=True)
-    
-    if st.button("💾 Salvar Orçamento e Gerar Dados"):
-        valor_final = v_bronze if opcao_final == "Bronze" else v_prata if opcao_final == "Prata" else v_ouro
-        
-        # Salva no histórico para a IA auditar depois
-        dados_venda = {
-            "cliente": nome_cliente,
-            "regime": regime_sel,
-            "valor_total": valor_final,
-            "horas_estimadas": total_horas_est,
-            "margem_escolhida": opcao_final
-        }
-        supabase.table("historico_vendas").insert(dados_venda).execute()
-        st.success(f"Orçamento de {nome_cliente} salvo com sucesso!")
+    # 7. SALVAMENTO
+    if st.button("💾 Salvar Orçamento Final"):
+        if nome_cliente:
+            dados_venda = {
+                "cliente": nome_cliente,
+                "regime": regime_sel,
+                "segmento": seg_sel,
+                "valor_total": v_prata, # Salvando o Prata como padrão
+                "horas_estimadas": total_horas_est
+            }
+            supabase.table("historico_vendas").insert(dados_venda).execute()
+            st.success("Orçamento salvo com sucesso!")
 
 # --- MÓDULOS DE APOIO (MANTIDOS E INTEGRADOS) ---
 elif menu == "Dashboard de Custos":
