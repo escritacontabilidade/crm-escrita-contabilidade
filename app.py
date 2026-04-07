@@ -231,53 +231,79 @@ elif menu == "Histórico de Vendas":
         st.dataframe(pd.DataFrame(res_h.data), use_container_width=True)
 
 elif menu == "Configurações":
-    st.title("⚙️ Painel de Controle")
-    t1, t2, t3 = st.tabs(["Segmentos e Perguntas", "Preços Avulsos", "Custos Fixos"])
+    st.title("⚙️ Painel de Controle e Cadastros")
+    t1, t2, t3, t4 = st.tabs(["Segmentos e Perguntas", "Preços Avulsos", "Pesos de Esforço", "Custos Fixos"])
     
     with t1:
-        # Recuperando a gestão de perguntas que você tinha
-        st.subheader("Cadastrar Novo Segmento")
-        n_seg = st.text_input("Nome:")
-        if st.button("Salvar Segmento"):
-            supabase.table("segmentos").insert({"nome": n_seg}).execute()
-            st.rerun()
-            
-        st.divider()
-        st.subheader("Nova Pergunta de Preço")
-        segs_data = supabase.table("segmentos").select("*").execute().data
-        if segs_data:
-            with st.form("nova_pergunta"):
-                f_seg = st.selectbox("Segmento", [s['nome'] for s in segs_data])
-                f_tipo = st.selectbox("Tipo", ["Múltipla Escolha", "Número (Multiplicador)"])
-                f_perg = st.text_input("Pergunta")
-                f_opt = st.text_input("Opções (Separadas por vírgula)")
-                f_pesos = st.text_input("Pesos (Separados por vírgula)")
-                if st.form_submit_button("Salvar Pergunta"):
-                    supabase.table("perguntas").insert({
-                        "segmento": f_seg, "pergunta": f_perg, "tipo_campo": f_tipo,
-                        "opcoes": f_opt, "pesos_opcoes": f_pesos
-                    }).execute()
-                    st.success("Pergunta salva!")
-    
-    with t2:
-        st.subheader("Serviços Avulsos")
-        with st.form("add_avulso"):
-            st.text_input("Serviço", key="av_n")
-            st.number_input("Valor", key="av_v")
-            st.selectbox("Categoria", ["Fiscal", "DP", "Contábil", "Legalização"], key="av_c")
-            if st.form_submit_button("Adicionar Serviço"):
-                supabase.table("servicos_avulsos").insert({
-                    "servico": st.session_state.av_n, 
-                    "valor": st.session_state.av_v, 
-                    "categoria": st.session_state.av_c
-                }).execute()
+        st.subheader("1. Gestão de Segmentos")
+        col_seg1, col_seg2 = st.columns([1, 2])
+        with col_seg1:
+            n_seg = st.text_input("Novo Segmento (Ex: Clínica):")
+            if st.button("Salvar Segmento"):
+                supabase.table("segmentos").insert({"nome": n_seg}).execute()
                 st.rerun()
+        with col_seg2:
+            res_s = supabase.table("segmentos").select("*").execute()
+            if res_s.data:
+                df_s = pd.DataFrame(res_s.data)
+                st.write("Segmentos Cadastrados:")
+                st.dataframe(df_s[['nome']], use_container_width=True)
+
+        st.divider()
+        st.subheader("2. Gestão de Perguntas")
+        with st.form("nova_pergunta"):
+            f_seg = st.selectbox("Segmento Alvo", [s['nome'] for s in res_s.data] if res_s.data else [])
+            f_tipo = st.selectbox("Tipo", ["Múltipla Escolha", "Número (Multiplicador)"])
+            f_perg = st.text_input("Pergunta")
+            f_opt = st.text_input("Opções (Ex: Sim, Não ou Pequeno, Médio)")
+            f_pesos = st.text_input("Pesos (Ex: 100, 0 ou 50, 150)")
+            if st.form_submit_button("Salvar Pergunta"):
+                supabase.table("perguntas").insert({
+                    "segmento": f_seg, "pergunta": f_perg, "tipo_campo": f_tipo,
+                    "opcoes": f_opt, "pesos_opcoes": f_pesos
+                }).execute()
+                st.success("Pergunta salva!")
+
+        # Visualização das Perguntas com Filtro
+        st.write("---")
+        st.write("🔍 Perguntas Existentes")
+        filtro_p = st.selectbox("Filtrar por Segmento:", ["Todos"] + ([s['nome'] for s in res_s.data] if res_s.data else []))
+        query_p = supabase.table("perguntas").select("*")
+        if filtro_p != "Todos":
+            query_p = query_p.eq("segmento", filtro_p)
+        res_p = query_p.execute()
+        if res_p.data:
+            st.dataframe(pd.DataFrame(res_p.data)[['segmento', 'pergunta', 'opcoes', 'pesos_opcoes']], use_container_width=True)
+
+    with t2:
+        st.subheader("Serviços Avulsos (Tabela 2026)")
+        with st.form("add_avulso"):
+            st.text_input("Nome do Serviço", key="av_n")
+            st.number_input("Valor (R$)", key="av_v")
+            if st.form_submit_button("Adicionar Serviço"):
+                supabase.table("servicos_avulsos").insert({"servico": st.session_state.av_n, "valor": st.session_state.av_v}).execute()
+                st.rerun()
+        
+        res_av = supabase.table("servicos_avulsos").select("*").execute()
+        if res_av.data:
+            st.write("Lista de Serviços Cadastrados:")
+            st.dataframe(pd.DataFrame(res_av.data)[['servico', 'valor']], use_container_width=True)
 
     with t3:
-        st.subheader("Custos Fixos")
-        with st.form("add_custo"):
-            st.text_input("Descrição do Custo", key="c_n")
-            st.number_input("Valor Mensal", key="c_v")
-            if st.form_submit_button("Adicionar Custo"):
-                supabase.table("custos_fixed").insert({"item": st.session_state.c_n, "valor": st.session_state.c_v}).execute()
-                st.rerun()
+        st.subheader("Ajuste de Pesos de Esforço (Horas)")
+        st.info("Aqui você altera quanto tempo cada item (Nota, Funcionário, etc) consome em cada regime.")
+        res_pesos = supabase.table("pesos_esforco").select("*").execute()
+        if res_pesos.data:
+            df_pesos = pd.DataFrame(res_pesos.data)
+            # Filtro por Regime
+            reg_f = st.selectbox("Filtrar Regime:", ["Todos", "Simples", "Presumido", "Real", "Filial"])
+            df_p_view = df_pesos if reg_f == "Todos" else df_pesos[df_pesos['regime'] == reg_f]
+            st.dataframe(df_p_view[['regime', 'item', 'horas_esforco']], use_container_width=True)
+            
+            st.warning("Para editar esses valores, utilize o Table Editor do Supabase diretamente por enquanto (Segurança do Banco).")
+
+    with t4:
+        st.subheader("Custos Fixos (Visualização)")
+        res_cf = supabase.table("configuracao_operacional").select("*").execute()
+        if res_cf.data:
+            st.dataframe(pd.DataFrame(res_cf.data)[['chave', 'valor']], use_container_width=True)
