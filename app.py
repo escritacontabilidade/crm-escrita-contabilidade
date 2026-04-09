@@ -77,6 +77,20 @@ if is_cliente:
         f_resp = st.text_input("Seu Nome")
         f_whatsapp = st.text_input("WhatsApp (com DDD)")
         f_regime = st.selectbox("Regime Atual", ["Simples", "Presumido", "Real", "Não sei"])
+    
+        st.divider()
+        st.subheader("Informações Gerais")
+    
+        f_faturamento = st.number_input(
+            "Faturamento médio mensal (R$)",
+            min_value=0.0,
+            step=1000.0,
+            format="%.2f"
+        )
+    
+        f_descricao = st.text_area(
+            "Breve descrição sobre as atividades exercidas pela empresa"
+        )
 
         respostas_extras = {}
         if res_perg_data:
