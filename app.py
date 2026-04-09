@@ -284,14 +284,7 @@ else:
             
             if seg_sel:
                 try:
-                    if len(seg_sel) == 1:
-                        origem_perguntas = get_origem_perguntas(seg_sel[0])
-                    else:
-                        origem_perguntas = get_origem_perguntas(seg_sel)
-            
-                    res_perg_data = get_perguntas_por_origem(origem_perguntas)
-            
-                    st.caption(f"Origem das perguntas utilizada: {origem_perguntas}")
+                    origem_perguntas = get_origem_perguntas(seg_sel)
             
                 except Exception as e:
                     st.error(f"Erro ao carregar perguntas do segmento: {e}")
