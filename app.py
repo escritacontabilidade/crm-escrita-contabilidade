@@ -56,10 +56,20 @@ if is_cliente:
     lista_segmentos = [s['nome'] for s in res_seg.data] if res_seg.data else ["Geral"]
 
     # 2. O cliente escolhe o segmento FORA do formulário para as perguntas carregarem
-    f_segmento = st.selectbox("Selecione seu Segmento de Atuação", lista_segmentos)
+    f_segmento = st.multiselect("Selecione o(s) segmento(s) de atuação", lista_segmentos)
+
+    res_perg_data = []
     
-    # 3. Busca as perguntas específicas desse segmento
-    res_perg = supabase.table("perguntas").select("*").ilike("segmento", f_segmento).execute()
+    if f_segmento:
+        try:
+            if len(f_segmento) == 1:
+                origem_perguntas = get_origem_perguntas(f_segmento[0])
+            else:
+                origem_perguntas = get_origem_perguntas(f_segmento)
+    
+            res_perg_data = get_perguntas_por_origem(origem_perguntas)
+        except Exception as e:
+            st.error(f"Erro ao carregar perguntas do segmento: {e}")
     
     with st.form("form_externo"):
         f_empresa = st.text_input("Nome da Empresa")
