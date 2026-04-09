@@ -82,7 +82,7 @@ if is_cliente:
     
         st.divider()
         st.subheader("Informações Gerais")
-
+    
         faturamento_medio = st.number_input(
             "Faturamento médio mensal (R$)",
             min_value=0.0,
@@ -91,18 +91,18 @@ if is_cliente:
             value=0.0,
             key="cli_faturamento"
         )
-        
+    
         descricao_atividades = st.text_area(
             "Breve descrição sobre as atividades exercidas pela empresa",
             value="",
             key="cli_descricao"
         )
-
+    
         respostas_extras = {}
         if res_perg_data:
             st.divider()
             st.subheader("Informações Adicionais")
-            
+    
             for p in res_perg_data:
                 st.markdown(f"**{p['pergunta']}**")
 
