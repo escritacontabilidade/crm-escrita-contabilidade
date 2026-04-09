@@ -108,7 +108,7 @@ if is_cliente:
                         "responsavel": f_resp,
                         "whatsapp": f_whatsapp,
                         "regime": f_regime,
-                        "segmento": f_segmento,
+                        "segmento": " + ".join(f_segmento),
                         "qtd_func": f_func,
                         "qtd_notas": f_notas,
                         "qtd_lanca": f_lanc,
