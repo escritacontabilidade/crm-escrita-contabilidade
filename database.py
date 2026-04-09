@@ -55,32 +55,19 @@ def get_peso_esforco(regime, item):
     if not res.data:
         raise ValueError(f"Peso de esforço não encontrado para regime='{regime}' e item='{item}'")
 
-def get_origem_perguntas(segmentos_selecionados):
-    """
-    Recebe um segmento único (str) ou vários segmentos (list)
-    e retorna a origem das perguntas.
-    """
+def get_origem_perguntas(segmento_escolhido):
     supabase = get_supabase()
-
-    if isinstance(segmentos_selecionados, list):
-        segmentos_ordenados = sorted(segmentos_selecionados)
-        chave = "+".join(segmentos_ordenados)
-        tipo = "combinado"
-    else:
-        chave = segmentos_selecionados
-        tipo = "simples"
 
     res = (
         supabase
         .table("regras_segmento")
         .select("origem_perguntas")
-        .eq("tipo", tipo)
-        .eq("segmentos", chave)
+        .eq("segmentos", segmento_escolhido)
         .execute()
     )
 
     if not res.data:
-        raise ValueError(f"Regra não encontrada para: {chave}")
+        raise ValueError(f"Regra não encontrada para: {segmento_escolhido}")
 
     return res.data[0]["origem_perguntas"]
 
