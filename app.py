@@ -141,9 +141,23 @@ else:
     
             # 4. Perguntas Dinâmicas do Segmento (Complexidade)
             total_pergunta_segmento = 0.0
-            res_perg = supabase.table("perguntas").select("*").ilike("segmento", seg_sel).execute()
-    
-            if res_perg.data:
+            res_perg_data = []
+            
+            if seg_sel:
+                try:
+                    if len(seg_sel) == 1:
+                        origem_perguntas = get_origem_perguntas(seg_sel[0])
+                    else:
+                        origem_perguntas = get_origem_perguntas(seg_sel)
+            
+                    res_perg_data = get_perguntas_por_origem(origem_perguntas)
+            
+                    st.caption(f"Origem das perguntas utilizada: {origem_perguntas}")
+            
+                except Exception as e:
+                    st.error(f"Erro ao carregar perguntas do segmento: {e}")
+            
+            if res_perg_data:
                 st.subheader(f"📋 Diagnóstico Específico: {seg_sel}")
                 for p in res_perg.data:
                     if "Múltipla Escolha" in p["tipo_campo"]:
