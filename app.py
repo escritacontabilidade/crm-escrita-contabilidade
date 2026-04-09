@@ -1,9 +1,16 @@
 import streamlit as st
 import pandas as pd
-from supabase import create_client
-from fpdf import FPDF
-import datetime
 import os
+
+from database import get_supabase, fetch_table, insert_data, upsert_data
+from pricing import calcular_custo_hora_real, calcular_precificacao_completa
+from validators import (
+    validar_campos_basicos_cliente,
+    validar_formulario_lead,
+    validar_pergunta_segmento,
+)
+from pdf_builder import gerar_pdf
+from utils import formatar_moeda
 
 # --- 1. CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(page_title="CRM & Precificação Escrita", layout="wide", page_icon="📄")
