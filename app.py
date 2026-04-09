@@ -50,51 +50,64 @@ if is_cliente:
     st.image("Logo Escrita.png", width=200)
     st.title("📝 Solicitação de Orçamento")
     st.write("Preencha os dados abaixo para receber nossa proposta comercial.")
-    
+
     # 1. Busca os segmentos
     res_seg = supabase.table("segmentos").select("nome").execute()
-    lista_segmentos = [s['nome'] for s in res_seg.data] if res_seg.data else ["Geral"]
+    lista_segmentos = [s["nome"] for s in res_seg.data] if res_seg.data else []
 
-    # 2. O cliente escolhe o segmento FORA do formulário para as perguntas carregarem
+    # 2. Cliente escolhe um ou mais segmentos
     f_segmento = st.multiselect("Selecione o(s) segmento(s) de atuação", lista_segmentos)
 
+    # 3. Busca perguntas pela origem correta
     res_perg_data = []
-    
+
     if f_segmento:
         try:
             if len(f_segmento) == 1:
                 origem_perguntas = get_origem_perguntas(f_segmento[0])
             else:
                 origem_perguntas = get_origem_perguntas(f_segmento)
-    
+
             res_perg_data = get_perguntas_por_origem(origem_perguntas)
         except Exception as e:
             st.error(f"Erro ao carregar perguntas do segmento: {e}")
-    
+
     with st.form("form_externo"):
         f_empresa = st.text_input("Nome da Empresa")
         f_resp = st.text_input("Seu Nome")
         f_whatsapp = st.text_input("WhatsApp (com DDD)")
         f_regime = st.selectbox("Regime Atual", ["Simples", "Presumido", "Real", "Não sei"])
-        
-        c1, c2, c3 = st.columns(3)
-        f_func = c1.number_input("Funcionários", min_value=0)
-        f_notas = c2.number_input("Notas/Mês", min_value=0)
-        f_lanc = c3.number_input("Lançamentos/Mês", min_value=0)
 
-        # 4. Mostra as perguntas dinâmicas aqui dentro
         respostas_extras = {}
         if res_perg_data:
             st.divider()
             st.subheader("Informações Adicionais")
-        
+
             for p in res_perg_data:
-                if "Múltipla Escolha" in p['tipo_campo']:
-                    ops = [o.strip() for o in str(p['opcoes']).split(",")]
-                    respostas_extras[p['pergunta']] = st.selectbox(p['pergunta'], ops, key=f"ext_{p['id']}")
+                st.markdown(f"**{p['pergunta']}**")
+
+                if "Múltipla Escolha" in p["tipo_campo"]:
+                    ops = [o.strip() for o in str(p["opcoes"]).split(",") if o.strip()]
+                    respostas_extras[p["pergunta"]] = st.radio(
+                        "Selecione uma opção:",
+                        ops,
+                        key=f"ext_{p['id']}"
+                    )
+                elif p["tipo_campo"] == "Texto Livre":
+                    respostas_extras[p["pergunta"]] = st.text_area(
+                        "Digite sua resposta:",
+                        key=f"ext_{p['id']}"
+                    )
                 else:
-                    respostas_extras[p['pergunta']] = st.number_input(p['pergunta'], min_value=0, key=f"ext_{p['id']}")
-        
+                    respostas_extras[p["pergunta"]] = st.number_input(
+                        "Informe a quantidade:",
+                        min_value=0,
+                        step=1,
+                        key=f"ext_{p['id']}"
+                    )
+
+                st.write("")
+
         if st.form_submit_button("Enviar Solicitação"):
             erros = validar_formulario_lead(f_empresa, f_resp, f_whatsapp, f_segmento)
 
@@ -109,10 +122,7 @@ if is_cliente:
                         "whatsapp": f_whatsapp,
                         "regime": f_regime,
                         "segmento": " + ".join(f_segmento),
-                        "qtd_func": f_func,
-                        "qtd_notas": f_notas,
-                        "qtd_lanca": f_lanc,
-                        "respostas_segmento": respostas_extras,
+                        "respostas_segmento": respostas_extras
                     }
                     insert_data("leads_externos", obj)
                     st.success("✅ Recebemos seus dados! Entraremos em contato em breve.")
