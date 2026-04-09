@@ -88,7 +88,7 @@ if is_cliente:
             min_value=0.0,
             step=1000.0,
             format="%.2f",
-            value=float(lead_em_analise.get("faturamento_medio") or 0),
+            value=0.0,
             key="np_faturamento"
         )
 
