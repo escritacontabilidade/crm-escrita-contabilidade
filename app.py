@@ -343,7 +343,10 @@ else:
                 query_p = query_p.eq("segmento", filtro_p)
             res_p = query_p.execute()
             if res_p.data:
-                st.dataframe(pd.DataFrame(res_p.data)[['segmento', 'pergunta', 'opcoes', 'pesos_opcoes']], use_container_width=True)
+                st.dataframe(
+                    pd.DataFrame(res_p.data)[['origem', 'pergunta', 'tipo_campo', 'opcoes', 'pesos_opcoes']],
+                    use_container_width=True
+                )
     
         with t2:
             st.subheader("Serviços Avulsos (Tabela 2026)")
