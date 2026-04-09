@@ -289,17 +289,64 @@ else:
                 except Exception as e:
                     st.error(f"Erro ao carregar perguntas do segmento: {e}")
             
-            for p in res_perg_data:
+            if res_perg_data:
                 st.subheader(f"📋 Diagnóstico Específico: {seg_sel}")
-                for p in res_perg.data:
+            
+                respostas_lead = lead_em_analise.get("respostas_segmento", {}) or {}
+            
+                for p in res_perg_data:
+                    st.markdown(f"**{p['pergunta']}**")
+            
+                    resposta_inicial = respostas_lead.get(p["pergunta"], None)
+            
                     if "Múltipla Escolha" in p["tipo_campo"]:
-                        ops = [o.strip() for o in str(p["opcoes"]).split(",")]
-                        vls = [float(v.strip()) for v in str(p["pesos_opcoes"]).split(",")]
-                        esc = st.selectbox(p["pergunta"], ops, key=f"p_{p['id']}")
+                        ops = [o.strip() for o in str(p["opcoes"]).split(",") if o.strip()]
+                        vls = [float(v.strip().replace(",", ".")) for v in str(p["pesos_opcoes"]).split(",") if v.strip()]
+            
+                        if len(ops) != len(vls):
+                            st.error(f"Erro na pergunta: {p['pergunta']}")
+                            continue
+            
+                        indice_padrao = 0
+                        if resposta_inicial in ops:
+                            indice_padrao = ops.index(resposta_inicial)
+            
+                        esc = st.radio(
+                            "Selecione uma opção:",
+                            ops,
+                            index=indice_padrao,
+                            key=f"p_{p['id']}"
+                        )
+            
                         total_pergunta_segmento += vls[ops.index(esc)]
+            
+                    elif p["tipo_campo"] == "Texto Livre":
+                        st.text_area(
+                            "Digite sua resposta:",
+                            value=str(resposta_inicial or ""),
+                            key=f"p_{p['id']}"
+                        )
+            
                     else:
-                        n_in = st.number_input(p["pergunta"], min_value=0, key=f"p_{p['id']}")
-                        total_pergunta_segmento += (n_in * float(p["pesos_opcoes"]))
+                        valor_inicial = 0
+                        try:
+                            valor_inicial = int(resposta_inicial) if resposta_inicial else 0
+                        except:
+                            valor_inicial = 0
+            
+                        peso_num = float(str(p["pesos_opcoes"]).replace(",", "."))
+            
+                        n_in = st.number_input(
+                            "Informe a quantidade:",
+                            min_value=0,
+                            step=1,
+                            value=valor_inicial,
+                            key=f"p_{p['id']}"
+                        )
+            
+                        total_pergunta_segmento += (n_in * peso_num)
+            
+                    st.write("")
     
             st.divider()
     
