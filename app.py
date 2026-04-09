@@ -157,7 +157,7 @@ else:
                 except Exception as e:
                     st.error(f"Erro ao carregar perguntas do segmento: {e}")
             
-            if res_perg_data:
+            for p in res_perg_data:
                 st.subheader(f"📋 Diagnóstico Específico: {seg_sel}")
                 for p in res_perg.data:
                     if "Múltipla Escolha" in p["tipo_campo"]:
