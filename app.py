@@ -124,7 +124,11 @@ else:
             # 2. Seleção de Segmento para carregar as Perguntas
             res_seg = supabase.table("segmentos").select("*").execute()
             lista_s = [s["nome"] for s in res_seg.data] if res_seg.data else []
-            seg_sel = st.selectbox("Selecione o segmento do cliente:", lista_s)
+            
+            seg_sel = st.multiselect(
+                "Selecione o(s) segmento(s) do cliente:",
+                lista_s
+            )
     
             st.divider()
     
