@@ -91,7 +91,7 @@ else:
         st.sidebar.image("Logo Escrita.png", width=200)
     menu = st.sidebar.selectbox("Navegação", ["Nova Proposta", "Dashboard de Custos", "Histórico de Vendas", "Configurações", "Link para Cliente"])
         
-        if menu == "Nova Proposta":
+    if menu == "Nova Proposta":
             st.title("📄 Elaboração de Proposta Precificada")
     
             # 1. Inputs de Identificação e Regime
@@ -190,7 +190,7 @@ else:
                         insert_data("historico_vendas", dados_venda)
                         st.success("Orçamento salvo com sucesso!")
                     except Exception as e:
-                        st.error(f"Erro ao salvar orçamento: {e}")
+                        st.error(f"Erro ao salvar orçamento: {e}")    
     
     # --- MÓDULOS DE APOIO (MANTIDOS E INTEGRADOS) ---
     elif menu == "Dashboard de Custos":
