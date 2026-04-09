@@ -212,23 +212,23 @@ else:
             lead_em_analise = st.session_state.get("lead_em_analise", {})
         
             # 1. Inputs de Identificação e Regime
-               c1, c2 = st.columns([2, 1])
+            c1, c2 = st.columns([2, 1])
 
-               nome_cliente = c1.text_input(
-                   "Nome da Empresa:",
-                   value=lead_em_analise.get("nome_empresa", "")
-               )
+            nome_cliente = c1.text_input(
+                "Nome da Empresa:",
+                value=lead_em_analise.get("nome_empresa", "")
+            )
             
-               opcoes_regime = ["Simples", "Presumido", "Real"]
-               regime_padrao = lead_em_analise.get("regime", "Simples")
-               if regime_padrao not in opcoes_regime:
-                   regime_padrao = "Simples"
+            opcoes_regime = ["Simples", "Presumido", "Real"]
+            regime_padrao = lead_em_analise.get("regime", "Simples")
+            if regime_padrao not in opcoes_regime:
+                regime_padrao = "Simples"
             
-               regime_sel = c2.selectbox(
-                   "Regime Tributário:",
-                   opcoes_regime,
-                   index=opcoes_regime.index(regime_padrao)
-               )
+            regime_sel = c2.selectbox(
+                "Regime Tributário:",
+                opcoes_regime,
+                index=opcoes_regime.index(regime_padrao)
+            )
 
             st.divider()
             st.subheader("Informações Gerais")
