@@ -277,6 +277,8 @@ else:
                             "cliente": nome_cliente,
                             "regime": regime_sel,
                             "segmento": " + ".join(seg_sel),
+                            "faturamento_medio": faturamento_medio,
+                            "descricao_atividades": descricao_atividades,
                             "valor_total": v_prata,
                             "horas_estimadas": memoria["horas_estimadas"],
                         }
