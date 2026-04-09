@@ -291,8 +291,7 @@ else:
             if res_perg_data:
                 st.subheader(f"📋 Diagnóstico Específico: {seg_sel}")
             
-                respostas_lead = lead_em_analise.get("respostas_segmento", {}) or {}
-            
+                            
                 for p in res_perg_data:
                     st.markdown(f"**{p['pergunta']}**")
             
