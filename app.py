@@ -254,9 +254,17 @@ else:
             res_seg = supabase.table("segmentos").select("*").execute()
             lista_s = [s["nome"] for s in res_seg.data] if res_seg.data else []
             
-            seg_sel = st.multiselect(
-                "Selecione o(s) segmento(s) do cliente:",
-                lista_s
+            res_regras = supabase.table("regras_segmento").select("segmentos").execute()
+            lista_segmentos = [r["segmentos"] for r in res_regras.data] if res_regras.data else []
+    
+            segmento_padrao = lead_em_analise.get("segmento", "")
+            if segmento_padrao not in lista_segmentos and lista_segmentos:
+                segmento_padrao = lista_segmentos[0]
+    
+            seg_sel = st.selectbox(
+                "Selecione o segmento do cliente:",
+                lista_segmentos,
+                index=lista_segmentos.index(segmento_padrao) if segmento_padrao in lista_segmentos else 0
             )
     
             st.divider()
