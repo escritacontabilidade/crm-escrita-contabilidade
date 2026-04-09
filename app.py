@@ -144,8 +144,8 @@ if is_cliente:
                         "whatsapp": f_whatsapp,
                         "regime": f_regime,
                         "segmento": " + ".join(f_segmento),
-                        "faturamento_medio": f_faturamento,
-                        "descricao_atividades": f_descricao,
+                        "faturamento_medio": faturamento_medio,
+                        "descricao_atividades": descricao_atividades,
                         "respostas_segmento": respostas_extras
                     }
                     insert_data("leads_externos", obj)
