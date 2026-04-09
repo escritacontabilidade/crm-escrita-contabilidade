@@ -77,15 +77,29 @@ if is_cliente:
                     respostas_extras[p['pergunta']] = st.number_input(p['pergunta'], min_value=0, key=f"ext_{p['id']}")
         
         if st.form_submit_button("Enviar Solicitação"):
-            obj = {
-                "nome_empresa": f_empresa, "responsavel": f_resp, "whatsapp": f_whatsapp, 
-                "regime": f_regime, "segmento": f_segmento, 
-                "qtd_func": f_func, "qtd_notas": f_notas, "qtd_lanca": f_lanc,
-                "respostas_segmento": respostas_extras # Salva as respostas das perguntas
-            }
-            supabase.table("leads_externos").insert(obj).execute()
-            st.success("✅ Recebemos seus dados! Entraremos em contato em breve.")
-            st.stop()
+            erros = validar_formulario_lead(f_empresa, f_resp, f_whatsapp, f_segmento)
+
+            if erros:
+                for erro in erros:
+                    st.warning(erro)
+            else:
+                try:
+                    obj = {
+                        "nome_empresa": f_empresa,
+                        "responsavel": f_resp,
+                        "whatsapp": f_whatsapp,
+                        "regime": f_regime,
+                        "segmento": f_segmento,
+                        "qtd_func": f_func,
+                        "qtd_notas": f_notas,
+                        "qtd_lanca": f_lanc,
+                        "respostas_segmento": respostas_extras,
+                    }
+                    insert_data("leads_externos", obj)
+                    st.success("✅ Recebemos seus dados! Entraremos em contato em breve.")
+                    st.stop()
+                except Exception as e:
+                    st.error(f"Erro ao salvar lead: {e}")
 else:
     if os.path.exists("Logo Escrita.png"):
         st.sidebar.image("Logo Escrita.png", width=200)
