@@ -36,9 +36,14 @@ def get_config_val(chave):
     res = supabase.table("configuracao_operacional").select("valor").eq("chave", chave).execute()
 
     if not res.data:
-        raise ValueError(f"Configuração não encontrada: {chave}")
+        return 0.0
 
-    return float(res.data[0]["valor"])
+    valor = res.data[0].get("valor")
+
+    if valor is None:
+        return 0.0
+
+    return float(valor)
 
 
 def get_peso_esforco(regime, item):
