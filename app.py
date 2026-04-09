@@ -56,8 +56,13 @@ if is_cliente:
     lista_segmentos = [s["nome"] for s in res_seg.data] if res_seg.data else []
 
     # 2. Cliente escolhe um ou mais segmentos
-    f_segmento = st.multiselect("Selecione o(s) segmento(s) de atuação", lista_segmentos)
-
+    res_regras = supabase.table("regras_segmento").select("segmentos").execute()
+    lista_segmentos = [r["segmentos"] for r in res_regras.data] if res_regras.data else []
+    
+    f_segmento = st.selectbox(
+        "Selecione o segmento da empresa",
+        lista_segmentos
+    )
     # 3. Busca perguntas pela origem correta
     res_perg_data = []
 
