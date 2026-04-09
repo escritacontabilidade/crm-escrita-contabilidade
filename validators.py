@@ -25,8 +25,8 @@ def validar_formulario_lead(nome_empresa, responsavel, whatsapp, segmento):
     if not whatsapp or not str(whatsapp).strip():
         erros.append("Informe o WhatsApp.")
 
-    if not segmento or not str(segmento).strip():
-        erros.append("Selecione o segmento.")
+    if not segmento:
+        erros.append("Selecione ao menos um segmento.")
 
     return erros
 
