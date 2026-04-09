@@ -84,10 +84,11 @@ if is_cliente:
 
         # 4. Mostra as perguntas dinâmicas aqui dentro
         respostas_extras = {}
-        if res_perg.data:
+        if res_perg_data:
             st.divider()
             st.subheader("Informações Adicionais")
-            for p in res_perg.data:
+        
+            for p in res_perg_data:
                 if "Múltipla Escolha" in p['tipo_campo']:
                     ops = [o.strip() for o in str(p['opcoes']).split(",")]
                     respostas_extras[p['pergunta']] = st.selectbox(p['pergunta'], ops, key=f"ext_{p['id']}")
