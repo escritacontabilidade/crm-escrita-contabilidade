@@ -94,7 +94,7 @@ if is_cliente:
 
         descricao_atividades = st.text_area(
             "Breve descrição sobre as atividades exercidas pela empresa",
-            value=lead_em_analise.get("descricao_atividades", ""),
+            value="",
             key="np_descricao"
         )
 
