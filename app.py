@@ -2,7 +2,14 @@ import streamlit as st
 import pandas as pd
 import os
 
-from database import get_supabase, fetch_table, insert_data, upsert_data, get_config_val
+from database import (
+    get_supabase,
+    fetch_table,
+    insert_data,
+    upsert_data,
+    get_config_val,
+    get_peso_esforco,
+)
 from pricing import calcular_custo_hora_real, calcular_precificacao_completa
 from validators import (
     validar_campos_basicos_cliente,
