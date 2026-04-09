@@ -7,8 +7,8 @@ def validar_campos_basicos_cliente(nome_cliente, regime_sel, seg_sel):
     if not regime_sel or not str(regime_sel).strip():
         erros.append("Informe o regime tributário.")
 
-    if not seg_sel or not str(seg_sel).strip():
-        erros.append("Selecione o segmento.")
+    if not seg_sel:
+        erros.append("Selecione ao menos um segmento.")
 
     return erros
 
