@@ -103,6 +103,8 @@ if is_cliente:
             st.divider()
             st.subheader("Informações Adicionais")
 
+            respostas_lead = lead_em_analise.get("respostas_segmento", {}) or {}
+            
             for p in res_perg_data:
                 st.markdown(f"**{p['pergunta']}**")
 
