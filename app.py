@@ -68,10 +68,7 @@ if is_cliente:
 
     if f_segmento:
         try:
-            if len(f_segmento) == 1:
-                origem_perguntas = get_origem_perguntas(f_segmento[0])
-            else:
-                origem_perguntas = get_origem_perguntas(f_segmento)
+            origem_perguntas = get_origem_perguntas(f_segmento)
 
             res_perg_data = get_perguntas_por_origem(origem_perguntas)
         except Exception as e:
