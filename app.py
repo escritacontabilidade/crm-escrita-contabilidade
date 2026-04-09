@@ -143,7 +143,7 @@ if is_cliente:
                         "responsavel": f_resp,
                         "whatsapp": f_whatsapp,
                         "regime": f_regime,
-                        "segmento": " + ".join(f_segmento),
+                        "segmento": f_segmento,
                         "faturamento_medio": faturamento_medio,
                         "descricao_atividades": descricao_atividades,
                         "respostas_segmento": respostas_extras
