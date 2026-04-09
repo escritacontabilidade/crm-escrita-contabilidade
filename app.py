@@ -8,7 +8,8 @@ from database import (
     insert_data,
     upsert_data,
     get_config_val,
-    get_peso_esforco,
+    get_origem_perguntas,
+    get_perguntas_por_origem,
 )
 from pricing import calcular_custo_hora_real, calcular_precificacao_completa
 from validators import (
