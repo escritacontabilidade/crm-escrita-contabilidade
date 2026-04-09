@@ -157,6 +157,22 @@ else:
             c1, c2 = st.columns([2, 1])
             nome_cliente = c1.text_input("Nome da Empresa:")
             regime_sel = c2.selectbox("Regime Tributário:", ["Simples", "Presumido", "Real"])
+
+            st.divider()
+            st.subheader("Informações Gerais")
+            
+            faturamento_medio = st.number_input(
+                "Faturamento médio mensal (R$)",
+                min_value=0.0,
+                step=1000.0,
+                format="%.2f",
+                key="np_faturamento"
+            )
+            
+            descricao_atividades = st.text_area(
+                "Breve descrição sobre as atividades exercidas pela empresa",
+                key="np_descricao"
+            )
     
             # 2. Seleção de Segmento para carregar as Perguntas
             res_seg = supabase.table("segmentos").select("*").execute()
