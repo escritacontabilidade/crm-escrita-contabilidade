@@ -15,13 +15,11 @@ from utils import formatar_moeda
 # --- 1. CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(page_title="CRM & Precificação Escrita", layout="wide", page_icon="📄")
 
-# --- 2. CONEXÃO ÚNICA (SUPABASE) ---
 try:
-    url = st.secrets["SUPABASE_URL"]
-    key = st.secrets["SUPABASE_KEY"]
-    supabase = create_client(url, key)
+    supabase = get_supabase()
 except Exception as e:
     st.error(f"Erro de conexão com o Supabase: {e}")
+    st.stop()
 
 # --- 3. ESTILOS VISUAIS ---
 st.markdown("""
