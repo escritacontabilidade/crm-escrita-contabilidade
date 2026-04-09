@@ -289,11 +289,24 @@ else:
                 f_opt = st.text_input("Opções (Ex: Sim, Não ou Pequeno, Médio)")
                 f_pesos = st.text_input("Pesos (Ex: 100, 0 ou 50, 150)")
                 if st.form_submit_button("Salvar Pergunta"):
-                    supabase.table("perguntas").insert({
-                        "segmento": f_seg, "pergunta": f_perg, "tipo_campo": f_tipo,
-                        "opcoes": f_opt, "pesos_opcoes": f_pesos
-                    }).execute()
-                    st.success("Pergunta salva!")
+                    erros = validar_pergunta_segmento(f_tipo, f_perg, f_opt, f_pesos)
+
+                    if erros:
+                        for erro in erros:
+                            st.warning(erro)
+                    else:
+                        try:
+                            supabase.table("perguntas").insert({
+                                "segmento": f_seg,
+                                "pergunta": f_perg,
+                                "tipo_campo": f_tipo,
+                                "opcoes": f_opt,
+                                "pesos_opcoes": f_pesos
+                            }).execute()
+                            st.success("Pergunta salva!")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Erro ao salvar pergunta: {e}")
     
             # Visualização das Perguntas com Filtro
             st.write("---")
