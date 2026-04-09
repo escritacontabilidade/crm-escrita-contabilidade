@@ -351,8 +351,7 @@ else:
                 st.dataframe(df_perg[colunas_existentes], use_container_width=True)
             else:
                 st.info("Nenhuma pergunta cadastrada.")
-                )
-    
+                   
         with t2:
             st.subheader("Serviços Avulsos (Tabela 2026)")
             with st.form("add_avulso"):
