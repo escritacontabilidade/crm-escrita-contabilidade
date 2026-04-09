@@ -209,7 +209,8 @@ else:
             
     if menu == "Nova Proposta":
             st.title("📄 Elaboração de Proposta Precificada")
-    
+            lead_em_analise = st.session_state.get("lead_em_analise", {})
+        
             # 1. Inputs de Identificação e Regime
             c1, c2 = st.columns([2, 1])
             nome_cliente = c1.text_input("Nome da Empresa:")
