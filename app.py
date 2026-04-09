@@ -223,7 +223,7 @@ else:
                         dados_venda = {
                             "cliente": nome_cliente,
                             "regime": regime_sel,
-                            "segmento": seg_sel,
+                            "segmento": " + ".join(seg_sel),
                             "valor_total": v_prata,
                             "horas_estimadas": memoria["horas_estimadas"],
                         }
