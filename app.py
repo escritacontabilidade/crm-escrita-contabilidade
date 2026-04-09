@@ -343,9 +343,14 @@ else:
                 query_p = query_p.eq("segmento", filtro_p)
             res_p = query_p.execute()
             if res_p.data:
-                st.dataframe(
-                    pd.DataFrame(res_p.data)[['origem', 'pergunta', 'tipo_campo', 'opcoes', 'pesos_opcoes']],
-                    use_container_width=True
+                df_perg = pd.DataFrame(res_p.data)
+            
+                colunas_desejadas = ['origem', 'pergunta', 'tipo_campo', 'opcoes', 'pesos_opcoes']
+                colunas_existentes = [c for c in colunas_desejadas if c in df_perg.columns]
+            
+                st.dataframe(df_perg[colunas_existentes], use_container_width=True)
+            else:
+                st.info("Nenhuma pergunta cadastrada.")
                 )
     
         with t2:
