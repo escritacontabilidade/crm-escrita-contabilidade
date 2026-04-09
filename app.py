@@ -283,7 +283,8 @@ else:
             if seg_sel:
                 try:
                     origem_perguntas = get_origem_perguntas(seg_sel)
-            
+                    res_perg_data = get_perguntas_por_origem(origem_perguntas)
+                    st.caption(f"Origem das perguntas utilizada: {origem_perguntas}")
                 except Exception as e:
                     st.error(f"Erro ao carregar perguntas do segmento: {e}")
             
