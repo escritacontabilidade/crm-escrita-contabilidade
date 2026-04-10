@@ -45,7 +45,11 @@ def gerar_lamina_preco(valor):
     x2 = int(largura * 0.90)
     y2 = int(altura * 0.89)
 
-    draw.rounded_rectangle((x1, y1, x2, y2), radius=35, fill=branco)
+    # limpa APENAS a área do valor (não a caixa inteira)
+    draw.rectangle(
+        (int(largura*0.30), int(altura*0.40), int(largura*0.70), int(altura*0.55)),
+        fill=(255,255,255)
+    )
 
     centro_x = (x1 + x2) // 2
 
