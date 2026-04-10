@@ -22,17 +22,7 @@ def gerar_lamina_preco(valor):
         fonte_valor = ImageFont.load_default()
 
     azul = (7, 31, 66)
-    branco = (255, 255, 255)
 
-    valor_formatado = f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-
-    # 1) Apaga só a área do valor antigo
-    x1 = int(largura * 0.32)
-    y1 = int(altura * 0.43)
-    x2 = int(largura * 0.68)
-    y2 = int(altura * 0.58)
-
-    draw.rectangle((x1, y1, x2, y2), fill=branco)
 
     # 2) Centraliza o valor novo
     bbox = draw.textbbox((0, 0), valor_formatado, font=fonte_valor)
