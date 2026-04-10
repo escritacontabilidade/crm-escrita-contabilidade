@@ -1,7 +1,46 @@
 import os
 import tempfile
 from fpdf import FPDF
+from PIL import Image, ImageDraw, ImageFont
+import os
 
+def gerar_lamina_preco(valor):
+    # Caminho da imagem original
+    caminho_base = "assets_proposta/10_preco.jpg"
+
+    # Nova imagem gerada
+    caminho_saida = "assets_proposta/10_preco_dinamico.jpg"
+
+    # Abre a imagem base
+    img = Image.open(caminho_base)
+    draw = ImageDraw.Draw(img)
+
+    # Tenta usar uma fonte melhor (se não tiver, usa padrão)
+    try:
+        fonte_valor = ImageFont.truetype("arial.ttf", 90)
+        fonte_texto = ImageFont.truetype("arial.ttf", 35)
+    except:
+        fonte_valor = ImageFont.load_default()
+        fonte_texto = ImageFont.load_default()
+
+    # Valor formatado
+    valor_formatado = f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+    # Texto por extenso (simples por enquanto)
+    valor_extenso = "valor por extenso aqui"
+
+    # Texto salário mínimo (ajustável depois)
+    texto_salario = "equivalente a X salários mínimos"
+
+    # POSIÇÕES (ajustaremos fino depois)
+    draw.text((600, 450), valor_formatado, fill="black", font=fonte_valor)
+    draw.text((600, 580), valor_extenso, fill="black", font=fonte_texto)
+    draw.text((600, 650), texto_salario, fill="black", font=fonte_texto)
+
+    # Salva nova imagem
+    img.save(caminho_saida)
+
+    return caminho_saida
 
 IMAGENS_PROPOSTA = [
     "assets_proposta/01_capa.jpg",
