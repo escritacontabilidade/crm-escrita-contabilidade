@@ -95,6 +95,9 @@ def gerar_pdf_proposta_comercial(nome_empresa, segmento, plano, valor_mensal):
         if caminho == "assets_proposta/10_preco.jpg":
             caminho_usado = lamina_preco
 
+        if not isinstance(caminho_usado, str) or not caminho_usado.strip():
+            continue
+
         if os.path.exists(caminho_usado):
             pdf.add_page()
             pdf.image(caminho_usado, x=0, y=0, w=297, h=210)
@@ -108,4 +111,5 @@ def gerar_pdf_proposta_comercial(nome_empresa, segmento, plano, valor_mensal):
     caminho_pdf = os.path.join(temp_dir, nome_arquivo)
 
     pdf.output(caminho_pdf)
+    return caminho_pdf
     return caminho_pdf
