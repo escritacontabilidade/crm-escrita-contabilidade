@@ -301,42 +301,43 @@ else:
                     resposta_inicial = respostas_lead.get(pergunta_texto, None)
             
                     if "Múltipla Escolha" in p["tipo_campo"]:
-                        ops = [o.strip() for o in str(p["opcoes"]).split(",") if o.strip()]
-                        vls = [float(v.strip().replace(",", ".")) for v in str(p["pesos_opcoes"]).split(",") if v.strip()]
-            
+                        ops = [o.strip() for o in str(p.get("opcoes", "")).split(",") if o.strip()]
+                        vls = [float(v.strip().replace(",", ".")) for v in str(p.get("pesos_opcoes", "")).split(",") if v.strip()]
+
                         if len(ops) != len(vls):
-                            st.error(f"Erro na pergunta: {p['pergunta']}")
+                            st.error(f"Erro na pergunta: {pergunta_texto}")
                             continue
-            
+
                         indice_padrao = 0
                         if resposta_inicial in ops:
                             indice_padrao = ops.index(resposta_inicial)
-            
+
                         esc = st.radio(
                             "Selecione uma opção:",
                             ops,
                             index=indice_padrao,
                             key=f"p_{p['id']}"
                         )
-            
+
                         total_pergunta_segmento += vls[ops.index(esc)]
-            
+
                     elif p["tipo_campo"] == "Texto Livre":
                         st.text_area(
                             "Digite sua resposta:",
                             value=str(resposta_inicial or ""),
                             key=f"p_{p['id']}"
                         )
-            
+
                     else:
                         valor_inicial = 0
                         try:
-                            valor_inicial = int(resposta_inicial) if resposta_inicial else 0
+                            if resposta_inicial not in [None, ""]:
+                                valor_inicial = int(float(resposta_inicial))
                         except:
                             valor_inicial = 0
-            
-                        peso_num = float(str(p["pesos_opcoes"]).replace(",", "."))
-            
+
+                        peso_num = float(str(p.get("pesos_opcoes", "0")).replace(",", "."))
+
                         n_in = st.number_input(
                             "Informe a quantidade:",
                             min_value=0,
@@ -344,7 +345,7 @@ else:
                             value=valor_inicial,
                             key=f"p_{p['id']}"
                         )
-            
+
                         total_pergunta_segmento += (n_in * peso_num)
             
                     st.write("")
