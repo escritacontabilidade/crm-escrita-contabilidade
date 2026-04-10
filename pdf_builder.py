@@ -5,7 +5,7 @@ from PIL import Image, ImageDraw, ImageFont
 import os
 
 def gerar_lamina_preco(valor):
-    caminho_base = "assets_proposta/10_preco.jpg"
+    caminho_base = "assets_proposta/10_preco_base.png"
     caminho_saida = "assets_proposta/10_preco_dinamico.jpg"
 
     img = Image.open(caminho_base).convert("RGB")
