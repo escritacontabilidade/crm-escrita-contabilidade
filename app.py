@@ -156,7 +156,7 @@ else:
         st.sidebar.image("Logo Escrita.png", width=200)
     menu = st.sidebar.selectbox(
         "Navegação",
-        ["Leads Recebidos", "Nova Proposta", "Dashboard de Custos", "Histórico de Vendas", "Configurações", "Link para Cliente"]
+        ["Leads Recebidos", "Nova Proposta", "Proposta Comercial", "Dashboard de Custos", "Histórico de Vendas", "Configurações", "Link para Cliente"]
     )
 
     if menu == "Leads Recebidos":
