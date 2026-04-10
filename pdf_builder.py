@@ -44,6 +44,8 @@ def gerar_lamina_preco(valor):
 
     draw.text((x_texto, y_texto), valor_formatado, fill=azul, font=fonte_valor)
 
+    img.save(caminho_saida, quality=95)
+    
     return caminho_saida
     
 IMAGENS_PROPOSTA = [
@@ -113,5 +115,4 @@ def gerar_pdf_proposta_comercial(nome_empresa, segmento, plano, valor_mensal):
     caminho_pdf = os.path.join(temp_dir, nome_arquivo)
 
     pdf.output(caminho_pdf)
-    return caminho_pdf
     return caminho_pdf
