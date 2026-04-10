@@ -10,80 +10,105 @@ def gerar_lamina_preco(valor):
 
     img = Image.open(caminho_base).convert("RGB")
     draw = ImageDraw.Draw(img)
-
     largura, altura = img.size
 
-    # fontes
+    # Fontes
     try:
-        fonte_valor = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", int(largura * 0.08))
-        fonte_texto = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", int(largura * 0.025))
+        fonte_titulo = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", int(largura * 0.055))
+        fonte_subtitulo = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", int(largura * 0.028))
+        fonte_valor = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", int(largura * 0.09))
+        fonte_extenso = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", int(largura * 0.03))
         fonte_obs = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", int(largura * 0.018))
     except:
+        fonte_titulo = ImageFont.load_default()
+        fonte_subtitulo = ImageFont.load_default()
         fonte_valor = ImageFont.load_default()
-        fonte_texto = ImageFont.load_default()
+        fonte_extenso = ImageFont.load_default()
         fonte_obs = ImageFont.load_default()
 
     azul = (7, 31, 66)
     dourado = (184, 153, 74)
     cinza = (90, 90, 90)
+    branco = (255, 255, 255)
 
     valor_formatado = f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
     salario_minimo = 1518.00
     qtd_salarios = round(valor / salario_minimo, 2)
-    texto_salario = f"o equivalente a {qtd_salarios} salários mínimos."
+    texto_salario = f"o equivalente à {qtd_salarios} salários mínimos."
 
     valor_extenso = "(valor por extenso a ajustar)"
 
-    # centro horizontal
-    centro_x = largura // 2
+    # Caixa branca nova: cobre toda a área central da arte
+    x1 = int(largura * 0.10)
+    y1 = int(altura * 0.18)
+    x2 = int(largura * 0.90)
+    y2 = int(altura * 0.89)
 
-    def centralizar(texto, fonte, y, cor):
+    draw.rounded_rectangle((x1, y1, x2, y2), radius=35, fill=branco)
+
+    centro_x = (x1 + x2) // 2
+
+    def centralizar_texto(texto, fonte, y, cor):
         bbox = draw.textbbox((0, 0), texto, font=fonte)
-        w = bbox[2] - bbox[0]
-        draw.text((centro_x - w // 2, y), texto, fill=cor, font=fonte)
+        largura_texto = bbox[2] - bbox[0]
+        x = centro_x - (largura_texto // 2)
+        draw.text((x, y), texto, fill=cor, font=fonte)
 
-    # POSIÇÕES BASEADAS NA ALTURA DA IMAGEM
-    centralizar("Honorários mensais para:", fonte_texto, int(altura * 0.28), dourado)
-    centralizar("contábil, fiscal, pessoal e societário.", fonte_texto, int(altura * 0.35), dourado)
+    def quebrar_linhas(texto, fonte, largura_max):
+        palavras = texto.split()
+        linhas = []
+        linha = ""
 
-    centralizar(valor_formatado, fonte_valor, int(altura * 0.48), azul)
+        for palavra in palavras:
+            teste = f"{linha} {palavra}".strip()
+            bbox = draw.textbbox((0, 0), teste, font=fonte)
+            largura_teste = bbox[2] - bbox[0]
 
-    centralizar(valor_extenso, fonte_texto, int(altura * 0.63), azul)
-    centralizar(texto_salario, fonte_texto, int(altura * 0.68), azul)
+            if largura_teste <= largura_max:
+                linha = teste
+            else:
+                if linha:
+                    linhas.append(linha)
+                linha = palavra
+
+        if linha:
+            linhas.append(linha)
+
+        return linhas
+
+    # Título
+    centralizar_texto("Honorários mensais para:", fonte_titulo, int(altura * 0.24), dourado)
+    centralizar_texto("contábil, fiscal, pessoal e societário.", fonte_subtitulo, int(altura * 0.36), dourado)
+
+    # Valor
+    centralizar_texto(valor_formatado, fonte_valor, int(altura * 0.47), azul)
+
+    # Extenso
+    centralizar_texto(valor_extenso, fonte_extenso, int(altura * 0.62), azul)
+
+    # Salários mínimos
+    centralizar_texto(texto_salario, fonte_extenso, int(altura * 0.69), azul)
 
     observacao = (
-        "*Além disso, será cobrado um honorário adicional em dezembro, no valor dos honorários vigentes, "
-        "destinado à entrega das obrigações federais, estaduais, municipais e trabalhistas. "
-        "Esse valor será devido proporcionalmente em rescisões de contrato."
+        "*Além disso, será cobrado um honorário adicional em dezembro, no valor dos honorários "
+        "vigentes, destinado à entrega das obrigações federais, estaduais, municipais e "
+        "trabalhistas. Esse valor será devido proporcionalmente em rescisões de contrato."
     )
 
-    # quebra por largura REAL
-    max_width = int(largura * 0.7)
+    linhas_obs = quebrar_linhas(
+        observacao,
+        fonte_obs,
+        largura_max=int((x2 - x1) * 0.78)
+    )
 
-    palavras = observacao.split()
-    linhas = []
-    atual = ""
-
-    for palavra in palavras:
-        teste = f"{atual} {palavra}".strip()
-        bbox = draw.textbbox((0, 0), teste, font=fonte_obs)
-        if bbox[2] <= max_width:
-            atual = teste
-        else:
-            linhas.append(atual)
-            atual = palavra
-
-    if atual:
-        linhas.append(atual)
-
-    y = int(altura * 0.78)
-
-    for linha in linhas:
+    y_obs = int(altura * 0.80)
+    for linha in linhas_obs:
         bbox = draw.textbbox((0, 0), linha, font=fonte_obs)
-        w = bbox[2]
-        draw.text((centro_x - w // 2, y), linha, fill=cinza, font=fonte_obs)
-        y += int(altura * 0.035)
+        largura_linha = bbox[2] - bbox[0]
+        x_obs = centro_x - (largura_linha // 2)
+        draw.text((x_obs, y_obs), linha, fill=cinza, font=fonte_obs)
+        y_obs += int(altura * 0.03)
 
     img.save(caminho_saida, quality=95)
     return caminho_saida
