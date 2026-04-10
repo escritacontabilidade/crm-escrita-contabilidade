@@ -1,59 +1,83 @@
-from fpdf import FPDF
 import os
+import tempfile
+from fpdf import FPDF
 
 
-def formatar_moeda(valor):
+IMAGENS_PROPOSTA = [
+    "assets_proposta/01_capa.jpg",
+    "assets_proposta/02_autoridade.jpg",
+    "assets_proposta/03_lideranca.jpg",
+    "assets_proposta/04_rodrigo.jpg",
+    "assets_proposta/05_roberta.jpg",
+    "assets_proposta/06_simone.jpg",
+    "assets_proposta/07_diferenciais.jpg",
+    "assets_proposta/08_servicos.jpg",
+    "assets_proposta/09_sistemas.jpg",
+    "assets_proposta/10_preco.jpg",
+    "assets_proposta/11_obrigacoes.jpg",
+    "assets_proposta/12_extras_1.jpg",
+    "assets_proposta/13_extras_2.jpg",
+]
+
+
+def moeda_br(valor):
     return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 
-class PDFProposta(FPDF):
-    def header(self):
-        self.set_fill_color(26, 42, 68)
-        self.rect(0, 0, 5, 297, "F")
+def gerar_pdf_proposta_comercial(nome_empresa, segmento, plano, valor_mensal):
+    pdf = FPDF(orientation="L", unit="mm", format="A4")
+    pdf.set_auto_page_break(auto=False)
 
-        if os.path.exists("Logo Escrita.png"):
-            self.image("Logo Escrita.png", 10, 10, 40)
+    # 1) páginas com imagens
+    for caminho in IMAGENS_PROPOSTA:
+        if os.path.exists(caminho):
+            pdf.add_page()
+            pdf.image(caminho, x=0, y=0, w=297, h=210)
 
-        self.set_xy(60, 15)
-        self.set_font("Arial", "B", 16)
-        self.set_text_color(26, 42, 68)
-        self.cell(140, 10, "PROPOSTA COMERCIAL", 0, 1, "R")
-        self.ln(15)
-
-    def footer(self):
-        self.set_y(-20)
-        self.set_font("Arial", "I", 8)
-        self.cell(0, 10, f"Escrita Contabilidade | Página {self.page_no()}", 0, 0, "C")
-
-
-def gerar_pdf(dados, mensal, extras_df):
-    pdf = PDFProposta()
+    # 2) página final dinâmica
     pdf.add_page()
+    pdf.set_fill_color(255, 255, 255)
+    pdf.rect(0, 0, 297, 210, "F")
 
-    pdf.set_font("Arial", "B", 14)
-    pdf.cell(0, 10, f"CLIENTE: {dados['nome'].upper()}", ln=True)
+    pdf.set_text_color(15, 32, 58)
 
-    pdf.set_font("Arial", "", 12)
-    pdf.cell(0, 10, f"Segmento: {dados['segmento']}", ln=True)
+    pdf.set_xy(15, 20)
+    pdf.set_font("Arial", "B", 26)
+    pdf.cell(0, 12, "Resumo da Proposta Comercial", ln=True)
+
+    pdf.ln(8)
+    pdf.set_font("Arial", "", 18)
+    pdf.cell(0, 10, f"Empresa: {nome_empresa}", ln=True)
+    pdf.cell(0, 10, f"Segmento: {segmento}", ln=True)
+    pdf.cell(0, 10, f"Plano apresentado: {plano}", ln=True)
+
+    pdf.ln(12)
+    pdf.set_font("Arial", "B", 34)
+    pdf.cell(0, 16, moeda_br(valor_mensal), ln=True)
+
     pdf.ln(10)
+    pdf.set_font("Arial", "", 16)
+    texto1 = (
+        "Honorario mensal para prestacao de servicos contabil, fiscal, pessoal e societario."
+    )
+    texto2 = (
+        "Observacao: alem disso, sera cobrado um honorario adicional em dezembro, "
+        "no valor dos honorarios vigentes, destinado a entrega das obrigacoes federais, "
+        "estaduais, municipais e trabalhistas. Esse valor sera devido proporcionalmente "
+        "em rescisoes de contrato."
+    )
 
-    pdf.set_fill_color(26, 42, 68)
-    pdf.set_text_color(255, 255, 255)
-    pdf.cell(130, 10, "  Serviço Recorrente", 1, 0, "L", True)
-    pdf.cell(60, 10, "Valor Mensal", 1, 1, "C", True)
+    pdf.multi_cell(0, 10, texto1)
+    pdf.ln(4)
+    pdf.multi_cell(0, 9, texto2)
 
-    pdf.set_text_color(0, 0, 0)
-    pdf.cell(130, 10, "  Honorários Contábeis", 1)
-    pdf.cell(60, 10, f"  {formatar_moeda(mensal)}", 1, 1, "R")
+    # 3) salvar em arquivo temporário
+    temp_dir = tempfile.gettempdir()
+    nome_limpo = "".join(c for c in nome_empresa if c.isalnum() or c in (" ", "_", "-")).strip()
+    if not nome_limpo:
+        nome_limpo = "proposta"
+    nome_arquivo = f"proposta_{nome_limpo.replace(' ', '_')}.pdf"
+    caminho_pdf = os.path.join(temp_dir, nome_arquivo)
 
-    if extras_df is not None and not extras_df.empty:
-        pdf.ln(5)
-        pdf.set_fill_color(200, 200, 200)
-        pdf.cell(130, 10, "  Serviços Extras / Avulsos", 1, 0, "L", True)
-        pdf.cell(60, 10, "Valor Único", 1, 1, "C", True)
-
-        for _, row in extras_df.iterrows():
-            pdf.cell(130, 10, f"  {row['servico']}", 1)
-            pdf.cell(60, 10, f"  {formatar_moeda(row['valor'])}", 1, 1, "R")
-
-    return bytes(pdf.output(dest="S"))
+    pdf.output(caminho_pdf)
+    return caminho_pdf
