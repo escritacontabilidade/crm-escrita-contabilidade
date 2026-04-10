@@ -43,6 +43,8 @@ def gerar_lamina_preco(valor):
     y_texto = int(altura * 0.455)
 
     draw.text((x_texto, y_texto), valor_formatado, fill=azul, font=fonte_valor)
+
+    return caminho_saida
     
 IMAGENS_PROPOSTA = [
     "assets_proposta/01_capa.jpg",
