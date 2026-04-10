@@ -401,7 +401,19 @@ else:
     
                 with st.expander("Ver memória do cálculo"):
                     st.json(memoria)
-    
+
+                st.session_state["proposta_atual"] = {
+                    "cliente": nome_cliente,
+                    "regime": regime_sel,
+                    "segmento": seg_sel,
+                    "faturamento_medio": faturamento_medio,
+                    "descricao_atividades": descricao_atividades,
+                    "valor_bronze": v_bronze,
+                    "valor_prata": v_prata,
+                    "valor_ouro": v_ouro,
+                    "valor_escolhido": v_prata
+                }
+                
                 # 7. Salvamento
                 if st.button("💾 Salvar Orçamento Final"):
                     try:
