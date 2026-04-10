@@ -58,7 +58,14 @@ def get_peso_esforco(regime, item):
     )
 
     if not res.data:
-        raise ValueError(f"Peso de esforço não encontrado para regime='{regime}' e item='{item}'")
+        return 0.0
+
+    valor = res.data[0].get("horas_esforco")
+
+    if valor is None:
+        return 0.0
+
+    return float(valor)
 
 def get_origem_perguntas(segmento_escolhido):
     supabase = get_supabase()
