@@ -88,14 +88,14 @@ if is_cliente:
             min_value=0.0,
             step=1000.0,
             format="%.2f",
-            value=0.0,
-            key="cli_faturamento"
+            value=float(lead_em_analise.get("faturamento_medio") or 0),
+            key="np_faturamento"
         )
         
         descricao_atividades = st.text_area(
             "Breve descrição sobre as atividades exercidas pela empresa",
-            value="",
-            key="cli_descricao"
+            value=lead_em_analise.get("descricao_atividades", "") or "",
+            key="np_descricao"
         )
     
         respostas_extras = {}
