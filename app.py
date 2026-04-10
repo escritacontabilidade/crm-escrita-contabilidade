@@ -94,8 +94,8 @@ if is_cliente:
         
         descricao_atividades = st.text_area(
             "Breve descrição sobre as atividades exercidas pela empresa",
-            value="" or "",
-            key="np_descricao"
+            value="",
+            key="cli_descricao"
         )
     
         respostas_extras = {}
