@@ -268,14 +268,7 @@ else:
             )
     
             st.divider()
-    
-            # 3. Inputs de Volume (Esforço Contábil)
-            col_a, col_b, col_c = st.columns(3)
-            qtd_func = col_a.number_input("Nº Funcionários", min_value=0, step=1)
-            qtd_notas = col_b.number_input("Qtd Notas Fiscais", min_value=0, step=1)
-            qtd_lanca = col_c.number_input("Qtd Lançamentos", min_value=0, step=1)
-            possui_filial = st.checkbox("Possui Filial?")
-    
+                  
             # 4. Perguntas Dinâmicas do Segmento (Complexidade)
             total_pergunta_segmento = 0.0
             res_perg_data = []
