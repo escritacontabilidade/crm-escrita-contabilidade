@@ -12,7 +12,6 @@ def gerar_lamina_preco(valor):
     draw = ImageDraw.Draw(img)
     largura, altura = img.size
 
-    # Fonte do valor
     try:
         fonte_valor = ImageFont.truetype(
             "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
@@ -23,8 +22,8 @@ def gerar_lamina_preco(valor):
 
     azul = (7, 31, 66)
 
+    valor_formatado = f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
-    # 2) Centraliza o valor novo
     bbox = draw.textbbox((0, 0), valor_formatado, font=fonte_valor)
     largura_texto = bbox[2] - bbox[0]
 
@@ -34,7 +33,6 @@ def gerar_lamina_preco(valor):
     draw.text((x_texto, y_texto), valor_formatado, fill=azul, font=fonte_valor)
 
     img.save(caminho_saida, quality=95)
-    
     return caminho_saida
     
 IMAGENS_PROPOSTA = [
