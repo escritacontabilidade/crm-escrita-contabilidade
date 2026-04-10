@@ -17,7 +17,7 @@ from validators import (
     validar_formulario_lead,
     validar_pergunta_segmento,
 )
-from pdf_builder import gerar_pdf
+from pdf_builder import gerar_pdf, gerar_pdf_proposta_comercial
 from utils import formatar_moeda
 
 # --- 1. CONFIGURAÇÃO DA PÁGINA ---
