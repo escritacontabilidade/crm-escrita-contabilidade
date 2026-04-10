@@ -249,7 +249,7 @@ else:
             descricao_atividades = st.text_area(
                 "Breve descrição sobre as atividades exercidas pela empresa",
                 value=lead_em_analise.get("descricao_atividades", "") or "",
-                key="np_descricao"
+                key="cli_descricao"
             )
     
             # 2. Seleção de Segmento para carregar as Perguntas
