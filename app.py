@@ -289,8 +289,7 @@ else:
             if res_perg_data:
                 st.subheader(f"📋 Diagnóstico Específico: {seg_sel}")
 
-                respostas_lead = lead_em_analise.get("respostas_segmento", {}) or {}
-
+                
                 if not isinstance(respostas_lead, dict):
                     respostas_lead = {}
 
