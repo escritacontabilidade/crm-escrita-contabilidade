@@ -24,8 +24,11 @@ def gerar_lamina_preco(valor):
 
     valor_formatado = f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
-    bbox = draw.textbbox((0, 0), valor_formatado, font=fonte_valor)
-    largura_texto = bbox[2] - bbox[0]
+    # mede o texto sem usar bbox
+    try:
+        largura_texto = int(draw.textlength(valor_formatado, font=fonte_valor))
+    except:
+        largura_texto = int(len(valor_formatado) * (largura * 0.03))
 
     x_texto = (largura - largura_texto) // 2
     y_texto = int(altura * 0.43)
