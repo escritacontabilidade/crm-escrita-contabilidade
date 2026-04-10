@@ -268,7 +268,12 @@ else:
             )
     
             st.divider()
-                  
+            # Valores padrão enquanto os volumes passam a vir apenas das perguntas
+            qtd_func = 0
+            qtd_notas = 0
+            qtd_lanca = 0
+            possui_filial = False
+        
             # 4. Perguntas Dinâmicas do Segmento (Complexidade)
             total_pergunta_segmento = 0.0
             res_perg_data = []
