@@ -5,41 +5,45 @@ from PIL import Image, ImageDraw, ImageFont
 import os
 
 def gerar_lamina_preco(valor):
-    # Caminho da imagem original
     caminho_base = "assets_proposta/10_preco.jpg"
-
-    # Nova imagem gerada
     caminho_saida = "assets_proposta/10_preco_dinamico.jpg"
 
-    # Abre a imagem base
-    img = Image.open(caminho_base)
+    img = Image.open(caminho_base).convert("RGB")
     draw = ImageDraw.Draw(img)
 
-    # Tenta usar uma fonte melhor (se não tiver, usa padrão)
     try:
-        fonte_valor = ImageFont.truetype("arial.ttf", 90)
-        fonte_texto = ImageFont.truetype("arial.ttf", 35)
+        fonte_valor = ImageFont.truetype("arial.ttf", 88)
+        fonte_extenso = ImageFont.truetype("arial.ttf", 34)
+        fonte_obs = ImageFont.truetype("arial.ttf", 22)
     except:
         fonte_valor = ImageFont.load_default()
-        fonte_texto = ImageFont.load_default()
+        fonte_extenso = ImageFont.load_default()
+        fonte_obs = ImageFont.load_default()
 
-    # Valor formatado
     valor_formatado = f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
-    # Texto por extenso (simples por enquanto)
-    valor_extenso = "valor por extenso aqui"
+    # texto por extenso simples por enquanto
+    valor_extenso = "(valor por extenso a ajustar)"
+    
+    salario_minimo = 1518.00
+    qtd_salarios = round(valor / salario_minimo, 2)
+    texto_salario = f"o equivalente a {qtd_salarios} salários mínimos."
 
-    # Texto salário mínimo (ajustável depois)
-    texto_salario = "equivalente a X salários mínimos"
+    # posições iniciais para teste fino
+    draw.text((760, 500), valor_formatado, fill=(7, 31, 66), font=fonte_valor)
+    draw.text((640, 650), valor_extenso, fill=(7, 31, 66), font=fonte_extenso)
+    draw.text((780, 720), texto_salario, fill=(7, 31, 66), font=fonte_extenso)
 
-    # POSIÇÕES (ajustaremos fino depois)
-    draw.text((600, 450), valor_formatado, fill="black", font=fonte_valor)
-    draw.text((600, 580), valor_extenso, fill="black", font=fonte_texto)
-    draw.text((600, 650), texto_salario, fill="black", font=fonte_texto)
+    observacao = (
+        "*Além disso, será cobrado um honorário adicional em dezembro, no valor "
+        "dos honorários vigentes, destinado à entrega das obrigações federais, "
+        "estaduais, municipais e trabalhistas. Esse valor será devido "
+        "proporcionalmente em rescisões de contrato."
+    )
 
-    # Salva nova imagem
-    img.save(caminho_saida)
+    draw.text((640, 930), observacao, fill=(60, 60, 60), font=fonte_obs)
 
+    img.save(caminho_saida, quality=95)
     return caminho_saida
 
 IMAGENS_PROPOSTA = [
