@@ -498,7 +498,32 @@ else:
         st.divider()
 
         st.info(f"Valor mensal sugerido para apresentação: {formatar_moeda(valor_apresentado)}")
-       
+
+        st.divider()
+
+        if st.button("📄 Preparar PDF da Proposta"):
+            if not nome_empresa:
+                st.warning("Gere uma proposta primeiro na tela 'Nova Proposta'.")
+            else:
+                caminho_pdf = gerar_pdf_proposta_comercial(
+                    nome_empresa=nome_empresa,
+                    segmento=segmento,
+                    plano=opcao_valor,
+                    valor_mensal=valor_apresentado
+                )
+                st.session_state["pdf_proposta_path"] = caminho_pdf
+                st.success("PDF preparado com sucesso.")
+
+        caminho_pdf = st.session_state.get("pdf_proposta_path")
+
+        if caminho_pdf and os.path.exists(caminho_pdf):
+            with open(caminho_pdf, "rb") as arquivo_pdf:
+                st.download_button(
+                    label="⬇️ Baixar PDF da Proposta",
+                    data=arquivo_pdf,
+                    file_name=f"proposta_{nome_empresa.replace(' ', '_')}.pdf",
+                    mime="application/pdf"
+                )
     
     elif menu == "Dashboard de Custos":
         st.title("💰 Configuração de Custos Operacionais")
