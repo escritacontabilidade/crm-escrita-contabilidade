@@ -288,12 +288,17 @@ else:
             
             if res_perg_data:
                 st.subheader(f"📋 Diagnóstico Específico: {seg_sel}")
-            
-                            
+
+                respostas_lead = lead_em_analise.get("respostas_segmento", {}) or {}
+
+                if not isinstance(respostas_lead, dict):
+                    respostas_lead = {}
+
                 for p in res_perg_data:
                     st.markdown(f"**{p['pergunta']}**")
-            
-                    resposta_inicial = respostas_lead.get(p["pergunta"], None)
+
+                    pergunta_texto = str(p.get("pergunta", "")).strip()
+                    resposta_inicial = respostas_lead.get(pergunta_texto, None)
             
                     if "Múltipla Escolha" in p["tipo_campo"]:
                         ops = [o.strip() for o in str(p["opcoes"]).split(",") if o.strip()]
