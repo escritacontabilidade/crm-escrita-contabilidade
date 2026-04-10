@@ -286,12 +286,20 @@ else:
                 except Exception as e:
                     st.error(f"Erro ao carregar perguntas do segmento: {e}")
                         
-                    if res_perg_data:
-                        st.subheader(f"📋 Diagnóstico Específico: {seg_sel}")
-
-                
+            if res_perg_data:
+                st.subheader(f"📋 Diagnóstico Específico: {seg_sel}")
+            
+                respostas_lead = lead_em_analise.get("respostas_segmento", {}) or {}
+            
                 if not isinstance(respostas_lead, dict):
                     respostas_lead = {}
+            
+                for p in res_perg_data:
+                    pergunta_texto = str(p.get("pergunta", "")).strip()
+            
+                    st.markdown(f"**{pergunta_texto}**")
+            
+                    resposta_inicial = respostas_lead.get(pergunta_texto, None)
 
                 for p in res_perg_data:
                     st.markdown(f"**{p['pergunta']}**")
