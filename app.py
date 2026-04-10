@@ -296,12 +296,7 @@ else:
                 if not isinstance(respostas_lead, dict):
                     respostas_lead = {}
             
-                for p in res_perg_data:
-                    pergunta_texto = str(p.get("pergunta", "")).strip()
-            
-                    st.markdown(f"**{pergunta_texto}**")
-            
-                    resposta_inicial = respostas_lead.get(pergunta_texto, None)
+               
 
                 for p in res_perg_data:
                     st.markdown(f"**{p['pergunta']}**")
