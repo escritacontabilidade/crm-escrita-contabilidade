@@ -4,3 +4,4 @@ fpdf
 st-gsheets-connection
 pandas
 numpy
+Pillow
