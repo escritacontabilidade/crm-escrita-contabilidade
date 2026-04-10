@@ -16,7 +16,7 @@ def gerar_lamina_preco(valor):
     try:
         fonte_titulo = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", int(largura * 0.055))
         fonte_subtitulo = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", int(largura * 0.028))
-        fonte_valor = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", int(largura * 0.09))
+        fonte_valor = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", int(largura * 0.14))
         fonte_extenso = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", int(largura * 0.03))
         fonte_obs = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", int(largura * 0.018))
     except:
@@ -86,7 +86,7 @@ def gerar_lamina_preco(valor):
     centralizar_texto("contábil, fiscal, pessoal e societário.", fonte_subtitulo, int(altura * 0.36), dourado)
 
     # Valor
-    centralizar_texto(valor_formatado, fonte_valor, int(altura * 0.47), azul)
+    centralizar_texto(valor_formatado, fonte_valor, int(altura * 0.50), azul)
 
     # Extenso
     centralizar_texto(valor_extenso, fonte_extenso, int(altura * 0.62), azul)
