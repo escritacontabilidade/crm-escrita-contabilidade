@@ -436,6 +436,43 @@ else:
     elif menu == "Proposta Comercial":
         st.title("📑 Proposta Comercial")
 
+        proposta_atual = st.session_state.get("proposta_atual", {})
+
+        nome_empresa = proposta_atual.get("cliente", "")
+        segmento = proposta_atual.get("segmento", "")
+        valor_bronze = proposta_atual.get("valor_bronze", 0.0)
+        valor_prata = proposta_atual.get("valor_prata", 0.0)
+        valor_ouro = proposta_atual.get("valor_ouro", 0.0)
+
+        st.subheader("Resumo da Proposta")
+        c1, c2 = st.columns(2)
+
+        with c1:
+            st.text_input("Empresa", value=nome_empresa, disabled=True)
+            st.text_input("Segmento", value=segmento, disabled=True)
+
+        with c2:
+            opcao_valor = st.selectbox(
+                "Plano a apresentar",
+                ["Bronze", "Prata", "Ouro"],
+                index=1
+            )
+
+            if opcao_valor == "Bronze":
+                valor_apresentado = valor_bronze
+            elif opcao_valor == "Ouro":
+                valor_apresentado = valor_ouro
+            else:
+                valor_apresentado = valor_prata
+
+            st.text_input(
+                "Valor mensal",
+                value=formatar_moeda(valor_apresentado),
+                disabled=True
+            )
+
+        st.divider()
+
         imagens_proposta = [
             "assets_proposta/01_capa.jpg",
             "assets_proposta/02_autoridade.jpg",
@@ -457,6 +494,10 @@ else:
                 st.image(caminho, use_container_width=True)
             else:
                 st.warning(f"Imagem não encontrada: {caminho}")
+
+        st.divider()
+
+        st.info(f"Valor mensal sugerido para apresentação: {formatar_moeda(valor_apresentado)}")
        
     
     elif menu == "Dashboard de Custos":
