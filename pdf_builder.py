@@ -10,57 +10,40 @@ def gerar_lamina_preco(valor):
 
     img = Image.open(caminho_base).convert("RGB")
     draw = ImageDraw.Draw(img)
+    largura, altura = img.size
 
-    # tenta fontes comuns do Linux/Streamlit
-    caminhos_fontes = [
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-    ]
+    # Fontes mais estáveis no Streamlit/Linux
+    fonte_regular_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+    fonte_bold_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+    fonte_oblique_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Oblique.ttf"
+    fonte_bold_oblique_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans-BoldOblique.ttf"
 
-    fonte_valor = None
-    fonte_extenso = None
-    fonte_obs = None
-
-    for caminho_fonte in caminhos_fontes:
-        if os.path.exists(caminho_fonte):
-            try:
-                fonte_valor = ImageFont.truetype(caminho_fonte, 110)
-                fonte_extenso = ImageFont.truetype(caminho_fonte, 36)
-                fonte_obs = ImageFont.truetype(caminho_fonte, 24)
-                break
-            except:
-                pass
-
-    if fonte_valor is None:
+    try:
+        fonte_titulo = ImageFont.truetype(fonte_bold_oblique_path, 56)
+        fonte_subtitulo = ImageFont.truetype(fonte_regular_path, 34)
+        fonte_valor = ImageFont.truetype(fonte_bold_path, 78)
+        fonte_extenso = ImageFont.truetype(fonte_bold_oblique_path, 34)
+        fonte_obs = ImageFont.truetype(fonte_regular_path, 18)
+    except:
+        fonte_titulo = ImageFont.load_default()
+        fonte_subtitulo = ImageFont.load_default()
         fonte_valor = ImageFont.load_default()
         fonte_extenso = ImageFont.load_default()
         fonte_obs = ImageFont.load_default()
+
+    azul = (7, 31, 66)
+    dourado = (184, 153, 74)
+    cinza = (80, 80, 80)
+    branco = (255, 255, 255)
 
     valor_formatado = f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
     salario_minimo = 1518.00
     qtd_salarios = round(valor / salario_minimo, 2)
-    texto_salario = f"o equivalente a {qtd_salarios} salários mínimos."
+    texto_salario = f"o equivalente à {qtd_salarios} salários mínimos."
 
     valor_extenso = "(valor por extenso a ajustar)"
 
-    # apaga a área antiga
-    draw.rounded_rectangle((430, 250, 1450, 1030), radius=40, fill=(255, 255, 255))
-
-    # título
-    draw.text((560, 320), "Honorários mensais para:", fill=(184, 153, 74), font=fonte_extenso)
-    draw.text((720, 395), "contábil, fiscal, pessoal e societário.", fill=(184, 153, 74), font=fonte_extenso)
-
-    # valor principal
-    draw.text((700, 520), valor_formatado, fill=(7, 31, 66), font=fonte_valor)
-
-    # extenso
-    draw.text((610, 680), valor_extenso, fill=(7, 31, 66), font=fonte_extenso)
-
-    # salários mínimos
-    draw.text((690, 740), texto_salario, fill=(7, 31, 66), font=fonte_extenso)
-
-    # observação
     observacao = (
         "*Além disso, será cobrado um honorário adicional em dezembro, no valor "
         "dos honorários vigentes, destinado à entrega das obrigações federais, "
@@ -68,30 +51,75 @@ def gerar_lamina_preco(valor):
         "proporcionalmente em rescisões de contrato."
     )
 
-    # quebra simples em linhas
-    largura_max = 90
-    palavras = observacao.split()
-    linhas = []
-    linha_atual = ""
+    # Caixa branca central baseada na arte
+    caixa_x1, caixa_y1, caixa_x2, caixa_y2 = 250, 180, 1650, 1060
+    draw.rounded_rectangle(
+        (caixa_x1, caixa_y1, caixa_x2, caixa_y2),
+        radius=55,
+        fill=branco
+    )
 
-    for palavra in palavras:
-        teste = f"{linha_atual} {palavra}".strip()
-        if len(teste) <= largura_max:
-            linha_atual = teste
-        else:
-            linhas.append(linha_atual)
-            linha_atual = palavra
+    caixa_centro_x = (caixa_x1 + caixa_x2) // 2
 
-    if linha_atual:
-        linhas.append(linha_atual)
+    def centralizar_texto(texto, fonte, y, cor):
+        bbox = draw.textbbox((0, 0), texto, font=fonte)
+        largura_texto = bbox[2] - bbox[0]
+        x = caixa_centro_x - (largura_texto // 2)
+        draw.text((x, y), texto, fill=cor, font=fonte)
 
-    y = 850
-    for linha in linhas:
-        draw.text((520, y), linha, fill=(70, 70, 70), font=fonte_obs)
-        y += 30
+    def quebrar_linhas_por_largura(texto, fonte, largura_max):
+        palavras = texto.split()
+        linhas = []
+        atual = ""
+
+        for palavra in palavras:
+            teste = f"{atual} {palavra}".strip()
+            bbox = draw.textbbox((0, 0), teste, font=fonte)
+            largura_teste = bbox[2] - bbox[0]
+
+            if largura_teste <= largura_max:
+                atual = teste
+            else:
+                if atual:
+                    linhas.append(atual)
+                atual = palavra
+
+        if atual:
+            linhas.append(atual)
+
+        return linhas
+
+    # Título
+    centralizar_texto("Honorários mensais para:", fonte_titulo, 255, dourado)
+    centralizar_texto("contábil, fiscal, pessoal e societário.", fonte_subtitulo, 360, dourado)
+
+    # Valor
+    centralizar_texto(valor_formatado, fonte_valor, 500, azul)
+
+    # Extenso
+    centralizar_texto(valor_extenso, fonte_extenso, 650, azul)
+
+    # Salários mínimos
+    centralizar_texto(texto_salario, fonte_extenso, 715, azul)
+
+    # Observação em múltiplas linhas centralizadas
+    linhas_obs = quebrar_linhas_por_largura(
+        observacao,
+        fonte_obs,
+        largura_max=980
+    )
+
+    y_obs = 860
+    for linha in linhas_obs:
+        bbox = draw.textbbox((0, 0), linha, font=fonte_obs)
+        largura_linha = bbox[2] - bbox[0]
+        x_obs = caixa_centro_x - (largura_linha // 2)
+        draw.text((x_obs, y_obs), linha, fill=cinza, font=fonte_obs)
+        y_obs += 28
 
     img.save(caminho_saida, quality=95)
     return caminho_saida
+    
 IMAGENS_PROPOSTA = [
     "assets_proposta/01_capa.jpg",
     "assets_proposta/02_autoridade.jpg",
