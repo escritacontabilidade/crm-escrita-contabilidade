@@ -11,29 +11,56 @@ def gerar_lamina_preco(valor):
     img = Image.open(caminho_base).convert("RGB")
     draw = ImageDraw.Draw(img)
 
-    try:
-        fonte_valor = ImageFont.truetype("arial.ttf", 88)
-        fonte_extenso = ImageFont.truetype("arial.ttf", 34)
-        fonte_obs = ImageFont.truetype("arial.ttf", 22)
-    except:
+    # tenta fontes comuns do Linux/Streamlit
+    caminhos_fontes = [
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+    ]
+
+    fonte_valor = None
+    fonte_extenso = None
+    fonte_obs = None
+
+    for caminho_fonte in caminhos_fontes:
+        if os.path.exists(caminho_fonte):
+            try:
+                fonte_valor = ImageFont.truetype(caminho_fonte, 110)
+                fonte_extenso = ImageFont.truetype(caminho_fonte, 36)
+                fonte_obs = ImageFont.truetype(caminho_fonte, 24)
+                break
+            except:
+                pass
+
+    if fonte_valor is None:
         fonte_valor = ImageFont.load_default()
         fonte_extenso = ImageFont.load_default()
         fonte_obs = ImageFont.load_default()
 
     valor_formatado = f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
-    # texto por extenso simples por enquanto
-    valor_extenso = "(valor por extenso a ajustar)"
-    
     salario_minimo = 1518.00
     qtd_salarios = round(valor / salario_minimo, 2)
     texto_salario = f"o equivalente a {qtd_salarios} salários mínimos."
 
-    # posições iniciais para teste fino
-    draw.text((760, 500), valor_formatado, fill=(7, 31, 66), font=fonte_valor)
-    draw.text((640, 650), valor_extenso, fill=(7, 31, 66), font=fonte_extenso)
-    draw.text((780, 720), texto_salario, fill=(7, 31, 66), font=fonte_extenso)
+    valor_extenso = "(valor por extenso a ajustar)"
 
+    # apaga a área antiga
+    draw.rounded_rectangle((430, 250, 1450, 1030), radius=40, fill=(255, 255, 255))
+
+    # título
+    draw.text((560, 320), "Honorários mensais para:", fill=(184, 153, 74), font=fonte_extenso)
+    draw.text((720, 395), "contábil, fiscal, pessoal e societário.", fill=(184, 153, 74), font=fonte_extenso)
+
+    # valor principal
+    draw.text((700, 520), valor_formatado, fill=(7, 31, 66), font=fonte_valor)
+
+    # extenso
+    draw.text((610, 680), valor_extenso, fill=(7, 31, 66), font=fonte_extenso)
+
+    # salários mínimos
+    draw.text((690, 740), texto_salario, fill=(7, 31, 66), font=fonte_extenso)
+
+    # observação
     observacao = (
         "*Além disso, será cobrado um honorário adicional em dezembro, no valor "
         "dos honorários vigentes, destinado à entrega das obrigações federais, "
@@ -41,11 +68,30 @@ def gerar_lamina_preco(valor):
         "proporcionalmente em rescisões de contrato."
     )
 
-    draw.text((640, 930), observacao, fill=(60, 60, 60), font=fonte_obs)
+    # quebra simples em linhas
+    largura_max = 90
+    palavras = observacao.split()
+    linhas = []
+    linha_atual = ""
+
+    for palavra in palavras:
+        teste = f"{linha_atual} {palavra}".strip()
+        if len(teste) <= largura_max:
+            linha_atual = teste
+        else:
+            linhas.append(linha_atual)
+            linha_atual = palavra
+
+    if linha_atual:
+        linhas.append(linha_atual)
+
+    y = 850
+    for linha in linhas:
+        draw.text((520, y), linha, fill=(70, 70, 70), font=fonte_obs)
+        y += 30
 
     img.save(caminho_saida, quality=95)
     return caminho_saida
-
 IMAGENS_PROPOSTA = [
     "assets_proposta/01_capa.jpg",
     "assets_proposta/02_autoridade.jpg",
