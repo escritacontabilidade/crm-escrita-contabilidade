@@ -100,7 +100,7 @@ def gerar_pdf_proposta_comercial(nome_empresa, segmento, plano, valor_mensal):
         if os.path.exists(caminho_usado):
             pdf.add_page()
             pdf.image(caminho_usado, x=0, y=0, w=297, h=210)
-    
+
     temp_dir = tempfile.gettempdir()
     nome_limpo = "".join(c for c in nome_empresa if c.isalnum() or c in (" ", "_", "-")).strip()
     if not nome_limpo:
