@@ -10,112 +10,80 @@ def gerar_lamina_preco(valor):
 
     img = Image.open(caminho_base).convert("RGB")
     draw = ImageDraw.Draw(img)
+
     largura, altura = img.size
 
-    # Fontes mais estáveis no Streamlit/Linux
-    fonte_regular_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
-    fonte_bold_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
-    fonte_oblique_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Oblique.ttf"
-    fonte_bold_oblique_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans-BoldOblique.ttf"
-
+    # fontes
     try:
-        fonte_titulo = ImageFont.truetype(fonte_bold_oblique_path, 56)
-        fonte_subtitulo = ImageFont.truetype(fonte_regular_path, 34)
-        fonte_valor = ImageFont.truetype(fonte_bold_path, 78)
-        fonte_extenso = ImageFont.truetype(fonte_bold_oblique_path, 34)
-        fonte_obs = ImageFont.truetype(fonte_regular_path, 18)
+        fonte_valor = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", int(largura * 0.08))
+        fonte_texto = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", int(largura * 0.025))
+        fonte_obs = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", int(largura * 0.018))
     except:
-        fonte_titulo = ImageFont.load_default()
-        fonte_subtitulo = ImageFont.load_default()
         fonte_valor = ImageFont.load_default()
-        fonte_extenso = ImageFont.load_default()
+        fonte_texto = ImageFont.load_default()
         fonte_obs = ImageFont.load_default()
 
     azul = (7, 31, 66)
     dourado = (184, 153, 74)
-    cinza = (80, 80, 80)
-    branco = (255, 255, 255)
+    cinza = (90, 90, 90)
 
     valor_formatado = f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
     salario_minimo = 1518.00
     qtd_salarios = round(valor / salario_minimo, 2)
-    texto_salario = f"o equivalente à {qtd_salarios} salários mínimos."
+    texto_salario = f"o equivalente a {qtd_salarios} salários mínimos."
 
     valor_extenso = "(valor por extenso a ajustar)"
 
-    observacao = (
-        "*Além disso, será cobrado um honorário adicional em dezembro, no valor "
-        "dos honorários vigentes, destinado à entrega das obrigações federais, "
-        "estaduais, municipais e trabalhistas. Esse valor será devido "
-        "proporcionalmente em rescisões de contrato."
-    )
+    # centro horizontal
+    centro_x = largura // 2
 
-    # Caixa branca central baseada na arte
-    caixa_x1, caixa_y1, caixa_x2, caixa_y2 = 250, 180, 1650, 1060
-    draw.rounded_rectangle(
-        (caixa_x1, caixa_y1, caixa_x2, caixa_y2),
-        radius=55,
-        fill=branco
-    )
-
-    caixa_centro_x = (caixa_x1 + caixa_x2) // 2
-
-    def centralizar_texto(texto, fonte, y, cor):
+    def centralizar(texto, fonte, y, cor):
         bbox = draw.textbbox((0, 0), texto, font=fonte)
-        largura_texto = bbox[2] - bbox[0]
-        x = caixa_centro_x - (largura_texto // 2)
-        draw.text((x, y), texto, fill=cor, font=fonte)
+        w = bbox[2] - bbox[0]
+        draw.text((centro_x - w // 2, y), texto, fill=cor, font=fonte)
 
-    def quebrar_linhas_por_largura(texto, fonte, largura_max):
-        palavras = texto.split()
-        linhas = []
-        atual = ""
+    # POSIÇÕES BASEADAS NA ALTURA DA IMAGEM
+    centralizar("Honorários mensais para:", fonte_texto, int(altura * 0.28), dourado)
+    centralizar("contábil, fiscal, pessoal e societário.", fonte_texto, int(altura * 0.35), dourado)
 
-        for palavra in palavras:
-            teste = f"{atual} {palavra}".strip()
-            bbox = draw.textbbox((0, 0), teste, font=fonte)
-            largura_teste = bbox[2] - bbox[0]
+    centralizar(valor_formatado, fonte_valor, int(altura * 0.48), azul)
 
-            if largura_teste <= largura_max:
-                atual = teste
-            else:
-                if atual:
-                    linhas.append(atual)
-                atual = palavra
+    centralizar(valor_extenso, fonte_texto, int(altura * 0.63), azul)
+    centralizar(texto_salario, fonte_texto, int(altura * 0.68), azul)
 
-        if atual:
-            linhas.append(atual)
-
-        return linhas
-
-    # Título
-    centralizar_texto("Honorários mensais para:", fonte_titulo, 255, dourado)
-    centralizar_texto("contábil, fiscal, pessoal e societário.", fonte_subtitulo, 360, dourado)
-
-    # Valor
-    centralizar_texto(valor_formatado, fonte_valor, 500, azul)
-
-    # Extenso
-    centralizar_texto(valor_extenso, fonte_extenso, 650, azul)
-
-    # Salários mínimos
-    centralizar_texto(texto_salario, fonte_extenso, 715, azul)
-
-    # Observação em múltiplas linhas centralizadas
-    linhas_obs = quebrar_linhas_por_largura(
-        observacao,
-        fonte_obs,
-        largura_max=980
+    observacao = (
+        "*Além disso, será cobrado um honorário adicional em dezembro, no valor dos honorários vigentes, "
+        "destinado à entrega das obrigações federais, estaduais, municipais e trabalhistas. "
+        "Esse valor será devido proporcionalmente em rescisões de contrato."
     )
 
-    y_obs = 860
-    for linha in linhas_obs:
+    # quebra por largura REAL
+    max_width = int(largura * 0.7)
+
+    palavras = observacao.split()
+    linhas = []
+    atual = ""
+
+    for palavra in palavras:
+        teste = f"{atual} {palavra}".strip()
+        bbox = draw.textbbox((0, 0), teste, font=fonte_obs)
+        if bbox[2] <= max_width:
+            atual = teste
+        else:
+            linhas.append(atual)
+            atual = palavra
+
+    if atual:
+        linhas.append(atual)
+
+    y = int(altura * 0.78)
+
+    for linha in linhas:
         bbox = draw.textbbox((0, 0), linha, font=fonte_obs)
-        largura_linha = bbox[2] - bbox[0]
-        x_obs = caixa_centro_x - (largura_linha // 2)
-        draw.text((x_obs, y_obs), linha, fill=cinza, font=fonte_obs)
-        y_obs += 28
+        w = bbox[2]
+        draw.text((centro_x - w // 2, y), linha, fill=cinza, font=fonte_obs)
+        y += int(altura * 0.035)
 
     img.save(caminho_saida, quality=95)
     return caminho_saida
