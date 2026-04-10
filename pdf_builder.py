@@ -27,10 +27,9 @@ def gerar_lamina_preco(valor):
     # 2) Centraliza o valor novo
     bbox = draw.textbbox((0, 0), valor_formatado, font=fonte_valor)
     largura_texto = bbox[2] - bbox[0]
-    altura_texto = bbox[3] - bbox[1]
 
     x_texto = (largura - largura_texto) // 2
-    y_texto = int(altura * 0.455)
+    y_texto = int(altura * 0.43)
 
     draw.text((x_texto, y_texto), valor_formatado, fill=azul, font=fonte_valor)
 
