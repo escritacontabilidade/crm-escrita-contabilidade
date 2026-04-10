@@ -286,8 +286,8 @@ else:
                 except Exception as e:
                     st.error(f"Erro ao carregar perguntas do segmento: {e}")
                         
-                        if res_perg_data:
-                            st.subheader(f"📋 Diagnóstico Específico: {seg_sel}")
+                    if res_perg_data:
+                        st.subheader(f"📋 Diagnóstico Específico: {seg_sel}")
 
                 
                 if not isinstance(respostas_lead, dict):
