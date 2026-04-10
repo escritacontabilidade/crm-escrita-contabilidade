@@ -242,11 +242,13 @@ else:
                 min_value=0.0,
                 step=1000.0,
                 format="%.2f",
+                value=float(lead_em_analise.get("faturamento_medio") or 0),
                 key="np_faturamento"
             )
             
             descricao_atividades = st.text_area(
                 "Breve descrição sobre as atividades exercidas pela empresa",
+                value=lead_em_analise.get("descricao_atividades", "") or "",
                 key="np_descricao"
             )
     
