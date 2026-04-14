@@ -406,16 +406,15 @@ else:
             )
     
             st.divider()
-            # Valores padrão enquanto os volumes passam a vir apenas das perguntas
-            qtd_func = 0
-            qtd_notas = 0
-            qtd_lanca = 0
-            possui_filial = False
-        
-            # 4. Perguntas Dinâmicas do Segmento (Complexidade)
-            total_pergunta_segmento = 0.0
+
+            # 4. Perguntas Dinâmicas do Segmento + Novo Motor de Precificação
+            respostas_lead = lead_em_analise.get("respostas_segmento", {}) or {}
+            if not isinstance(respostas_lead, dict):
+                respostas_lead = {}
+
+            respostas_formulario = {}
             res_perg_data = []
-            
+
             if seg_sel:
                 try:
                     origem_perguntas = get_origem_perguntas(seg_sel)
@@ -423,7 +422,195 @@ else:
                     st.caption(f"Origem das perguntas utilizada: {origem_perguntas}")
                 except Exception as e:
                     st.error(f"Erro ao carregar perguntas do segmento: {e}")
-                        
+                    origem_perguntas = seg_sel
+            else:
+                origem_perguntas = ""
+
+            if res_perg_data:
+                st.subheader(f"📋 Diagnóstico Específico: {seg_sel}")
+
+                for p in res_perg_data:
+                    st.markdown(f"**{p['pergunta']}**")
+
+                    pergunta_texto = str(p.get("pergunta", "")).strip()
+                    resposta_inicial = respostas_lead.get(pergunta_texto, None)
+
+                    if "Múltipla Escolha" in p["tipo_campo"]:
+                        ops = [o.strip() for o in str(p.get("opcoes", "")).split(",") if o.strip()]
+
+                        indice_padrao = 0
+                        if resposta_inicial in ops:
+                            indice_padrao = ops.index(resposta_inicial)
+
+                        resposta = st.radio(
+                            "Selecione uma opção:",
+                            ops,
+                            index=indice_padrao,
+                            key=f"p_{p['id']}"
+                        )
+
+                    elif p["tipo_campo"] == "Texto Livre":
+                        resposta = st.text_area(
+                            "Digite sua resposta:",
+                            value=str(resposta_inicial or ""),
+                            key=f"p_{p['id']}"
+                        )
+
+                    else:
+                        valor_inicial = 0
+                        try:
+                            if resposta_inicial not in [None, ""]:
+                                valor_inicial = int(float(resposta_inicial))
+                        except:
+                            valor_inicial = 0
+
+                        resposta = st.number_input(
+                            "Informe a quantidade:",
+                            min_value=0,
+                            step=1,
+                            value=valor_inicial,
+                            key=f"p_{p['id']}"
+                        )
+
+                    respostas_formulario[pergunta_texto] = resposta
+                    st.write("")
+
+            st.divider()
+
+            # 5. Validação e novo cálculo
+            erros = validar_campos_basicos_cliente(nome_cliente, regime_sel, seg_sel)
+            for erro in erros:
+                st.warning(erro)
+
+            valores = None
+            memoria = None
+
+            if not erros:
+                try:
+                    tabela_base = buscar_tabela_base(seg_sel)
+                    preco_base_inicial, faixa_encontrada = buscar_preco_base_inicial(
+                        tabela_base=tabela_base,
+                        regime=regime_sel,
+                        faturamento=faturamento_medio
+                    )
+
+                    regras_precificacao = buscar_regras_precificacao(origem_perguntas)
+                    regras_por_pergunta = {
+                        str(r["pergunta"]).strip(): r
+                        for r in regras_precificacao
+                    }
+
+                    detalhamento_acrescimos = []
+                    total_acrescimos = 0.0
+
+                    for pergunta, resposta in respostas_formulario.items():
+                        regra = regras_por_pergunta.get(str(pergunta).strip())
+
+                        if not regra:
+                            continue
+
+                        valor_item = calcular_valor_regra(regra, resposta)
+
+                        if valor_item > 0:
+                            detalhamento_acrescimos.append({
+                                "pergunta": pergunta,
+                                "resposta": resposta,
+                                "tipo_calculo": regra.get("tipo_calculo"),
+                                "valor": valor_item,
+                                "provisorio": regra.get("provisorio", False)
+                            })
+                            total_acrescimos += valor_item
+
+                    preco_base_calculado = preco_base_inicial + total_acrescimos
+
+                    v_bronze = preco_base_calculado * 1.20
+                    v_prata = preco_base_calculado * 1.35
+                    v_ouro = preco_base_calculado * 1.50
+
+                    valores = {
+                        "bronze": v_bronze,
+                        "prata": v_prata,
+                        "ouro": v_ouro
+                    }
+
+                    memoria = {
+                        "segmento_escolhido": seg_sel,
+                        "origem_perguntas": origem_perguntas,
+                        "tabela_base": tabela_base,
+                        "regime": regime_sel,
+                        "faturamento_medio": faturamento_medio,
+                        "faixa_encontrada": faixa_encontrada,
+                        "preco_base_inicial": preco_base_inicial,
+                        "total_acrescimos": total_acrescimos,
+                        "detalhamento_acrescimos": detalhamento_acrescimos,
+                        "preco_base_calculado": preco_base_calculado,
+                        "valor_bronze": v_bronze,
+                        "valor_prata": v_prata,
+                        "valor_ouro": v_ouro
+                    }
+
+                except Exception as e:
+                    st.error(f"Erro no cálculo da precificação: {e}")
+
+            # 6. Exibição dos cards
+            if valores:
+                st.subheader("💰 Opções de Investimento")
+                res1, res2, res3 = st.columns(3)
+
+                v_bronze = valores["bronze"]
+                v_prata = valores["prata"]
+                v_ouro = valores["ouro"]
+
+                res1.markdown(
+                    f"""<div class="metric-card"><p>BRONZE (20%)</p><h2>{formatar_moeda(v_bronze)}</h2></div>""",
+                    unsafe_allow_html=True
+                )
+                res2.markdown(
+                    f"""<div class="metric-card"><p>PRATA (35%)</p><h2>{formatar_moeda(v_prata)}</h2></div>""",
+                    unsafe_allow_html=True
+                )
+                res3.markdown(
+                    f"""<div class="metric-card"><p>OURO (50%)</p><h2>{formatar_moeda(v_ouro)}</h2></div>""",
+                    unsafe_allow_html=True
+                )
+
+                with st.expander("Ver memória do cálculo"):
+                    st.json(memoria)
+
+                st.session_state["proposta_atual"] = {
+                    "cliente": nome_cliente,
+                    "regime": regime_sel,
+                    "segmento": seg_sel,
+                    "origem_perguntas": origem_perguntas,
+                    "tabela_base": memoria["tabela_base"],
+                    "faturamento_medio": faturamento_medio,
+                    "descricao_atividades": descricao_atividades,
+                    "respostas_formulario": respostas_formulario,
+                    "preco_base_inicial": memoria["preco_base_inicial"],
+                    "total_acrescimos": memoria["total_acrescimos"],
+                    "preco_base_calculado": memoria["preco_base_calculado"],
+                    "valor_bronze": v_bronze,
+                    "valor_prata": v_prata,
+                    "valor_ouro": v_ouro,
+                    "valor_escolhido": v_prata
+                }
+
+                # 7. Salvamento
+                if st.button("💾 Salvar Orçamento Final"):
+                    try:
+                        dados_venda = {
+                            "cliente": nome_cliente,
+                            "regime": regime_sel,
+                            "segmento": seg_sel,
+                            "faturamento_medio": faturamento_medio,
+                            "descricao_atividades": descricao_atividades,
+                            "valor_total": v_prata,
+                            "observacoes_comerciais": str(memoria)
+                        }
+                        insert_data("historico_vendas", dados_venda)
+                        st.success("Orçamento salvo com sucesso!")
+                    except Exception as e:
+                        st.error(f"Erro ao salvar orçamento: {e}")
             if res_perg_data:
                 st.subheader(f"📋 Diagnóstico Específico: {seg_sel}")
             
