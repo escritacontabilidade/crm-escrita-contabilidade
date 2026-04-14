@@ -20,6 +20,24 @@ from validators import (
 from pdf_builder import gerar_pdf, gerar_pdf_proposta_comercial
 from utils import formatar_moeda
 
+def estilo_status_linha(row):
+    status = str(row.get("status_comercial", "")).strip()
+
+    if status == "Em aberto":
+        cor = "background-color: #fff3cd; color: #000000;"
+    elif status == "Preço apresentado":
+        cor = "background-color: #cfe2ff; color: #000000;"
+    elif status == "Contrato fechado":
+        cor = "background-color: #d1e7dd; color: #000000;"
+    elif status == "Negativa":
+        cor = "background-color: #f8d7da; color: #000000;"
+    elif status == "Sem resposta":
+        cor = "background-color: #e2e3e5; color: #000000;"
+    else:
+        cor = ""
+
+    return [cor] * len(row)
+
 def normalizar_regime_para_tabela(regime):
     if not regime:
         return ""
