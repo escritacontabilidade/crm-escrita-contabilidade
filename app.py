@@ -616,7 +616,10 @@ else:
                 # 7. Salvamento
                 if st.button("💾 Salvar Orçamento Final"):
                     try:
+                        lead_id_atual = lead_em_analise.get("id")
+
                         dados_venda = {
+                            "lead_id": lead_id_atual,
                             "cliente": nome_cliente,
                             "regime": regime_sel,
                             "segmento": seg_sel,
