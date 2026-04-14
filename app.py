@@ -20,6 +20,142 @@ from validators import (
 from pdf_builder import gerar_pdf, gerar_pdf_proposta_comercial
 from utils import formatar_moeda
 
+def normalizar_regime_para_tabela(regime):
+    if not regime:
+        return ""
+    regime = str(regime).strip()
+
+    mapa = {
+        "Simples": "Simples",
+        "Simples Nacional": "Simples",
+        "Presumido": "Lucro Presumido",
+        "Lucro Presumido": "Lucro Presumido",
+        "Real": "Lucro Real",
+        "Lucro Real": "Lucro Real",
+        "Não sei": "Simples",
+    }
+    return mapa.get(regime, regime)
+
+
+def buscar_tabela_base(segmento):
+    try:
+        res = supabase.table("mapa_segmento_precificacao") \
+            .select("tabela_base") \
+            .eq("segmento_questionario", segmento) \
+            .eq("ativo", True) \
+            .limit(1) \
+            .execute()
+
+        if res.data:
+            return res.data[0]["tabela_base"]
+    except Exception as e:
+        st.error(f"Erro ao buscar tabela base: {e}")
+
+    return None
+
+
+def buscar_preco_base_inicial(tabela_base, regime, faturamento):
+    try:
+        faturamento = float(faturamento or 0)
+        regime_tabela = normalizar_regime_para_tabela(regime)
+
+        res = supabase.table("precos_base_precificacao") \
+            .select("*") \
+            .eq("tabela_base", tabela_base) \
+            .eq("regime", regime_tabela) \
+            .eq("ativo", True) \
+            .order("faixa_inicial") \
+            .execute()
+
+        if not res.data:
+            return 0.0, None
+
+        for linha in res.data:
+            faixa_inicial = float(linha.get("faixa_inicial") or 0)
+            faixa_final = float(linha.get("faixa_final") or 0)
+            sem_limite_superior = bool(linha.get("sem_limite_superior"))
+            valor_base = float(linha.get("valor_base") or 0)
+
+            if sem_limite_superior:
+                if faturamento >= faixa_inicial:
+                    return valor_base, linha
+            else:
+                if faixa_inicial <= faturamento <= faixa_final:
+                    return valor_base, linha
+
+    except Exception as e:
+        st.error(f"Erro ao buscar preço base inicial: {e}")
+
+    return 0.0, None
+
+
+def buscar_regras_precificacao(segmento_origem):
+    try:
+        res = supabase.table("regras_perguntas_precificacao") \
+            .select("*") \
+            .eq("segmento_origem", segmento_origem) \
+            .eq("ativo", True) \
+            .execute()
+
+        return res.data if res.data else []
+    except Exception as e:
+        st.error(f"Erro ao buscar regras de precificação: {e}")
+        return []
+
+
+def calcular_valor_regra(regra, resposta):
+    tipo = regra.get("tipo_calculo")
+    modo = regra.get("modo_aplicacao")
+    resposta_gatilho = regra.get("resposta_gatilho")
+
+    if resposta is None or resposta == "":
+        return 0.0
+
+    resposta_str = str(resposta).strip()
+
+    if modo == "resposta_igual":
+        if resposta_str != str(resposta_gatilho).strip():
+            return 0.0
+
+    elif modo == "quantidade_maior_que_zero":
+        try:
+            qtd = float(resposta)
+            if qtd <= 0:
+                return 0.0
+        except:
+            return 0.0
+
+    elif modo == "resposta_preenchida":
+        if resposta_str == "":
+            return 0.0
+
+    if tipo == "fixo":
+        return float(regra.get("valor_fixo") or 0)
+
+    if tipo == "por_quantidade":
+        try:
+            qtd = float(resposta)
+        except:
+            qtd = 0
+        valor_unitario = float(regra.get("valor_unitario") or 0)
+        return qtd * valor_unitario
+
+    if tipo == "escalonado":
+        try:
+            qtd = float(resposta)
+        except:
+            qtd = 0
+
+        if qtd <= 0:
+            return 0.0
+
+        if qtd <= 29:
+            return qtd * float(regra.get("valor_ate_29") or 0)
+        else:
+            return qtd * float(regra.get("valor_a_partir_30") or 0)
+
+    return 0.0
+
 # --- 1. CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(page_title="CRM & Precificação Escrita", layout="wide", page_icon="📄")
 
