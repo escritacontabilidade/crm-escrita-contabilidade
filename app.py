@@ -885,6 +885,30 @@ else:
                                 dados_update["data_negativa"] = pd.Timestamp.today().date().isoformat()
 
                             supabase.table("historico_vendas").update(dados_update).eq("id", id_escolhido).execute()
+                            # atualiza o lead vinculado, se existir
+                            try:
+                                lead_id_vinculado = df_h[df_h["id"] == id_escolhido]["lead_id"].iloc[0] if "lead_id" in df_h.columns else None
+
+                                if pd.notnull(lead_id_vinculado):
+                                    status_lead = "Em análise"
+
+                                    if novo_status == "Preço apresentado":
+                                        status_lead = "Preço apresentado"
+                                    elif novo_status == "Contrato fechado":
+                                        status_lead = "Fechado"
+                                    elif novo_status == "Negativa":
+                                        status_lead = "Negativa"
+                                    elif novo_status == "Sem resposta":
+                                        status_lead = "Sem resposta"
+                                    elif novo_status == "Em aberto":
+                                        status_lead = "Em análise"
+
+                                    supabase.table("leads_externos").update({
+                                        "status": status_lead
+                                    }).eq("id", int(lead_id_vinculado)).execute()
+
+                            except Exception as e:
+                                st.warning(f"Status do orçamento salvo, mas não foi possível atualizar o lead: {e}")
                             st.success("Status atualizado com sucesso.")
                             st.rerun()
 
