@@ -622,20 +622,51 @@ else:
 
         nome_empresa = proposta_atual.get("cliente", "")
         segmento = proposta_atual.get("segmento", "")
+        regime = proposta_atual.get("regime", "")
+        tabela_base = proposta_atual.get("tabela_base", "")
+        faturamento_medio = proposta_atual.get("faturamento_medio", 0.0)
+        preco_base_inicial = proposta_atual.get("preco_base_inicial", 0.0)
+        total_acrescimos = proposta_atual.get("total_acrescimos", 0.0)
+        preco_base_calculado = proposta_atual.get("preco_base_calculado", 0.0)
+
         valor_bronze = proposta_atual.get("valor_bronze", 0.0)
         valor_prata = proposta_atual.get("valor_prata", 0.0)
         valor_ouro = proposta_atual.get("valor_ouro", 0.0)
 
-        st.subheader("Resumo da Proposta")
-        c1, c2 = st.columns(2)
+        if not nome_empresa:
+            st.warning("Gere uma proposta primeiro na tela 'Nova Proposta'.")
+        else:
+            st.subheader("Resumo da Proposta")
+            c1, c2 = st.columns(2)
 
-        with c1:
-            st.text_input("Empresa", value=nome_empresa, disabled=True)
-            st.text_input("Segmento", value=segmento, disabled=True)
+            with c1:
+                st.text_input("Empresa", value=nome_empresa, disabled=True)
+                st.text_input("Segmento", value=segmento, disabled=True)
+                st.text_input("Regime", value=regime, disabled=True)
 
-        with c2:
+            with c2:
+                st.text_input("Tabela Base Utilizada", value=tabela_base, disabled=True)
+                st.text_input("Faturamento Médio", value=formatar_moeda(faturamento_medio), disabled=True)
+
+            st.divider()
+
+            st.subheader("Formação do Preço")
+            c3, c4, c5 = st.columns(3)
+
+            with c3:
+                st.text_input("Preço Base Inicial", value=formatar_moeda(preco_base_inicial), disabled=True)
+
+            with c4:
+                st.text_input("Acréscimos do Questionário", value=formatar_moeda(total_acrescimos), disabled=True)
+
+            with c5:
+                st.text_input("Preço Base Calculado", value=formatar_moeda(preco_base_calculado), disabled=True)
+
+            st.divider()
+
+            st.subheader("Plano a Apresentar")
             opcao_valor = st.selectbox(
-                "Plano a apresentar",
+                "Selecione o plano comercial",
                 ["Bronze", "Prata", "Ouro"],
                 index=1
             )
@@ -647,65 +678,85 @@ else:
             else:
                 valor_apresentado = valor_prata
 
-            st.text_input(
-                "Valor mensal",
-                value=formatar_moeda(valor_apresentado),
-                disabled=True
-            )
+            proposta_atual["plano_escolhido"] = opcao_valor
+            proposta_atual["valor_escolhido"] = valor_apresentado
+            st.session_state["proposta_atual"] = proposta_atual
 
-        st.divider()
+            c6, c7, c8 = st.columns(3)
 
-        imagens_proposta = [
-            "assets_proposta/01_capa.jpg",
-            "assets_proposta/02_autoridade.jpg",
-            "assets_proposta/03_lideranca.jpg",
-            "assets_proposta/04_rodrigo.jpg",
-            "assets_proposta/05_roberta.jpg",
-            "assets_proposta/06_simone.jpg",
-            "assets_proposta/07_diferenciais.jpg",
-            "assets_proposta/08_servicos.jpg",
-            "assets_proposta/09_sistemas.jpg",
-            "assets_proposta/10_preco.jpg",
-            "assets_proposta/11_obrigacoes.jpg",
-            "assets_proposta/12_extras_1.jpg",
-            "assets_proposta/13_extras_2.jpg",
-        ]
-
-        for caminho in imagens_proposta:
-            if os.path.exists(caminho):
-                st.image(caminho, use_container_width=True)
-            else:
-                st.warning(f"Imagem não encontrada: {caminho}")
-
-        st.divider()
-
-        st.info(f"Valor mensal sugerido para apresentação: {formatar_moeda(valor_apresentado)}")
-
-        st.divider()
-
-        if st.button("📄 Preparar PDF da Proposta"):
-            if not nome_empresa:
-                st.warning("Gere uma proposta primeiro na tela 'Nova Proposta'.")
-            else:
-                caminho_pdf = gerar_pdf_proposta_comercial(
-                    nome_empresa=nome_empresa,
-                    segmento=segmento,
-                    plano=opcao_valor,
-                    valor_mensal=valor_apresentado
+            with c6:
+                st.markdown(
+                    f"""<div class="metric-card"><p>BRONZE</p><h2>{formatar_moeda(valor_bronze)}</h2></div>""",
+                    unsafe_allow_html=True
                 )
-                st.session_state["pdf_proposta_path"] = caminho_pdf
-                st.success("PDF preparado com sucesso.")
 
-        caminho_pdf = st.session_state.get("pdf_proposta_path")
-
-        if caminho_pdf and os.path.exists(caminho_pdf):
-            with open(caminho_pdf, "rb") as arquivo_pdf:
-                st.download_button(
-                    label="⬇️ Baixar PDF da Proposta",
-                    data=arquivo_pdf,
-                    file_name=f"proposta_{nome_empresa.replace(' ', '_')}.pdf",
-                    mime="application/pdf"
+            with c7:
+                st.markdown(
+                    f"""<div class="metric-card"><p>PRATA</p><h2>{formatar_moeda(valor_prata)}</h2></div>""",
+                    unsafe_allow_html=True
                 )
+
+            with c8:
+                st.markdown(
+                    f"""<div class="metric-card"><p>OURO</p><h2>{formatar_moeda(valor_ouro)}</h2></div>""",
+                    unsafe_allow_html=True
+                )
+
+            st.info(f"Plano selecionado para apresentação: {opcao_valor} — {formatar_moeda(valor_apresentado)}")
+
+            with st.expander("Ver detalhes do cálculo da proposta"):
+                st.json(proposta_atual)
+
+            st.divider()
+
+            imagens_proposta = [
+                "assets_proposta/01_capa.jpg",
+                "assets_proposta/02_autoridade.jpg",
+                "assets_proposta/03_lideranca.jpg",
+                "assets_proposta/04_rodrigo.jpg",
+                "assets_proposta/05_roberta.jpg",
+                "assets_proposta/06_simone.jpg",
+                "assets_proposta/07_diferenciais.jpg",
+                "assets_proposta/08_servicos.jpg",
+                "assets_proposta/09_sistemas.jpg",
+                "assets_proposta/10_preco_base.png",
+                "assets_proposta/11_obrigacoes.jpg",
+                "assets_proposta/12_extras_1.jpg",
+                "assets_proposta/13_extras_2.jpg",
+            ]
+
+            st.subheader("Pré-visualização da proposta")
+            for caminho in imagens_proposta:
+                if os.path.exists(caminho):
+                    st.image(caminho, use_container_width=True)
+                else:
+                    st.warning(f"Imagem não encontrada: {caminho}")
+
+            st.divider()
+
+            if st.button("📄 Preparar PDF da Proposta"):
+                try:
+                    caminho_pdf = gerar_pdf_proposta_comercial(
+                        nome_empresa=nome_empresa,
+                        segmento=segmento,
+                        plano=opcao_valor,
+                        valor_mensal=valor_apresentado
+                    )
+                    st.session_state["pdf_proposta_path"] = caminho_pdf
+                    st.success("PDF preparado com sucesso.")
+                except Exception as e:
+                    st.error(f"Erro ao preparar PDF: {e}")
+
+            caminho_pdf = st.session_state.get("pdf_proposta_path")
+
+            if caminho_pdf and os.path.exists(caminho_pdf):
+                with open(caminho_pdf, "rb") as arquivo_pdf:
+                    st.download_button(
+                        label="⬇️ Baixar PDF da Proposta",
+                        data=arquivo_pdf,
+                        file_name=f"proposta_{nome_empresa.replace(' ', '_')}.pdf",
+                        mime="application/pdf"
+                    )
     
     elif menu == "Dashboard de Custos":
         st.title("💰 Configuração de Custos Operacionais")
