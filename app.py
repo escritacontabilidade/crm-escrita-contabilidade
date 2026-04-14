@@ -826,9 +826,123 @@ else:
             
     elif menu == "Histórico de Vendas":
         st.title("📊 Histórico de Orçamentos")
-        res_h = supabase.table("historico_vendas").select("*").order("data_criacao", desc=True).execute()
-        if res_h.data:
-            st.dataframe(pd.DataFrame(res_h.data), use_container_width=True)
+
+        try:
+            res_h = supabase.table("historico_vendas").select("*").order("data_criacao", desc=True).execute()
+
+            if not res_h.data:
+                st.info("Nenhum orçamento salvo ainda.")
+            else:
+                df_h = pd.DataFrame(res_h.data)
+
+                if "status_comercial" not in df_h.columns:
+                    df_h["status_comercial"] = "Em aberto"
+
+                filtro_status = st.selectbox(
+                    "Filtrar por status",
+                    ["Todos", "Em aberto", "Preço apresentado", "Contrato fechado", "Negativa", "Sem resposta"]
+                )
+
+                if filtro_status != "Todos":
+                    df_h = df_h[df_h["status_comercial"] == filtro_status]
+
+                st.subheader("Atualizar status comercial")
+
+                opcoes_linha = [
+                    f"{row['id']} | {row.get('cliente', 'Sem nome')} | {formatar_moeda(row.get('valor_total', 0))}"
+                    for _, row in df_h.iterrows()
+                ]
+
+                if opcoes_linha:
+                    linha_escolhida = st.selectbox("Selecione um orçamento", opcoes_linha)
+
+                    novo_status = st.selectbox(
+                        "Novo status",
+                        ["Em aberto", "Preço apresentado", "Contrato fechado", "Negativa", "Sem resposta"]
+                    )
+
+                    observacao_status = st.text_input("Observação do status", value="")
+
+                    if st.button("Salvar status comercial"):
+                        try:
+                            id_escolhido = int(linha_escolhida.split("|")[0].strip())
+
+                            dados_update = {
+                                "status_comercial": novo_status,
+                                "observacao_status": observacao_status
+                            }
+
+                            if novo_status == "Preço apresentado":
+                                dados_update["data_apresentacao"] = pd.Timestamp.today().date().isoformat()
+
+                            elif novo_status == "Contrato fechado":
+                                dados_update["data_fechamento"] = pd.Timestamp.today().date().isoformat()
+
+                            elif novo_status == "Negativa":
+                                dados_update["data_negativa"] = pd.Timestamp.today().date().isoformat()
+
+                            supabase.table("historico_vendas").update(dados_update).eq("id", id_escolhido).execute()
+                            st.success("Status atualizado com sucesso.")
+                            st.rerun()
+
+                        except Exception as e:
+                            st.error(f"Erro ao atualizar status: {e}")
+
+                st.divider()
+
+                # cálculo de dias
+                hoje = pd.Timestamp.today().normalize()
+
+                if "data_apresentacao" in df_h.columns:
+                    df_h["dias_desde_apresentacao"] = df_h["data_apresentacao"].apply(
+                        lambda x: (hoje - pd.to_datetime(x)).days if pd.notnull(x) and x != "" else None
+                    )
+                else:
+                    df_h["dias_desde_apresentacao"] = None
+
+                if "data_fechamento" in df_h.columns:
+                    df_h["dias_ate_fechamento"] = df_h.apply(
+                        lambda row: (
+                            (pd.to_datetime(row["data_fechamento"]) - pd.to_datetime(row["data_apresentacao"])).days
+                            if pd.notnull(row.get("data_fechamento")) and pd.notnull(row.get("data_apresentacao"))
+                            and row.get("data_fechamento") != "" and row.get("data_apresentacao") != ""
+                            else None
+                        ),
+                        axis=1
+                    )
+                else:
+                    df_h["dias_ate_fechamento"] = None
+
+                colunas_preferidas = [
+                    "id",
+                    "cliente",
+                    "segmento",
+                    "regime",
+                    "valor_total",
+                    "status_comercial",
+                    "data_apresentacao",
+                    "data_fechamento",
+                    "data_negativa",
+                    "dias_desde_apresentacao",
+                    "dias_ate_fechamento",
+                    "observacao_status",
+                    "data_criacao",
+                ]
+
+                colunas_exibir = [c for c in colunas_preferidas if c in df_h.columns]
+
+                if "valor_total" in df_h.columns:
+                    df_h["valor_total"] = df_h["valor_total"].apply(formatar_moeda)
+
+                st.subheader("Histórico")
+
+                st.dataframe(
+                    df_h[colunas_exibir].style.apply(estilo_status_linha, axis=1),
+                    use_container_width=True
+                )
+
+        except Exception as e:
+            st.error(f"Erro ao carregar histórico de vendas: {e}")
     
     elif menu == "Configurações":
         st.title("⚙️ Painel de Controle e Cadastros")
