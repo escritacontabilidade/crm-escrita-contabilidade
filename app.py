@@ -224,6 +224,9 @@ st.markdown("""
 query_params = st.query_params
 is_cliente = query_params.get("modo") == "cliente"
 
+if "autenticado" not in st.session_state:
+    st.session_state["autenticado"] = False
+    
 if is_cliente:
     st.image("Logo Escrita.png", width=200)
     st.title("📝 Solicitação de Orçamento")
