@@ -20,6 +20,30 @@ from validators import (
 from pdf_builder import gerar_pdf, gerar_pdf_proposta_comercial
 from utils import formatar_moeda
 
+def autenticar_usuario(usuario, senha):
+    try:
+        usuario_correto = st.secrets["auth"]["username"]
+        senha_correta = st.secrets["auth"]["password"]
+        return usuario == usuario_correto and senha == senha_correta
+    except Exception:
+        return False
+
+
+def tela_login():
+    st.title("🔐 Acesso Interno")
+    st.write("Informe usuário e senha para acessar a área interna do CRM.")
+
+    usuario = st.text_input("Usuário")
+    senha = st.text_input("Senha", type="password")
+
+    if st.button("Entrar"):
+        if autenticar_usuario(usuario, senha):
+            st.session_state["autenticado"] = True
+            st.success("Login realizado com sucesso.")
+            st.rerun()
+        else:
+            st.error("Usuário ou senha inválidos.")
+
 def estilo_status_linha(row):
     status = str(row.get("status_comercial", "")).strip()
 
