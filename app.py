@@ -333,6 +333,10 @@ if is_cliente:
                 except Exception as e:
                     st.error(f"Erro ao salvar lead: {e}")
 else:
+    if not st.session_state["autenticado"]:
+        tela_login()
+        st.stop()
+        
     if os.path.exists("Logo Escrita.png"):
         st.sidebar.image("Logo Escrita.png", width=200)
     menu = st.sidebar.selectbox(
