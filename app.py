@@ -339,6 +339,11 @@ else:
         
     if os.path.exists("Logo Escrita.png"):
         st.sidebar.image("Logo Escrita.png", width=200)
+
+    if st.sidebar.button("Sair"):
+        st.session_state["autenticado"] = False
+        st.rerun()
+        
     menu = st.sidebar.selectbox(
         "Navegação",
         ["Leads Recebidos", "Nova Proposta", "Proposta Comercial", "Dashboard de Custos", "Histórico de Vendas", "Configurações", "Link para Cliente"]
