@@ -47,7 +47,9 @@ def calcular_adicionais(respostas, regras, valor_base):
     total = 0
 
     for r in regras:
-        pergunta = r["pergunta"]
+        pergunta = r.get("pergunta")
+        if not pergunta:
+            continue
         resposta = respostas.get(pergunta)
 
         if resposta is None:
