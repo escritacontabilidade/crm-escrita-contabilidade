@@ -149,6 +149,59 @@ def buscar_regras_precificacao(segmento_origem):
         st.error(f"Erro ao buscar regras de precificação: {e}")
         return []
 
+def limpar_nome_arquivo(texto):
+    texto = str(texto or "").strip()
+    texto = re.sub(r'[^A-Za-z0-9._ -]+', '', texto)
+    texto = texto.replace(" ", "_")
+    return texto or "sem_nome"
+
+
+def get_drive_service():
+    creds_info = dict(st.secrets["gcp_service_account"])
+    scopes = ["https://www.googleapis.com/auth/drive.file"]
+
+    credentials = Credentials.from_service_account_info(
+        creds_info,
+        scopes=scopes
+    )
+
+    return build("drive", "v3", credentials=credentials)
+
+
+def upload_arquivo_para_drive(uploaded_file, nome_empresa, lead_id, pasta_drive_id):
+    service = get_drive_service()
+
+    nome_empresa_limpo = limpar_nome_arquivo(nome_empresa)
+    nome_original = limpar_nome_arquivo(uploaded_file.name)
+
+    nome_salvo = f"{pd.Timestamp.today().date()}__lead_{lead_id}__{nome_empresa_limpo}__balancete__{nome_original}"
+
+    file_metadata = {
+        "name": nome_salvo,
+        "parents": [pasta_drive_id]
+    }
+
+    file_bytes = io.BytesIO(uploaded_file.getvalue())
+
+    media = MediaIoBaseUpload(
+        file_bytes,
+        mimetype=uploaded_file.type or "application/octet-stream",
+        resumable=True
+    )
+
+    arquivo = service.files().create(
+        body=file_metadata,
+        media_body=media,
+        fields="id, webViewLink"
+    ).execute()
+
+    return {
+        "nome_original": uploaded_file.name,
+        "nome_salvo": nome_salvo,
+        "drive_file_id": arquivo.get("id"),
+        "drive_link": arquivo.get("webViewLink"),
+        "mime_type": uploaded_file.type
+    }
 
 # --- 1. CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(page_title="CRM & Precificação Escrita", layout="wide", page_icon="📄")
