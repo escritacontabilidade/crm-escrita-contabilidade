@@ -144,33 +144,6 @@ def buscar_regras_precificacao(segmento_origem):
         st.error(f"Erro ao buscar regras de precificação: {e}")
         return []
 
- 
-    if tipo == "fixo":
-        return float(regra.get("valor_fixo") or 0)
-
-    if tipo == "por_quantidade":
-        try:
-            qtd = float(resposta)
-        except:
-            qtd = 0
-        valor_unitario = float(regra.get("valor_unitario") or 0)
-        return qtd * valor_unitario
-
-    if tipo == "escalonado":
-        try:
-            qtd = float(resposta)
-        except:
-            qtd = 0
-
-        if qtd <= 0:
-            return 0.0
-
-        if qtd <= 29:
-            return qtd * float(regra.get("valor_ate_29") or 0)
-        else:
-            return qtd * float(regra.get("valor_a_partir_30") or 0)
-
-    return 0.0
 
 # --- 1. CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(page_title="CRM & Precificação Escrita", layout="wide", page_icon="📄")
