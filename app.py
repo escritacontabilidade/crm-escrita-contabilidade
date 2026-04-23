@@ -144,13 +144,7 @@ def buscar_regras_precificacao(segmento_origem):
         st.error(f"Erro ao buscar regras de precificação: {e}")
         return []
 
-    
-   
-
-    elif modo == "resposta_preenchida":
-        if resposta_str == "":
-            return 0.0
-
+ 
     if tipo == "fixo":
         return float(regra.get("valor_fixo") or 0)
 
