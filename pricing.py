@@ -106,8 +106,15 @@ def calcular_preco_final(valor_base, respostas, regras):
 
 print(calcular_preco_final(
     2000,
-    {1: "sim"},
+    {
+        "Tem folha de pagamento?": "Sim"
+    },
     [
-        {"pergunta_id": 1, "tipo_regra": "fixo", "valor": 100}
+        {
+            "pergunta": "Tem folha de pagamento?",
+            "tipo_calculo": "fixo",
+            "valor_fixo": 200,
+            "resposta_gatilho": "Sim"
+        }
     ]
 ))
