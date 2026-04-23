@@ -300,10 +300,19 @@ if is_cliente:
                         key=f"ext_{p['id']}"
                     )
                 elif p["tipo_campo"] == "Texto Livre":
-                    respostas_extras[p["pergunta"]] = st.text_area(
-                        "Digite sua resposta:",
-                        key=f"ext_{p['id']}"
-                    )
+                    pergunta_texto = str(p["pergunta"]).strip().lower()
+                
+                    if "balancete" in pergunta_texto:
+                        respostas_extras[p["pergunta"]] = st.file_uploader(
+                            "Anexe o balancete",
+                            type=["pdf", "xlsx", "xls", "csv"],
+                            key=f"ext_balancete_{p['id']}"
+                        )
+                    else:
+                        respostas_extras[p["pergunta"]] = st.text_area(
+                            "Digite sua resposta:",
+                            key=f"ext_{p['id']}"
+                        )
                 else:
                     respostas_extras[p["pergunta"]] = st.number_input(
                         "Informe a quantidade:",
