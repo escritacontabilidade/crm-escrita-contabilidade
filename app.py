@@ -325,7 +325,7 @@ if is_cliente:
 
         if st.form_submit_button("Enviar Solicitação"):
             erros = validar_formulario_lead(f_empresa, f_resp, f_whatsapp, f_segmento)
-
+        
             if erros:
                 for erro in erros:
                     st.warning(erro)
@@ -339,13 +339,49 @@ if is_cliente:
                         "segmento": f_segmento,
                         "faturamento_medio": faturamento_medio,
                         "descricao_atividades": descricao_atividades,
-                        "respostas_segmento": respostas_extras
+                        "respostas_segmento": {
+                            k: (v.name if hasattr(v, "name") else v)
+                            for k, v in respostas_extras.items()
+                        }
                     }
-                    insert_data("leads_externos", obj)
-                    st.success("✅ Recebemos seus dados! Entraremos em contato em breve.")
+        
+                    res_insert = supabase.table("leads_externos").insert(obj).execute()
+        
+                    if not res_insert.data:
+                        st.error("Não foi possível salvar o lead.")
+                        st.stop()
+        
+                    lead_salvo = res_insert.data[0]
+                    lead_id = lead_salvo["id"]
+        
+                    for pergunta, valor in respostas_extras.items():
+                        pergunta_texto = str(pergunta).strip().lower()
+        
+                        if "balancete" in pergunta_texto and valor is not None:
+                            pasta_drive_id = st.secrets["drive_balancetes_folder_id"]
+        
+                            arquivo_info = upload_arquivo_para_drive(
+                                uploaded_file=valor,
+                                nome_empresa=f_empresa,
+                                lead_id=lead_id,
+                                pasta_drive_id=pasta_drive_id
+                            )
+        
+                            supabase.table("lead_arquivos").insert({
+                                "lead_id": lead_id,
+                                "tipo_arquivo": "balancete",
+                                "nome_original": arquivo_info["nome_original"],
+                                "nome_salvo": arquivo_info["nome_salvo"],
+                                "drive_file_id": arquivo_info["drive_file_id"],
+                                "drive_link": arquivo_info["drive_link"],
+                                "mime_type": arquivo_info["mime_type"]
+                            }).execute()
+        
+                    st.success("✅ Recebemos seus dados e o balancete foi anexado com sucesso.")
                     st.stop()
+        
                 except Exception as e:
-                    st.error(f"Erro ao salvar lead: {e}")
+                    st.error(f"Erro ao salvar lead/anexar balancete: {e}")
 else:
     if not st.session_state["autenticado"]:
         tela_login()
