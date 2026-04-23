@@ -5,3 +5,5 @@ st-gsheets-connection
 pandas
 numpy
 Pillow
+google-api-python-client
+google-auth
