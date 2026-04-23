@@ -504,9 +504,9 @@ else:
                         regras=regras_precificacao
                     )
                     
-                    v_bronze = preco_base_calculado * 1.20
-                    v_prata = preco_base_calculado * 1.35
-                    v_ouro = preco_base_calculado * 1.50
+                    v_bronze = preco_base_calculado 
+                    v_prata = preco_base_calculado * 1.15
+                    v_ouro = preco_base_calculado * 1.35
 
                     valores = {
                         "bronze": v_bronze,
