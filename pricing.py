@@ -58,7 +58,7 @@ def calcular_adicionais(respostas, regras, valor_base):
 
         # REGRA FIXA
         if tipo == "fixo":
-            if str(resposta).lower() == "sim":
+            if str(resposta).strip().lower() in ["sim", "true", "1"]:
                 total += float(valor)
 
         # REGRA POR FAIXA
@@ -73,7 +73,7 @@ def calcular_adicionais(respostas, regras, valor_base):
 
         # REGRA PERCENTUAL
         elif tipo == "percentual":
-            if str(resposta).lower() == "sim":
+            if str(resposta).strip().lower() in ["sim", "true", "1"]:
                 total += valor_base * float(valor)
 
     return total
