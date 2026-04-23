@@ -530,8 +530,7 @@ else:
                         respostas_formulario=respostas_formulario,
                         regras=regras_precificacao
                     )
-                    preco_base_calculado = preco_base_inicial + total_acrescimos
-
+                    
                     v_bronze = preco_base_calculado * 1.20
                     v_prata = preco_base_calculado * 1.35
                     v_ouro = preco_base_calculado * 1.50
