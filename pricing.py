@@ -47,38 +47,49 @@ def calcular_adicionais(respostas, regras, valor_base):
     total = 0
 
     for r in regras:
-        pergunta_id = r.get("pergunta_id") or r.get("id_pergunta")
-        tipo = r.get("tipo_regra") or r.get("tipo")
+        pergunta = r["pergunta"]
+        resposta = respostas.get(pergunta)
 
         if resposta is None:
             continue
 
-        tipo = r["tipo_regra"]  # fixo, faixa, percentual
-        valor = r["valor"]
+        tipo = r["tipo_calculo"]
 
-        # REGRA FIXA
+        # -------------------------
+        # FIXO
+        # -------------------------
         if tipo == "fixo":
-            if str(resposta).strip().lower() in ["sim", "true", "1"]:
-                total += float(valor)
+            gatilho = str(r.get("resposta_gatilho", "")).strip().lower()
+            resp = str(resposta).strip().lower()
 
-        # REGRA POR FAIXA
-        elif tipo == "faixa":
+            if resp == gatilho:
+                total += float(r.get("valor_fixo") or 0)
+
+        # -------------------------
+        # POR QUANTIDADE
+        # -------------------------
+        elif tipo == "por_quantidade":
             try:
-                resposta_int = int(resposta)
+                qtd = int(resposta)
             except:
                 continue
 
-            inicio = r.get("faixa_inicio")
-            fim = r.get("faixa_fim")
-            
-            if inicio is not None and fim is not None:
-                if inicio <= resposta_int <= fim:
-                    total += float(valor)
+            if qtd > 0:
+                total += qtd * float(r.get("valor_unitario") or 0)
 
-        # REGRA PERCENTUAL
-        elif tipo == "percentual":
-            if str(resposta).strip().lower() in ["sim", "true", "1"]:
-                total += valor_base * float(valor)
+        # -------------------------
+        # ESCALONADO
+        # -------------------------
+        elif tipo == "escalonado":
+            try:
+                qtd = int(resposta)
+            except:
+                continue
+
+            if qtd <= 29:
+                total += qtd * float(r.get("valor_ate_29") or 0)
+            else:
+                total += qtd * float(r.get("valor_a_partir_30") or 0)
 
     return total
 
