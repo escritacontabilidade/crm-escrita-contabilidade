@@ -12,6 +12,7 @@ from database import (
     get_perguntas_por_origem,
 )
 from pricing import calcular_preco_final
+from pricing import calcular_preco_completo
 from validators import (
     validar_campos_basicos_cliente,
     validar_formulario_lead,
