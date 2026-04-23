@@ -108,3 +108,11 @@ def calcular_preco_final(valor_base, respostas, regras):
         "preco_final": preco_final
     }
 
+def calcular_valor_regra(regra, resposta):
+    tipo = regra.get("tipo_calculo")
+    modo = regra.get("modo_aplicacao")
+    resposta_gatilho = regra.get("resposta_gatilho")
+
+    if resposta is None or resposta == "":
+        return 0.0
+
