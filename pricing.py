@@ -68,8 +68,12 @@ def calcular_adicionais(respostas, regras, valor_base):
             except:
                 continue
 
-            if r["faixa_inicio"] <= resposta_int <= r["faixa_fim"]:
-                total += float(valor)
+            inicio = r.get("faixa_inicio")
+            fim = r.get("faixa_fim")
+            
+            if inicio is not None and fim is not None:
+                if inicio <= resposta_int <= fim:
+                    total += float(valor)
 
         # REGRA PERCENTUAL
         elif tipo == "percentual":
