@@ -43,34 +43,6 @@ def calcular_venda(custo_operacional, perc_imposto, margem):
     return custo_operacional / divisor
 
 
-def calcular_precificacao_completa(regime_sel, qtd_func, qtd_notas, qtd_lanca, possui_filial, total_pergunta_segmento):
-    custo_hora = calcular_custo_hora_real()
-    total_horas_est = calcular_horas_estimadas(regime_sel, qtd_func, qtd_notas, qtd_lanca, possui_filial)
-
-    perc_imposto = get_config_val("impostos_faturamento") / 100
-    custo_operacional = calcular_custo_operacional(total_horas_est, custo_hora, total_pergunta_segmento)
-
-    valores = {
-        "bronze": calcular_venda(custo_operacional, perc_imposto, 20),
-        "prata": calcular_venda(custo_operacional, perc_imposto, 35),
-        "ouro": calcular_venda(custo_operacional, perc_imposto, 50),
-    }
-
-    memoria = {
-        "custo_hora": custo_hora,
-        "horas_estimadas": total_horas_est,
-        "perc_imposto": perc_imposto,
-        "custo_operacional": custo_operacional,
-        "adicional_segmento": total_pergunta_segmento,
-        "possui_filial": possui_filial,
-        "qtd_func": qtd_func,
-        "qtd_notas": qtd_notas,
-        "qtd_lanca": qtd_lanca,
-        "regime": regime_sel,
-    }
-
-    return valores, memoria
-
 def calcular_adicionais(respostas, regras, valor_base):
     total = 0
 
