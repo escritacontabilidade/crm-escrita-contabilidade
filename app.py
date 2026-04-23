@@ -543,15 +543,15 @@ else:
                 v_ouro = valores["ouro"]
 
                 res1.markdown(
-                    f"""<div class="metric-card"><p>BRONZE (20%)</p><h2>{formatar_moeda(v_bronze)}</h2></div>""",
+                    f"""<div class="metric-card"><p>BRONZE </p><h2>{formatar_moeda(v_bronze)}</h2></div>""",
                     unsafe_allow_html=True
                 )
                 res2.markdown(
-                    f"""<div class="metric-card"><p>PRATA (35%)</p><h2>{formatar_moeda(v_prata)}</h2></div>""",
+                    f"""<div class="metric-card"><p>PRATA </p><h2>{formatar_moeda(v_prata)}</h2></div>""",
                     unsafe_allow_html=True
                 )
                 res3.markdown(
-                    f"""<div class="metric-card"><p>OURO (50%)</p><h2>{formatar_moeda(v_ouro)}</h2></div>""",
+                    f"""<div class="metric-card"><p>OURO </p><h2>{formatar_moeda(v_ouro)}</h2></div>""",
                     unsafe_allow_html=True
                 )
 
