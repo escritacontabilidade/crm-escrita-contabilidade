@@ -145,13 +145,7 @@ def buscar_regras_precificacao(segmento_origem):
         return []
 
     
-    elif modo == "quantidade_maior_que_zero":
-        try:
-            qtd = float(resposta)
-            if qtd <= 0:
-                return 0.0
-        except:
-            return 0.0
+   
 
     elif modo == "resposta_preenchida":
         if resposta_str == "":
