@@ -109,12 +109,63 @@ def calcular_preco_final(valor_base, respostas, regras):
     }
 
 def calcular_valor_regra(regra, resposta):
-    tipo = regra.get("tipo_calculo")
-    modo = regra.get("modo_aplicacao")
-    resposta_gatilho = regra.get("resposta_gatilho")
+    tipo = str(regra.get("tipo_calculo") or "").strip()
+    modo = str(regra.get("modo_aplicacao") or "").strip()
+    resposta_gatilho = str(regra.get("resposta_gatilho") or "").strip()
 
-    if resposta is None or resposta == "":
+    if resposta is None:
         return 0.0
+
+    resposta_str = str(resposta).strip()
+
+    # 1. valida se a regra deve aplicar
+    if modo == "resposta_igual":
+        if resposta_str.lower() != resposta_gatilho.lower():
+            return 0.0
+
+    elif modo == "quantidade_maior_que_zero":
+        try:
+            qtd = float(resposta)
+            if qtd <= 0:
+                return 0.0
+        except:
+            return 0.0
+
+    elif modo == "resposta_preenchida":
+        if resposta_str == "":
+            return 0.0
+
+    # 2. calcula o valor conforme o tipo
+    if tipo == "fixo":
+        return float(regra.get("valor_fixo") or 0)
+
+    elif tipo == "por_quantidade":
+        try:
+            qtd = float(resposta)
+        except:
+            return 0.0
+
+        valor_unitario = float(regra.get("valor_unitario") or 0)
+        return qtd * valor_unitario
+
+    elif tipo == "escalonado":
+        try:
+            qtd = float(resposta)
+        except:
+            return 0.0
+
+        if qtd <= 0:
+            return 0.0
+
+        valor_ate_29 = float(regra.get("valor_ate_29") or 0)
+        valor_a_partir_30 = float(regra.get("valor_a_partir_30") or 0)
+
+        if qtd <= 29:
+            return qtd * valor_ate_29
+        else:
+            return qtd * valor_a_partir_30
+
+    return 0.0
         
 def calcular_preco_completo(valor_base, respostas_formulario, regras):
     total_acrescimos = 0
