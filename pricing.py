@@ -105,3 +105,14 @@ def calcular_adicionais(respostas, regras, valor_base):
                 total += valor_base * float(valor)
 
     return total
+
+def calcular_preco_final(valor_base, respostas, regras):
+    adicionais = calcular_adicionais(respostas, regras, valor_base)
+
+    preco_final = valor_base + adicionais
+
+    return preco_final, {
+        "valor_base": valor_base,
+        "adicionais": adicionais,
+        "preco_final": preco_final
+    }
