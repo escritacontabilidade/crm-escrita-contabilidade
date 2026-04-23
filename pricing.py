@@ -115,4 +115,30 @@ def calcular_valor_regra(regra, resposta):
 
     if resposta is None or resposta == "":
         return 0.0
+        
+def calcular_preco_completo(valor_base, respostas_formulario, regras):
+    total_acrescimos = 0
+    detalhamento = []
 
+    for r in regras:
+        pergunta = str(r.get("pergunta")).strip()
+        resposta = respostas_formulario.get(pergunta)
+
+        if resposta is None:
+            continue
+
+        valor = calcular_valor_regra(r, resposta)
+
+        if valor > 0:
+            detalhamento.append({
+                "pergunta": pergunta,
+                "resposta": resposta,
+                "valor": valor,
+                "tipo": r.get("tipo_calculo")
+            })
+
+            total_acrescimos += valor
+
+    preco_base_calculado = valor_base + total_acrescimos
+
+    return preco_base_calculado, total_acrescimos, detalhamento
