@@ -70,3 +70,38 @@ def calcular_precificacao_completa(regime_sel, qtd_func, qtd_notas, qtd_lanca, p
     }
 
     return valores, memoria
+
+def calcular_adicionais(respostas, regras, valor_base):
+    total = 0
+
+    for r in regras:
+        pergunta_id = r["pergunta_id"]
+        resposta = respostas.get(pergunta_id)
+
+        if resposta is None:
+            continue
+
+        tipo = r["tipo_regra"]  # fixo, faixa, percentual
+        valor = r["valor"]
+
+        # REGRA FIXA
+        if tipo == "fixo":
+            if str(resposta).lower() == "sim":
+                total += float(valor)
+
+        # REGRA POR FAIXA
+        elif tipo == "faixa":
+            try:
+                resposta_int = int(resposta)
+            except:
+                continue
+
+            if r["faixa_inicio"] <= resposta_int <= r["faixa_fim"]:
+                total += float(valor)
+
+        # REGRA PERCENTUAL
+        elif tipo == "percentual":
+            if str(resposta).lower() == "sim":
+                total += valor_base * float(valor)
+
+    return total
