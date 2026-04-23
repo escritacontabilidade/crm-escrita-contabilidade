@@ -144,14 +144,7 @@ def buscar_regras_precificacao(segmento_origem):
         st.error(f"Erro ao buscar regras de precificação: {e}")
         return []
 
-
-
-    resposta_str = str(resposta).strip()
-
-    if modo == "resposta_igual":
-        if resposta_str != str(resposta_gatilho).strip():
-            return 0.0
-
+    
     elif modo == "quantidade_maior_que_zero":
         try:
             qtd = float(resposta)
