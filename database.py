@@ -96,3 +96,7 @@ def get_perguntas_por_origem(origem):
     return res.data if res.data else []
 
     return float(res.data[0]["horas_esforco"])
+
+def get_regras_precificacao():
+    res = supabase.table("regras_perguntas").select("*").eq("ativo", True).execute()
+    return res.data if res.data else []
