@@ -104,17 +104,3 @@ def calcular_preco_final(valor_base, respostas, regras):
         "preco_final": preco_final
     }
 
-print(calcular_preco_final(
-    2000,
-    {
-        "Tem folha de pagamento?": "Sim"
-    },
-    [
-        {
-            "pergunta": "Tem folha de pagamento?",
-            "tipo_calculo": "fixo",
-            "valor_fixo": 200,
-            "resposta_gatilho": "Sim"
-        }
-    ]
-))
