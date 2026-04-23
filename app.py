@@ -145,13 +145,6 @@ def buscar_regras_precificacao(segmento_origem):
         return []
 
 
-def calcular_valor_regra(regra, resposta):
-    tipo = regra.get("tipo_calculo")
-    modo = regra.get("modo_aplicacao")
-    resposta_gatilho = regra.get("resposta_gatilho")
-
-    if resposta is None or resposta == "":
-        return 0.0
 
     resposta_str = str(resposta).strip()
 
