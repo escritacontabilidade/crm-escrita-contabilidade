@@ -548,27 +548,7 @@ else:
                         for r in regras_precificacao
                     }
 
-                    detalhamento_acrescimos = []
-                    total_acrescimos = 0.0
-
-                    for pergunta, resposta in respostas_formulario.items():
-                        regra = regras_por_pergunta.get(str(pergunta).strip())
-
-                        if not regra:
-                            continue
-
-                        valor_item = calcular_valor_regra(regra, resposta)
-
-                        if valor_item > 0:
-                            detalhamento_acrescimos.append({
-                                "pergunta": pergunta,
-                                "resposta": resposta,
-                                "tipo_calculo": regra.get("tipo_calculo"),
-                                "valor": valor_item,
-                                "provisorio": regra.get("provisorio", False)
-                            })
-                            total_acrescimos += valor_item
-
+                    
                     preco_base_calculado = preco_base_inicial + total_acrescimos
 
                     v_bronze = preco_base_calculado * 1.20
