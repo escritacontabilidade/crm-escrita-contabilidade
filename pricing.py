@@ -55,7 +55,9 @@ def calcular_adicionais(respostas, regras, valor_base):
         if resposta is None:
             continue
 
-        tipo = r["tipo_calculo"]
+        tipo = r.get("tipo_calculo")
+        if not tipo:
+            continue
 
         # -------------------------
         # FIXO
