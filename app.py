@@ -19,6 +19,11 @@ from validators import (
 )
 from pdf_builder import gerar_pdf, gerar_pdf_proposta_comercial
 from utils import formatar_moeda
+import io
+import re
+from google.oauth2.service_account import Credentials
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaIoBaseUpload
 
 def autenticar_usuario(usuario, senha):
     try:
