@@ -92,3 +92,11 @@ def calcular_preco_final(valor_base, respostas, regras):
         "adicionais": adicionais,
         "preco_final": preco_final
     }
+
+print(calcular_preco_final(
+    2000,
+    {1: "sim"},
+    [
+        {"pergunta_id": 1, "tipo_regra": "fixo", "valor": 100}
+    ]
+))
