@@ -542,10 +542,7 @@ else:
                     )
 
                     regras_precificacao = buscar_regras_precificacao(origem_perguntas)
-                    regras_por_pergunta = {
-                        str(r["pergunta"]).strip(): r
-                        for r in regras_precificacao
-                    }
+                    
 
                     preco_base_calculado, total_acrescimos, detalhamento_acrescimos = calcular_preco_completo(
                         valor_base=preco_base_inicial,
