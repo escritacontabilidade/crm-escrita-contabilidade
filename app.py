@@ -170,6 +170,9 @@ def get_drive_service():
     return build("drive", "v3", credentials=credentials)
 
 def arquivo_parece_balancete(uploaded_file):
+    if not hasattr(uploaded_file, "name"):
+        return False, "Nenhum arquivo válido foi enviado."
+
     nome = str(uploaded_file.name or "").lower()
     tipo = str(uploaded_file.type or "").lower()
 
