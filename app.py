@@ -169,6 +169,58 @@ def get_drive_service():
 
     return build("drive", "v3", credentials=credentials)
 
+def arquivo_parece_balancete(uploaded_file):
+    nome = str(uploaded_file.name or "").lower()
+    tipo = str(uploaded_file.type or "").lower()
+
+    palavras_chave = [
+        "balancete",
+        "conta",
+        "saldo",
+        "saldo anterior",
+        "saldo atual",
+        "débito",
+        "debito",
+        "crédito",
+        "credito",
+        "ativo",
+        "passivo",
+        "receita",
+        "despesa",
+        "resultado",
+    ]
+
+    texto = ""
+
+    try:
+        if nome.endswith(".pdf") or "pdf" in tipo:
+            pdf_bytes = uploaded_file.getvalue()
+            doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+
+            for page in doc:
+                texto += page.get_text("text") + "\n"
+
+        elif nome.endswith(".xlsx") or nome.endswith(".xlsm"):
+            arquivo = io.BytesIO(uploaded_file.getvalue())
+            wb = load_workbook(arquivo, data_only=True, read_only=True)
+
+            for ws in wb.worksheets:
+                for row in ws.iter_rows(values_only=True):
+                    texto += " ".join([str(c) for c in row if c is not None]) + "\n"
+
+        else:
+            return False, "Formato não aceito. Envie PDF ou Excel."
+
+        texto_lower = texto.lower()
+        encontrados = [p for p in palavras_chave if p in texto_lower]
+
+        if len(encontrados) >= 3:
+            return True, f"Arquivo validado como possível balancete. Termos encontrados: {', '.join(encontrados[:5])}"
+
+        return False, "O arquivo não parece ser um balancete contábil. Verifique se enviou o documento correto."
+
+    except Exception as e:
+        return False, f"Não foi possível validar o arquivo: {e}"
 
 def upload_arquivo_para_drive(uploaded_file, nome_empresa, lead_id, pasta_drive_id):
     service = get_drive_service()
