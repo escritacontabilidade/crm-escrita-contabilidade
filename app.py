@@ -360,7 +360,7 @@ if is_cliente:
                     if "enviar o último balancete" in pergunta_texto or "enviar o ultimo balancete" in pergunta_texto:
                         respostas_extras[p["pergunta"]] = st.file_uploader(
                             "Anexe o balancete",
-                            type=["pdf", "xlsx", "xls", "csv"],
+                            type=["pdf", "xlsx", "xlsm"],
                             key=f"ext_balancete_{p['id']}"
                         )
                     else:
