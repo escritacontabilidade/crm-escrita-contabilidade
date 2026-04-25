@@ -359,7 +359,7 @@ if is_cliente:
                         pergunta_texto = str(pergunta).strip().lower()
         
                         if "balancete" in pergunta_texto and valor is not None:
-                            
+                            st.write("TESTE SECRET DRIVE:", st.secrets.get("drive_balancetes_folder_id", "NAO_ENCONTRADO"))
                             pasta_drive_id = st.secrets["drive_balancetes_folder_id"]
         
                             arquivo_info = upload_arquivo_para_drive(
