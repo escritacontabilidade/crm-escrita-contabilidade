@@ -192,7 +192,8 @@ def upload_arquivo_para_drive(uploaded_file, nome_empresa, lead_id, pasta_drive_
     arquivo = service.files().create(
         body=file_metadata,
         media_body=media,
-        fields="id, webViewLink"
+        fields="id, webViewLink",
+        supportsAllDrives=True
     ).execute()
 
     return {
