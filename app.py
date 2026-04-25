@@ -413,7 +413,12 @@ if is_cliente:
                         pergunta_texto = str(pergunta).strip().lower()
         
                         if "balancete" in pergunta_texto and valor is not None:
-                            
+                            arquivo_ok, mensagem_validacao = arquivo_parece_balancete(valor)
+
+                            if not arquivo_ok:
+                                st.error(mensagem_validacao)
+                                st.stop()
+                                
                             pasta_drive_id = st.secrets["drive_balancetes_folder_id"]
         
                             arquivo_info = upload_arquivo_para_drive(
