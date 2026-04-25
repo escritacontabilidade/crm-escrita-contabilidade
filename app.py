@@ -24,6 +24,8 @@ import re
 from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
+import fitz
+from openpyxl import load_workbook
 
 def autenticar_usuario(usuario, senha):
     try:
