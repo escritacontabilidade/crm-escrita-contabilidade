@@ -303,7 +303,7 @@ if is_cliente:
                 elif p["tipo_campo"] == "Texto Livre":
                     pergunta_texto = str(p["pergunta"]).strip().lower()
                 
-                    if "balancete" in pergunta_texto:
+                   if "enviar o último balancete" in pergunta_texto or "enviar o ultimo balancete" in pergunta_texto:
                         respostas_extras[p["pergunta"]] = st.file_uploader(
                             "Anexe o balancete",
                             type=["pdf", "xlsx", "xls", "csv"],
