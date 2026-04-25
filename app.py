@@ -216,10 +216,15 @@ def arquivo_parece_balancete(uploaded_file):
 
         texto_lower = texto.lower()
         encontrados = [p for p in palavras_chave if p in texto_lower]
-
+        
+        obrigatorias = ["saldo", "conta"]
+        
+        if not all(p in texto_lower for p in obrigatorias):
+            return False, "Arquivo não possui estrutura mínima de balancete. Precisa conter termos como saldo e conta."
+        
         if len(encontrados) >= 5:
             return True, f"Arquivo validado como possível balancete. Termos encontrados: {', '.join(encontrados[:5])}"
-
+        
         return False, "O arquivo não parece ser um balancete contábil. Verifique se enviou o documento correto."
 
     except Exception as e:
