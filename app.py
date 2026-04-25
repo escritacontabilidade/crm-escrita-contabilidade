@@ -415,7 +415,7 @@ if is_cliente:
                     for pergunta, valor in respostas_extras.items():
                         pergunta_texto = str(pergunta).strip().lower()
         
-                        if "balancete" in pergunta_texto and valor is not None:
+                        if "balancete" in pergunta_texto and hasattr(valor, "name"):
                             arquivo_ok, mensagem_validacao = arquivo_parece_balancete(valor)
 
                             if not arquivo_ok:
