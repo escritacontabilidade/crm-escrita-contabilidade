@@ -217,7 +217,7 @@ def arquivo_parece_balancete(uploaded_file):
         texto_lower = texto.lower()
         encontrados = [p for p in palavras_chave if p in texto_lower]
 
-        if len(encontrados) >= 3:
+        if len(encontrados) >= 5:
             return True, f"Arquivo validado como possível balancete. Termos encontrados: {', '.join(encontrados[:5])}"
 
         return False, "O arquivo não parece ser um balancete contábil. Verifique se enviou o documento correto."
