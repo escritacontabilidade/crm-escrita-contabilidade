@@ -45,8 +45,11 @@ def tela_login():
     senha = st.text_input("Senha", type="password")
 
     if st.button("Entrar"):
-        if autenticar_usuario(usuario, senha):
+        perfil = autenticar_usuario(usuario, senha)
+
+        if perfil:
             st.session_state["autenticado"] = True
+            st.session_state["perfil_usuario"] = perfil
             st.success("Login realizado com sucesso.")
             st.rerun()
         else:
