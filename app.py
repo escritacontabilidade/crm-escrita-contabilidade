@@ -29,11 +29,12 @@ from openpyxl import load_workbook
 
 def autenticar_usuario(usuario, senha):
     try:
-        usuario_correto = st.secrets["auth"]["username"]
-        senha_correta = st.secrets["auth"]["password"]
-        return usuario == usuario_correto and senha == senha_correta
+        for perfil, dados in st.secrets["auth"].items():
+            if usuario == dados["username"] and senha == dados["password"]:
+                return perfil
+        return None
     except Exception:
-        return False
+        return None
 
 
 def tela_login():
