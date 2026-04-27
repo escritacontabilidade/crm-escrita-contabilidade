@@ -465,6 +465,7 @@ else:
 
     if st.sidebar.button("Sair"):
         st.session_state["autenticado"] = False
+        st.session_state["perfil_usuario"] = ""
         st.rerun()
         
     perfil_usuario = st.session_state.get("perfil_usuario", "")
