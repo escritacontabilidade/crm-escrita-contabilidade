@@ -467,9 +467,23 @@ else:
         st.session_state["autenticado"] = False
         st.rerun()
         
+    perfil_usuario = st.session_state.get("perfil_usuario", "")
+
+    menus_permitidos = [
+        "Leads Recebidos",
+        "Nova Proposta",
+        "Proposta Comercial",
+        "Histórico de Vendas",
+        "Link para Cliente"
+    ]
+    
+    if perfil_usuario == "admin":
+        menus_permitidos.insert(3, "Dashboard de Custos")
+        menus_permitidos.append("Configurações")
+    
     menu = st.sidebar.selectbox(
         "Navegação",
-        ["Leads Recebidos", "Nova Proposta", "Proposta Comercial", "Dashboard de Custos", "Histórico de Vendas", "Configurações", "Link para Cliente"]
+        menus_permitidos
     )
 
     if menu == "Leads Recebidos":
