@@ -102,11 +102,6 @@ def converter_numero_br(texto):
     except:
         return 0.0
 
-def formatar_numero_br(valor):
-    try:
-        valor = float(valor or 0)
-    except:
-        valor = 0.0
 
     return f"{valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
