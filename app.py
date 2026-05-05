@@ -373,7 +373,13 @@ def tela_lead_site():
         with col5:
             uf = st.text_input("UF")
         with col6:
-            faturamento_anual = st.text_input("Faturamento Anual")
+            faturamento_anual_txt = st.text_input(
+                "Faturamento Anual",
+                value="0,00",
+                placeholder="Ex: 1.000.000,00"
+            )
+            
+            faturamento_anual = converter_numero_br(faturamento_anual_txt)
         with col7:
             forma_tributacao = st.selectbox(
                 "Forma de Tributação",
