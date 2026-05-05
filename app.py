@@ -647,6 +647,23 @@ else:
                     except Exception as e:
                         st.warning(f"Não foi possível atualizar o status do lead: {e}")
 
+
+                if st.button("Arquivar Lead Selecionado"):
+                    lead_id = int(lead_escolhido.split("|")[0].strip())
+                
+                    try:
+                        supabase.table("leads_externos").update({
+                            "ativo": False,
+                            "deleted_at": pd.Timestamp.now().isoformat(),
+                            "deleted_reason": "Arquivado manualmente no CRM"
+                        }).eq("id", lead_id).execute()
+                
+                        st.success("Lead arquivado com sucesso.")
+                        st.rerun()
+                
+                    except Exception as e:
+                        st.error(f"Erro ao arquivar lead: {e}")    
+
                     st.success("Lead carregado. Agora vá para 'Nova Proposta'.")
             else:
                 st.info("Nenhum lead recebido ainda.")
