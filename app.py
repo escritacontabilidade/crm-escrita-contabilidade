@@ -648,7 +648,8 @@ else:
                     except Exception as e:
                         st.warning(f"Não foi possível atualizar o status do lead: {e}")
 
-
+                    st.success("Lead carregado. Agora vá para 'Nova Proposta'.")
+                    
                 if st.button("Arquivar Lead Selecionado"):
                     lead_id = int(lead_escolhido.split("|")[0].strip())
                 
@@ -665,7 +666,7 @@ else:
                     except Exception as e:
                         st.error(f"Erro ao arquivar lead: {e}")    
 
-                    st.success("Lead carregado. Agora vá para 'Nova Proposta'.")
+                    
             else:
                 st.info("Nenhum lead recebido ainda.")
 
