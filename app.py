@@ -783,14 +783,14 @@ else:
             st.divider()
             st.subheader("Informações Gerais")
             
-            faturamento_medio = st.number_input(
+            faturamento_medio_txt = st.text_input(
                 "Faturamento médio mensal (R$)",
-                min_value=0.0,
-                step=1000.0,
-                format="%.2f",
-                value=float(lead_em_analise.get("faturamento_medio") or 0),
-                key="np_faturamento"
+                value=formatar_numero_br(lead_em_analise.get("faturamento_medio") or 0),
+                placeholder="Ex: 1.000.000,00",
+                key="np_faturamento_txt"
             )
+            
+            faturamento_medio = converter_numero_br(faturamento_medio_txt)
             
             descricao_atividades = st.text_area(
                 "Breve descrição sobre as atividades exercidas pela empresa",
