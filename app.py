@@ -501,7 +501,29 @@ if is_cliente:
                         }
                     }
         
-                    res_insert = supabase.table("leads_externos").insert(obj).execute()
+                    cnpj_limpo = "".join([c for c in str(f_cnpj or "") if c.isdigit()])
+
+                    if cnpj_limpo:
+                        obj["cnpj"] = cnpj_limpo
+                    
+                        res_existente = supabase.table("leads_externos") \
+                            .select("*") \
+                            .eq("cnpj", cnpj_limpo) \
+                            .eq("ativo", True) \
+                            .limit(1) \
+                            .execute()
+                    
+                        if res_existente.data:
+                            lead_id_existente = res_existente.data[0]["id"]
+                    
+                            res_insert = supabase.table("leads_externos") \
+                                .update(obj) \
+                                .eq("id", lead_id_existente) \
+                                .execute()
+                        else:
+                            res_insert = supabase.table("leads_externos").insert(obj).execute()
+                    else:
+                        res_insert = supabase.table("leads_externos").insert(obj).execute()
         
                     if not res_insert.data:
                         st.error("Não foi possível salvar o lead.")
