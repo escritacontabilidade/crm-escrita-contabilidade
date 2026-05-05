@@ -1088,19 +1088,26 @@ else:
             
             st.divider()
 
-            if st.button("📄 Preparar PDF da Proposta"):
+            if st.button("📄 Preparar PDF da Proposta V2"):
+                if not servicos_contratados:
+                    st.error("Selecione pelo menos um serviço contratado antes de gerar a proposta.")
+                    st.stop()
+            
                 try:
-                    caminho_pdf = gerar_pdf_proposta_comercial(
+                    caminho_pdf = gerar_pdf_proposta_comercial_v2(
                         nome_empresa=nome_empresa,
-                        segmento=segmento,
                         plano=opcao_valor,
-                        valor_mensal=valor_apresentado
+                        valor_mensal=valor_apresentado,
+                        servicos_contratados=servicos_contratados,
+                        respostas_cliente=proposta_atual.get("respostas_formulario", {})
                     )
+            
                     st.session_state["pdf_proposta_path"] = caminho_pdf
-                    st.success("PDF preparado com sucesso.")
+                    st.success("PDF V2 preparado com sucesso.")
+            
                 except Exception as e:
-                    st.error(f"Erro ao preparar PDF: {e}")
-
+                    st.error(f"Erro ao preparar PDF V2: {e}")
+                    
             caminho_pdf = st.session_state.get("pdf_proposta_path")
 
             if caminho_pdf and os.path.exists(caminho_pdf):
