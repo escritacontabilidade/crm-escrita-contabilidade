@@ -136,7 +136,7 @@ def _slide_preco(valor_mensal, servicos_contratados):
     dourado = (174, 144, 60)
 
     # Cobre os textos fixos do slide para reescrever por cima
-    draw.rounded_rectangle((260, 205, 1340, 705), radius=35, fill=(255, 255, 255))
+    draw.rounded_rectangle((250, 250, 1670, 830), radius=45, fill=(255, 255, 255))
 
     _texto_centralizado(
         draw,
