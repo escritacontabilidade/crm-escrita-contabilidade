@@ -1085,29 +1085,7 @@ else:
 
             st.divider()
 
-            imagens_proposta = [
-                "assets_proposta/01_capa.jpg",
-                "assets_proposta/02_autoridade.jpg",
-                "assets_proposta/03_lideranca.jpg",
-                "assets_proposta/04_rodrigo.jpg",
-                "assets_proposta/05_roberta.jpg",
-                "assets_proposta/06_simone.jpg",
-                "assets_proposta/07_diferenciais.jpg",
-                "assets_proposta/08_servicos.jpg",
-                "assets_proposta/09_sistemas.jpg",
-                "assets_proposta/10_preco_base.png",
-                "assets_proposta/11_obrigacoes.jpg",
-                "assets_proposta/12_extras_1.jpg",
-                "assets_proposta/13_extras_2.jpg",
-            ]
-
-            st.subheader("Pré-visualização da proposta")
-            for caminho in imagens_proposta:
-                if os.path.exists(caminho):
-                    st.image(caminho, use_container_width=True)
-                else:
-                    st.warning(f"Imagem não encontrada: {caminho}")
-
+            
             st.divider()
 
             if st.button("📄 Preparar PDF da Proposta"):
