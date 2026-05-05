@@ -7,7 +7,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 
 ASSETS_DIR = "assets_proposta_v2"
-PAGE_W, PAGE_H = 1600, 900
+PAGE_W, PAGE_H = 1920, 1080
 
 
 SERVICOS_TEXTOS = {
