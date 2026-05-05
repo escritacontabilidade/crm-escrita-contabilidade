@@ -295,6 +295,7 @@ st.markdown("""
 # --- 5. LÓGICA DE ACESSO (CLIENTE VS CONTADOR) ---
 query_params = st.query_params
 is_cliente = query_params.get("modo") == "cliente"
+is_site = query_params.get("modo") == "site"
 
 if "autenticado" not in st.session_state:
     st.session_state["autenticado"] = False
