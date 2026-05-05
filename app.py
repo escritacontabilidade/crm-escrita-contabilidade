@@ -602,7 +602,11 @@ else:
         st.title("📥 Leads Recebidos")
 
         try:
-            res_leads = supabase.table("leads_externos").select("*").order("created_at", desc=True).execute()
+            res_leads = supabase.table("leads_externos") \
+                .select("*") \
+                .eq("ativo", True) \
+                .order("created_at", desc=True) \
+                .execute()
 
             if res_leads.data:
                 df_leads = pd.DataFrame(res_leads.data)
