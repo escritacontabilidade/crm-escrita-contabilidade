@@ -129,8 +129,8 @@ def _slide_preco(valor_mensal, servicos_contratados):
     servicos = servicos_contratados or ["Contábil", "Fiscal", "Pessoal", "Societário"]
     servicos_txt = ", ".join(servicos)
 
-    fonte_serv = _font(38)
-    fonte_valor = _font(78, bold=True)
+    fonte_serv = _font(46)
+    fonte_valor = _font(110, bold=True)
 
     azul = (8, 28, 50)
     dourado = (174, 144, 60)
