@@ -416,6 +416,7 @@ if is_cliente:
 
     with st.form("form_externo"):
         f_empresa = st.text_input("Nome da Empresa")
+        f_cnpj = st.text_input("CNPJ")
         f_resp = st.text_input("Seu Nome")
         f_whatsapp = st.text_input("WhatsApp (com DDD)")
         f_regime = st.selectbox("Regime Atual", ["Simples", "Presumido", "Real", "Não sei"])
