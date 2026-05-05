@@ -488,6 +488,7 @@ if is_cliente:
                 try:
                     obj = {
                         "nome_empresa": f_empresa,
+                        "cnpj": f_cnpj,
                         "responsavel": f_resp,
                         "whatsapp": f_whatsapp,
                         "regime": f_regime,
