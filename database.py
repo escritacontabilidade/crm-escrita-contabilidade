@@ -91,6 +91,8 @@ def get_perguntas_por_origem(origem):
         .table("perguntas")
         .select("*")
         .eq("origem", origem)
+        .order("ordem")
+        .order("id")
         .execute()
     )
     return res.data if res.data else []
