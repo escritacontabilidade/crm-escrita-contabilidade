@@ -75,6 +75,33 @@ def estilo_status_linha(row):
 
     return [cor] * len(row)
 
+def formatar_numero_br(valor):
+    try:
+        valor = float(valor or 0)
+    except:
+        valor = 0.0
+
+    return f"{valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+
+def converter_numero_br(texto):
+    if texto is None:
+        return 0.0
+
+    texto = str(texto).strip()
+
+    if texto == "":
+        return 0.0
+
+    texto = texto.replace("R$", "").strip()
+    texto = texto.replace(".", "")
+    texto = texto.replace(",", ".")
+
+    try:
+        return float(texto)
+    except:
+        return 0.0
+
 def normalizar_regime_para_tabela(regime):
     if not regime:
         return ""
