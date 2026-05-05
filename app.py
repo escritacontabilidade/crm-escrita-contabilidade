@@ -453,14 +453,14 @@ if is_cliente:
         st.divider()
         st.subheader("Informações Gerais")
     
-        faturamento_medio = st.number_input(
+        faturamento_medio_txt = st.text_input(
             "Faturamento médio mensal (R$)",
-            min_value=0.0,
-            step=1000.0,
-            format="%.2f",
-            value=0.0,
-            key="cli_faturamento"
+            value="0,00",
+            placeholder="Ex: 1.000.000,00",
+            key="cli_faturamento_txt"
         )
+        
+        faturamento_medio = converter_numero_br(faturamento_medio_txt)
         
         descricao_atividades = st.text_area(
             "Breve descrição sobre as atividades exercidas pela empresa",
