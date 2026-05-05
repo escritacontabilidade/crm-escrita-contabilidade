@@ -583,6 +583,7 @@ else:
 
     menus_permitidos = [
         "Leads Recebidos",
+        "Leads Arquivados",
         "Nova Proposta",
         "Proposta Comercial",
         "Histórico de Vendas",
