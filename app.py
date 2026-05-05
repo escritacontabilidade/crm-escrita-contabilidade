@@ -1069,6 +1069,17 @@ else:
 
             st.info(f"Plano selecionado para apresentação: {opcao_valor} — {formatar_moeda(valor_apresentado)}")
 
+            st.subheader("Serviços contratados")
+
+            servicos_contratados = st.multiselect(
+                "Selecione os serviços incluídos na proposta:",
+                ["Contábil", "Fiscal", "Pessoal", "Societário"],
+                default=["Contábil", "Fiscal", "Pessoal", "Societário"]
+            )
+            
+            if not servicos_contratados:
+                st.warning("Selecione pelo menos um serviço para gerar a proposta.")
+                
             with st.expander("Ver detalhes do cálculo da proposta"):
                 st.json(proposta_atual)
 
