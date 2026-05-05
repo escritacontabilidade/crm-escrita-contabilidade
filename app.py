@@ -672,6 +672,61 @@ else:
         except Exception as e:
             st.error(f"Erro ao carregar leads: {e}")
             
+    elif menu == "Leads Arquivados":
+        st.title("📦 Leads Arquivados")
+
+        try:
+            res_leads = supabase.table("leads_externos") \
+                .select("*") \
+                .eq("ativo", False) \
+                .order("deleted_at", desc=True) \
+                .execute()
+
+            if not res_leads.data:
+                st.info("Nenhum lead arquivado.")
+            else:
+                df_leads = pd.DataFrame(res_leads.data)
+
+                colunas_exibir = [
+                    "id",
+                    "nome_empresa",
+                    "responsavel",
+                    "cnpj",
+                    "segmento",
+                    "regime",
+                    "status",
+                    "deleted_at",
+                    "deleted_reason"
+                ]
+                colunas_exibir = [c for c in colunas_exibir if c in df_leads.columns]
+
+                st.dataframe(df_leads[colunas_exibir], use_container_width=True)
+
+                lista_opcoes = [
+                    f"{row['id']} | {row.get('nome_empresa', 'Sem nome')} | {row.get('responsavel', '')}"
+                    for _, row in df_leads.iterrows()
+                ]
+
+                lead_escolhido = st.selectbox(
+                    "Selecione um lead para restaurar",
+                    lista_opcoes
+                )
+
+                if st.button("Restaurar Lead Selecionado"):
+                    lead_id = int(lead_escolhido.split("|")[0].strip())
+
+                    supabase.table("leads_externos").update({
+                        "ativo": True,
+                        "deleted_at": None,
+                        "deleted_reason": None
+                    }).eq("id", lead_id).execute()
+
+                    st.success("Lead restaurado com sucesso.")
+                    st.rerun()
+
+        except Exception as e:
+            st.error(f"Erro ao carregar leads arquivados: {e}")
+            
     if menu == "Nova Proposta":
             st.title("📄 Elaboração de Proposta Precificada")
             lead_em_analise = st.session_state.get("lead_em_analise", {})
