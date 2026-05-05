@@ -211,37 +211,27 @@ def _desenhar_card(draw, titulo, bullets, x, y, w, h):
 def _slide_servicos_dinamico(servicos_contratados, pagina=1):
     servicos = servicos_contratados or ["Contábil", "Fiscal", "Pessoal", "Societário"]
 
-    if pagina == 1:
-        servicos_pagina = [s for s in servicos if s in ["Contábil", "Fiscal"]]
-    else:
-        servicos_pagina = [s for s in servicos if s in ["Pessoal", "Societário"]]
-
-    if not servicos_pagina:
-        return None
-
-    img = Image.new("RGB", (PAGE_W, PAGE_H), (5, 21, 36))
+    numero_slide = 8 if pagina == 1 else 9
+    img = _abrir_slide(numero_slide)
     draw = ImageDraw.Draw(img)
 
-    # fundo usa um slide existente como textura visual
-    try:
-        fundo = _abrir_slide(8 if pagina == 1 else 9)
-        fundo = fundo.convert("RGBA")
-        overlay = Image.new("RGBA", fundo.size, (5, 21, 36, 180))
-        img = Image.alpha_composite(fundo, overlay).convert("RGB")
-        draw = ImageDraw.Draw(img)
-    except Exception:
-        pass
+    # cor aproximada do fundo escuro
+    cor_cobertura = (4, 22, 38)
 
-    draw.text((60, 610), "Serviços", font=_font(80), fill=(245, 245, 245))
-    draw.text((60, 710), "contratados", font=_font(80), fill=(245, 245, 245))
-
-    if len(servicos_pagina) == 1:
-        posicoes = [(850, 150, 560, 600)]
+    if pagina == 1:
+        blocos = {
+            "Contábil": (820, 60, 1225, 1010),
+            "Fiscal": (1260, 60, 1665, 1010),
+        }
     else:
-        posicoes = [(735, 125, 390, 650), (1180, 125, 390, 650)]
+        blocos = {
+            "Pessoal": (820, 60, 1225, 1010),
+            "Societário": (1260, 60, 1665, 1010),
+        }
 
-    for servico, (x, y, w, h) in zip(servicos_pagina, posicoes):
-        _desenhar_card(draw, f"Área {servico}", SERVICOS_TEXTOS[servico], x, y, w, h)
+    for servico, coords in blocos.items():
+        if servico not in servicos:
+            draw.rectangle(coords, fill=cor_cobertura)
 
     return _salvar_temp(img, f"slide_servicos_{pagina}_")
 
