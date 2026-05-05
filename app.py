@@ -297,6 +297,10 @@ query_params = st.query_params
 is_cliente = query_params.get("modo") == "cliente"
 is_site = query_params.get("modo") == "site"
 
+if is_site:
+    tela_lead_site()
+    st.stop()
+
 if "autenticado" not in st.session_state:
     st.session_state["autenticado"] = False
 
