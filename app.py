@@ -291,19 +291,6 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-
-# --- 5. LÓGICA DE ACESSO (CLIENTE VS CONTADOR) ---
-query_params = st.query_params
-is_cliente = query_params.get("modo") == "cliente"
-is_site = query_params.get("modo") == "site"
-
-if is_site:
-    tela_lead_site()
-    st.stop()
-
-if "autenticado" not in st.session_state:
-    st.session_state["autenticado"] = False
-
 def tela_lead_site():
     st.image("Logo Escrita.png", width=200)
     st.title("Fale com a Escrita Contabilidade")
@@ -384,6 +371,20 @@ def tela_lead_site():
                 st.stop()
             except Exception as e:
                 st.error(f"Erro ao salvar lead do site: {e}")
+                
+# --- 5. LÓGICA DE ACESSO (CLIENTE VS CONTADOR) ---
+query_params = st.query_params
+is_cliente = query_params.get("modo") == "cliente"
+is_site = query_params.get("modo") == "site"
+
+if is_site:
+    tela_lead_site()
+    st.stop()
+
+if "autenticado" not in st.session_state:
+    st.session_state["autenticado"] = False
+
+
 
 if is_cliente:
     st.image("Logo Escrita.png", width=200)
