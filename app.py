@@ -26,6 +26,7 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 import fitz
 from openpyxl import load_workbook
+from proposal_builder_v2 import gerar_pdf_proposta_comercial_v2
 
 def autenticar_usuario(usuario, senha):
     try:
