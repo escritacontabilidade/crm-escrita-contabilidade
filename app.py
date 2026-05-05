@@ -298,7 +298,88 @@ is_cliente = query_params.get("modo") == "cliente"
 
 if "autenticado" not in st.session_state:
     st.session_state["autenticado"] = False
-    
+
+def tela_lead_site():
+    st.image("Logo Escrita.png", width=200)
+    st.title("Fale com a Escrita Contabilidade")
+
+    with st.form("form_site"):
+        ajuda = st.text_area("Em que podemos ajudar? *", placeholder="Estou entrando em contato pois preciso...")
+        nome = st.text_input("Nome Completo *")
+
+        col1, col2 = st.columns(2)
+        with col1:
+            email = st.text_input("E-mail *")
+        with col2:
+            telefone = st.text_input("Telefone")
+
+        possui_empresa = st.selectbox(
+            "Você já possui uma empresa constituída? *",
+            ["", "Sim", "Não"]
+        )
+
+        nome_empresa = st.text_input("Nome da Empresa")
+
+        col3, col4 = st.columns(2)
+        with col3:
+            cnpj = st.text_input("CNPJ")
+        with col4:
+            cidade = st.text_input("Cidade")
+
+        col5, col6, col7 = st.columns(3)
+        with col5:
+            uf = st.text_input("UF")
+        with col6:
+            faturamento_anual = st.text_input("Faturamento Anual")
+        with col7:
+            forma_tributacao = st.selectbox(
+                "Forma de Tributação",
+                ["", "Simples Nacional", "Lucro Presumido", "Lucro Real", "MEI", "Não sei"]
+            )
+
+        detalhes_empresa = st.text_area("Detalhes sobre a empresa")
+
+        enviar = st.form_submit_button("Enviar")
+
+        if enviar:
+            if not ajuda or not nome or not email or not possui_empresa:
+                st.warning("Preencha os campos obrigatórios marcados com *.")
+                st.stop()
+
+            obj = {
+                "tipo_lead": "site",
+                "origem": "formulario_site",
+                "status": "Novo",
+                "nome_empresa": nome_empresa,
+                "responsavel": nome,
+                "whatsapp": telefone,
+                "email": email,
+                "telefone": telefone,
+                "possui_empresa_constituida": possui_empresa,
+                "cnpj": cnpj,
+                "cidade": cidade,
+                "uf": uf,
+                "faturamento_medio": faturamento_anual,
+                "forma_tributacao": forma_tributacao,
+                "descricao_atividades": ajuda,
+                "detalhes_empresa": detalhes_empresa,
+                "segmento": "Não informado",
+                "regime": forma_tributacao,
+                "respostas_segmento": {
+                    "Em que podemos ajudar?": ajuda,
+                    "Você já possui uma empresa constituída?": possui_empresa,
+                    "Detalhes sobre a empresa": detalhes_empresa
+                },
+                "ativo": True
+            }
+
+            try:
+                supabase.table("leads_externos").insert(obj).execute()
+                st.success("Recebemos sua solicitação. Em breve entraremos em contato.")
+                st.stop()
+            except Exception as e:
+                st.error(f"Erro ao salvar lead do site: {e}")
+
 if is_cliente:
     st.image("Logo Escrita.png", width=200)
     st.title("📝 Solicitação de Orçamento")
