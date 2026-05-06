@@ -2,7 +2,7 @@ import os
 from datetime import datetime
 from jinja2 import Template
 from weasyprint import HTML
-
+from num2words import num2words
 
 ASSETS_DIR = "assets_proposta_v2"
 
