@@ -88,8 +88,8 @@ def gerar_pdf_proposta_html(
         z-index: 3;
     
         left: 470px;
-        top: 720px;
-    
+        top: 708px;
+        
         width: 660px;
         height: 62px;
     
