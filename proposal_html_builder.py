@@ -162,7 +162,7 @@ def gerar_pdf_proposta_html(
         z-index: 3;
     
         left: 200px;
-        top: 525px;
+        top: 500px;
     
         width: 1200px;
     
