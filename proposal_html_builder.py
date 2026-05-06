@@ -261,10 +261,7 @@ def gerar_pdf_proposta_html(
                     {{ valor_formatado }}
                 </div>
 
-                <div class="preco-plano">
-                    Plano selecionado: {{ plano }}
-                </div>
-
+                
                 <div class="preco-nota">
                     Além disso, será cobrado um honorário adicional em dezembro, no valor dos honorários vigentes,
                     destinado à entrega das obrigações federais, estaduais, municipais e trabalhistas.
