@@ -78,19 +78,25 @@ def gerar_pdf_proposta_html(
 
     .empresa-slide-1 {
         position: absolute;
-        z-index: 2;
-        left: 485px;
-        top: 735px;
-        width: 630px;
-        height: 55px;
-        text-align: center;
+        z-index: 3;
+    
+        left: 470px;
+        top: 720px;
+    
+        width: 660px;
+        height: 62px;
+    
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    
         color: #ffffff;
-        font-size: 24px;
-        line-height: 55px;
-        font-weight: 400;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+    
+        font-size: 30px;
+        font-weight: 600;
+        letter-spacing: 0.4px;
+    
+        text-align: center;
     }
 
     .preco-cover {
