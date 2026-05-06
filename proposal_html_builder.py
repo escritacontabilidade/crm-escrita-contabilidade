@@ -157,17 +157,24 @@ def gerar_pdf_proposta_html(
         font-weight: 900;
     }
 
-    .preco-plano {
+    .preco-extenso {
         position: absolute;
         z-index: 3;
-        left: 320px;
-        top: 515px;
-        width: 960px;
+    
+        left: 200px;
+        top: 525px;
+    
+        width: 1200px;
+    
         text-align: center;
+    
         color: #06192c;
-        font-size: 28px;
-        line-height: 1.2;
+    
+        font-size: 34px;
+        line-height: 1.15;
+    
         font-weight: 700;
+        font-style: italic;
     }
 
     .preco-nota {
