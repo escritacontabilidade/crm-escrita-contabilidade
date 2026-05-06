@@ -181,7 +181,7 @@ def gerar_pdf_proposta_html(
         position: absolute;
         z-index: 3;
         left: 305px;
-        top: 585px;
+        top: 620px;
         width: 990px;
         text-align: center;
         color: #06192c;
