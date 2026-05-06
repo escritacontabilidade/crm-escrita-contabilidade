@@ -35,6 +35,13 @@ def gerar_pdf_proposta_html(
     servicos_contratados = servicos_contratados or ["Contábil", "Fiscal", "Pessoal", "Societário"]
 
     valor_formatado = formatar_moeda_pdf(valor_mensal)
+    valor_extenso = num2words(
+        float(valor_mensal),
+        lang='pt_BR',
+        to='currency'
+    )
+    
+    valor_extenso = valor_extenso.capitalize()
     servicos_texto = ", ".join(servicos_contratados).lower()
 
     html_template = """
