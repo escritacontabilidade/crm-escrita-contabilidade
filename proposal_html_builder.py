@@ -314,6 +314,7 @@ def gerar_pdf_proposta_html(
         nome_empresa=nome_empresa or "Nome da empresa",
         plano=plano or "",
         valor_formatado=valor_formatado,
+        valor_extenso=valor_extenso,
         servicos_texto=servicos_texto,
         respostas=respostas_cliente,
         data_geracao=datetime.now().strftime("%d/%m/%Y %H:%M"),
