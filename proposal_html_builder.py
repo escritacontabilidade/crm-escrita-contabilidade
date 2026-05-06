@@ -173,7 +173,7 @@ def gerar_pdf_proposta_html(
         font-size: 34px;
         line-height: 1.15;
     
-        font-weight: 700;
+        font-weight: 600;
         font-style: italic;
     }
 
