@@ -139,7 +139,7 @@ def gerar_pdf_proposta_html(
         width: 940px;
         text-align: center;
         color: #a78b3a;
-        font-size: 34px;
+        font-size: 28px;
         line-height: 1.2;
         font-weight: 400;
     }
