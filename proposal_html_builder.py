@@ -45,7 +45,7 @@ def gerar_pdf_proposta_html(
 
 <style>
     @page {
-        size: A4 landscape;
+        size: 1600px 900px;
         margin: 0;
     }
 
@@ -60,68 +60,133 @@ def gerar_pdf_proposta_html(
     }
 
     .slide {
-        width: 297mm;
-        height: 210mm;
+        width: 1600px;
+        height: 900px;
         position: relative;
         page-break-after: always;
         overflow: hidden;
-        background-size: cover;
-        background-position: center;
-        background-repeat: no-repeat;
+    }
+
+    .slide-bg {
+        position: absolute;
+        inset: 0;
+        width: 1600px;
+        height: 900px;
+        object-fit: cover;
+        z-index: 1;
     }
 
     .empresa-slide-1 {
         position: absolute;
-        left: 91mm;
-        top: 162mm;
-        width: 115mm;
-        height: 14mm;
+        z-index: 2;
+        left: 485px;
+        top: 735px;
+        width: 630px;
+        height: 55px;
         text-align: center;
         color: #ffffff;
-        font-size: 15pt;
-        line-height: 14mm;
+        font-size: 24px;
+        line-height: 55px;
         font-weight: 400;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .preco-cover {
+        position: absolute;
+        z-index: 2;
+        left: 185px;
+        top: 165px;
+        width: 1230px;
+        height: 560px;
+        background: #ffffff;
+        border-radius: 34px;
+    }
+
+    .preco-titulo {
+        position: absolute;
+        z-index: 3;
+        left: 230px;
+        top: 230px;
+        width: 1140px;
+        text-align: center;
+        color: #b19745;
+        font-size: 64px;
+        line-height: 1.05;
+        font-weight: 800;
+        font-style: italic;
     }
 
     .preco-servicos {
         position: absolute;
-        left: 70mm;
-        top: 60mm;
-        width: 160mm;
+        z-index: 3;
+        left: 330px;
+        top: 340px;
+        width: 940px;
         text-align: center;
         color: #a78b3a;
-        font-size: 20pt;
+        font-size: 34px;
         line-height: 1.2;
         font-weight: 400;
     }
 
     .preco-valor {
         position: absolute;
-        left: 45mm;
-        top: 83mm;
-        width: 210mm;
+        z-index: 3;
+        left: 260px;
+        top: 410px;
+        width: 1080px;
         text-align: center;
-        color: #07192c;
-        font-size: 46pt;
-        line-height: 1.1;
-        font-weight: 800;
+        color: #06192c;
+        font-size: 86px;
+        line-height: 1.05;
+        font-weight: 900;
     }
 
     .preco-plano {
         position: absolute;
-        left: 70mm;
-        top: 108mm;
-        width: 160mm;
+        z-index: 3;
+        left: 320px;
+        top: 515px;
+        width: 960px;
         text-align: center;
-        color: #07192c;
-        font-size: 16pt;
+        color: #06192c;
+        font-size: 28px;
+        line-height: 1.2;
         font-weight: 700;
     }
 
+    .preco-nota {
+        position: absolute;
+        z-index: 3;
+        left: 305px;
+        top: 585px;
+        width: 990px;
+        text-align: center;
+        color: #06192c;
+        font-size: 24px;
+        line-height: 1.25;
+        font-weight: 400;
+    }
+
+    .preco-validade {
+        position: absolute;
+        z-index: 3;
+        left: 400px;
+        top: 695px;
+        width: 800px;
+        text-align: center;
+        color: #06192c;
+        font-size: 24px;
+        line-height: 1.2;
+        font-weight: 400;
+    }
+
     .anexo {
-        width: 297mm;
-        min-height: 210mm;
-        padding: 18mm 22mm;
+        width: 1600px;
+        min-height: 900px;
+        padding: 70px 95px;
         page-break-after: always;
         background: #ffffff;
         color: #0b1f35;
@@ -129,29 +194,30 @@ def gerar_pdf_proposta_html(
     }
 
     .anexo h1 {
-        font-size: 24pt;
-        margin: 0 0 8mm 0;
+        font-size: 38px;
+        margin: 0 0 30px 0;
         color: #0b1f35;
     }
 
     .anexo-meta {
-        font-size: 11pt;
-        margin-bottom: 8mm;
+        font-size: 20px;
+        margin-bottom: 35px;
+        line-height: 1.45;
     }
 
     .qa {
-        margin-bottom: 4mm;
+        margin-bottom: 18px;
         page-break-inside: avoid;
     }
 
     .pergunta {
-        font-size: 10pt;
+        font-size: 18px;
         font-weight: 700;
-        margin-bottom: 1mm;
+        margin-bottom: 4px;
     }
 
     .resposta {
-        font-size: 10pt;
+        font-size: 18px;
         color: #333333;
     }
 </style>
@@ -160,18 +226,41 @@ def gerar_pdf_proposta_html(
 <body>
 
     {% for n in range(1, 16) %}
-        <section class="slide" style="background-image: url('{{ assets_dir }}/{{ n }}.png');">
+        <section class="slide">
+            <img class="slide-bg" src="{{ assets_dir }}/{{ n }}.png">
 
             {% if n == 1 %}
                 <div class="empresa-slide-1">{{ nome_empresa }}</div>
             {% endif %}
 
             {% if n == 12 %}
-                <div class="preco-servicos">{{ servicos_texto }}</div>
-                <div class="preco-valor">{{ valor_formatado }}</div>
-                <div class="preco-plano">Plano selecionado: {{ plano }}</div>
-            {% endif %}
+                <div class="preco-cover"></div>
 
+                <div class="preco-titulo">
+                    Honorários mensais para:
+                </div>
+
+                <div class="preco-servicos">
+                    {{ servicos_texto }}.
+                </div>
+
+                <div class="preco-valor">
+                    {{ valor_formatado }}
+                </div>
+
+                <div class="preco-plano">
+                    Plano selecionado: {{ plano }}
+                </div>
+
+                <div class="preco-nota">
+                    Além disso, será cobrado um honorário adicional em dezembro, no valor dos honorários vigentes,
+                    destinado à entrega das obrigações federais, estaduais, municipais e trabalhistas.
+                </div>
+
+                <div class="preco-validade">
+                    * Proposta válida por 10 dias
+                </div>
+            {% endif %}
         </section>
     {% endfor %}
 
