@@ -1460,6 +1460,56 @@ else:
                 colunas_existentes = [c for c in colunas_desejadas if c in df_perg.columns]
             
                 st.dataframe(df_perg[colunas_existentes], use_container_width=True)
+                st.divider()
+                st.subheader("✏️ Editar pergunta existente")
+                
+                opcoes_perguntas = [
+                    f"{row['id']} | {row.get('origem', '')} | {row.get('pergunta', '')[:80]}"
+                    for _, row in df_perg.iterrows()
+                ]
+                
+                pergunta_escolhida = st.selectbox(
+                    "Selecione a pergunta para editar:",
+                    opcoes_perguntas
+                )
+                
+                id_pergunta = int(pergunta_escolhida.split("|")[0].strip())
+                linha = df_perg[df_perg["id"] == id_pergunta].iloc[0].to_dict()
+                
+                with st.form("editar_pergunta_existente"):
+                    nova_origem = st.text_input("Origem", value=str(linha.get("origem") or ""))
+                    nova_ordem = st.number_input("Ordem", value=int(linha.get("ordem") or 0), step=1)
+                    nova_pergunta = st.text_area("Pergunta", value=str(linha.get("pergunta") or ""))
+                    novo_tipo = st.selectbox(
+                        "Tipo de campo",
+                        ["Múltipla Escolha", "Texto Livre", "Número (Multiplicador)"],
+                        index=["Múltipla Escolha", "Texto Livre", "Número (Multiplicador)"].index(
+                            linha.get("tipo_campo") if linha.get("tipo_campo") in ["Múltipla Escolha", "Texto Livre", "Número (Multiplicador)"] else "Texto Livre"
+                        )
+                    )
+                    novas_opcoes = st.text_input("Opções", value=str(linha.get("opcoes") or ""))
+                    novos_pesos = st.text_input("Pesos", value=str(linha.get("pesos_opcoes") or ""))
+                
+                    salvar_edicao = st.form_submit_button("Salvar edição da pergunta")
+                
+                    if salvar_edicao:
+                        try:
+                            supabase.table("perguntas").update({
+                                "origem": nova_origem,
+                                "ordem": nova_ordem,
+                                "pergunta": nova_pergunta,
+                                "tipo_campo": novo_tipo,
+                                "opcoes": novas_opcoes,
+                                "pesos_opcoes": novos_pesos
+                            }).eq("id", id_pergunta).execute()
+                
+                            st.success("Pergunta atualizada com sucesso.")
+                            st.rerun()
+                
+                        except Exception as e:
+                            st.error(f"Erro ao atualizar pergunta: {e}")           
+            
+            
             else:
                 st.info("Nenhuma pergunta cadastrada.")
                    
