@@ -1166,7 +1166,7 @@ else:
                     caminho_pdf = gerar_pdf_proposta_html(
                         nome_empresa=nome_empresa,
                         plano=opcao_valor,
-                        valor_mensal=valor_apresentado,
+                        valor_mensal=valor_final_proposta,
                         servicos_contratados=servicos_contratados,
                         respostas_cliente=proposta_atual.get("respostas_formulario", {})
                     )
