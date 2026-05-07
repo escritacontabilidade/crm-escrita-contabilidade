@@ -1099,8 +1099,21 @@ else:
             else:
                 valor_apresentado = valor_prata
 
+            st.info(f"Valor calculado do plano {opcao_valor}: {formatar_moeda(valor_apresentado)}")
+
+            valor_editado_txt = st.text_input(
+                "Valor final da proposta (editável)",
+                value=formatar_numero_br(valor_apresentado),
+                placeholder="Ex: 2.500,00",
+                key="valor_final_proposta_txt"
+            )
+            
+            valor_final_proposta = converter_numero_br(valor_editado_txt)
+            
             proposta_atual["plano_escolhido"] = opcao_valor
-            proposta_atual["valor_escolhido"] = valor_apresentado
+            proposta_atual["valor_escolhido"] = valor_final_proposta
+            proposta_atual["valor_calculado_original"] = valor_apresentado
+            
             st.session_state["proposta_atual"] = proposta_atual
 
             c6, c7, c8 = st.columns(3)
