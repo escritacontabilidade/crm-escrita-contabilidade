@@ -1434,11 +1434,25 @@ else:
             # Visualização das Perguntas com Filtro
             st.write("---")
             st.write("🔍 Perguntas Existentes")
-            filtro_p = st.selectbox("Filtrar por Segmento:", ["Todos"] + ([s['nome'] for s in res_s.data] if res_s.data else []))
+            res_origens = supabase.table("perguntas").select("origem").execute()
+
+            lista_origens = sorted(list({
+                r.get("origem")
+                for r in res_origens.data
+                if r.get("origem")
+            })) if res_origens.data else []
+            
+            filtro_p = st.selectbox(
+                "Filtrar por origem das perguntas:",
+                ["Todos"] + lista_origens
+            )
+            
             query_p = supabase.table("perguntas").select("*")
+            
             if filtro_p != "Todos":
-                query_p = query_p.eq("segmento", filtro_p)
-            res_p = query_p.execute()
+                query_p = query_p.eq("origem", filtro_p)
+            
+            res_p = query_p.order("origem").order("ordem").order("id").execute()
             if res_p.data:
                 df_perg = pd.DataFrame(res_p.data)
             
