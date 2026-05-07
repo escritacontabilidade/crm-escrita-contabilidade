@@ -1136,7 +1136,11 @@ else:
                     unsafe_allow_html=True
                 )
 
-            st.info(f"Plano selecionado para apresentação: {opcao_valor} — {formatar_moeda(valor_apresentado)}")
+            st.info(
+                f"Plano selecionado: {opcao_valor} | "
+                f"Valor calculado: {formatar_moeda(valor_apresentado)} | "
+                f"Valor final editado: {formatar_moeda(valor_final_proposta)}"
+            )
 
             st.subheader("Serviços contratados")
 
