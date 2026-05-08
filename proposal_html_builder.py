@@ -355,7 +355,8 @@ def gerar_pdf_proposta_html(
     template = Template(html_template)
 
     html_final = template.render(
-        assets_dir=ASSETS_DIR,
+        assets_dir=assets_usados,
+        extensao_img=extensao_img,
         nome_empresa=nome_empresa or "Nome da empresa",
         plano=plano or "",
         valor_formatado=valor_formatado,
