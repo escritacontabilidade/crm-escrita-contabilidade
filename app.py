@@ -1161,22 +1161,38 @@ else:
             
             st.divider()
 
-            if st.button("📄 Preparar PDF Profissional"):
+            col_pdf1, col_pdf2 = st.columns(2)
+
+            with col_pdf1:
+                gerar_alta = st.button("📄 Gerar PDF Alta Qualidade")
+            
+            with col_pdf2:
+                gerar_email = st.button("📩 Gerar PDF Leve para E-mail")
+            
+            if gerar_alta or gerar_email:
                 if not servicos_contratados:
                     st.error("Selecione pelo menos um serviço contratado antes de gerar a proposta.")
                     st.stop()
             
                 try:
+                    versao_pdf = "alta" if gerar_alta else "email"
+            
                     caminho_pdf = gerar_pdf_proposta_html(
                         nome_empresa=nome_empresa,
                         plano=opcao_valor,
                         valor_mensal=valor_final_proposta,
                         servicos_contratados=servicos_contratados,
-                        respostas_cliente=proposta_atual.get("respostas_formulario", {})
+                        respostas_cliente=proposta_atual.get("respostas_formulario", {}),
+                        versao=versao_pdf
                     )
             
                     st.session_state["pdf_proposta_path"] = caminho_pdf
-                    st.success("PDF profissional preparado com sucesso.")
+                    st.session_state["pdf_proposta_versao"] = versao_pdf
+            
+                    if versao_pdf == "email":
+                        st.success("PDF leve para e-mail preparado com sucesso.")
+                    else:
+                        st.success("PDF em alta qualidade preparado com sucesso.")
             
                 except Exception as e:
                     st.error(f"Erro ao preparar PDF profissional: {e}")
