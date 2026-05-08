@@ -1239,6 +1239,92 @@ else:
                         file_name=f"proposta_{nome_empresa.replace(' ', '_')}_{st.session_state.get('pdf_proposta_versao', 'alta')}.pdf",
                         mime="application/pdf"
                     )
+
+    elif menu == "Orçamentos":
+        st.title("📂 Orçamentos")
+
+        try:
+            res_orc = supabase.table("orcamentos") \
+                .select("*") \
+                .eq("ativo", True) \
+                .order("created_at", desc=True) \
+                .execute()
+
+            if not res_orc.data:
+                st.info("Nenhum orçamento salvo ainda.")
+            else:
+                df_orc = pd.DataFrame(res_orc.data)
+
+                colunas = [
+                    "id",
+                    "cliente",
+                    "segmento",
+                    "regime",
+                    "plano",
+                    "valor_final",
+                    "status",
+                    "created_at",
+                    "pdf_drive_link"
+                ]
+
+                colunas = [c for c in colunas if c in df_orc.columns]
+
+                st.dataframe(df_orc[colunas], use_container_width=True)
+
+                opcoes = [
+                    f"{row['id']} | {row.get('cliente', '')} | {row.get('status', '')}"
+                    for _, row in df_orc.iterrows()
+                ]
+
+                escolhido = st.selectbox("Selecione um orçamento", opcoes)
+
+                orcamento_id = int(escolhido.split("|")[0].strip())
+                orc = df_orc[df_orc["id"] == orcamento_id].iloc[0].to_dict()
+
+                st.subheader("Editar orçamento")
+
+                novo_status = st.selectbox(
+                    "Status",
+                    ["Em aberto", "Proposta enviada", "Negociação", "Fechado", "Perdido", "Arquivado"],
+                    index=["Em aberto", "Proposta enviada", "Negociação", "Fechado", "Perdido", "Arquivado"].index(
+                        orc.get("status") if orc.get("status") in ["Em aberto", "Proposta enviada", "Negociação", "Fechado", "Perdido", "Arquivado"] else "Em aberto"
+                    )
+                )
+
+                novo_valor_txt = st.text_input(
+                    "Valor final",
+                    value=formatar_numero_br(orc.get("valor_final") or 0)
+                )
+
+                novo_valor = converter_numero_br(novo_valor_txt)
+
+                servicos_atuais = orc.get("servicos_contratados")
+
+                if not isinstance(servicos_atuais, list):
+                    servicos_atuais = []
+
+                novos_servicos = st.multiselect(
+                    "Serviços contratados",
+                    ["Contábil", "Fiscal", "Pessoal", "Societário"],
+                    default=servicos_atuais
+                )
+
+                if st.button("Salvar alterações do orçamento"):
+                    supabase.table("orcamentos").update({
+                        "status": novo_status,
+                        "valor_final": novo_valor,
+                        "servicos_contratados": novos_servicos,
+                        "updated_at": pd.Timestamp.now().isoformat()
+                    }).eq("id", orcamento_id).execute()
+
+                    st.success("Orçamento atualizado com sucesso.")
+                    st.rerun()
+
+                if orc.get("pdf_drive_link"):
+                    st.link_button("Abrir PDF no Drive", orc.get("pdf_drive_link"))
+
+        except Exception as e:
+            st.error(f"Erro ao carregar orçamentos: {e}")
     
     elif menu == "Dashboard de Custos":
         st.title("💰 Configuração de Custos Operacionais")
