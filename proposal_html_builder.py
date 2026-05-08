@@ -67,6 +67,15 @@ def gerar_pdf_proposta_html(
 ):
     os.makedirs(output_dir, exist_ok=True)
 
+    if versao == "email":
+        assets_usados = preparar_assets_email()
+        extensao_img = "jpg"
+        sufixo = "email"
+    else:
+        assets_usados = ASSETS_DIR
+        extensao_img = "png"
+        sufixo = "alta"
+    
     respostas_cliente = respostas_cliente or {}
     servicos_contratados = servicos_contratados or ["Contábil", "Fiscal", "Pessoal", "Societário"]
 
