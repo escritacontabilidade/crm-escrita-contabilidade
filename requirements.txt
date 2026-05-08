@@ -12,3 +12,4 @@ openpyxl
 weasyprint
 jinja2
 num2words
+pypdf
