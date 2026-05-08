@@ -367,7 +367,7 @@ def gerar_pdf_proposta_html(
     )
 
     nome_limpo = limpar_nome_arquivo(nome_empresa)
-    caminho_pdf = os.path.join(output_dir, f"proposta_{nome_limpo}.pdf")
+    caminho_pdf = os.path.join(output_dir, f"proposta_{nome_limpo}_{sufixo}.pdf")
 
     HTML(string=html_final, base_url=".").write_pdf(caminho_pdf)
 
