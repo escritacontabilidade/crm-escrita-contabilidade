@@ -1204,7 +1204,7 @@ else:
                     st.download_button(
                         label="⬇️ Baixar PDF da Proposta",
                         data=arquivo_pdf,
-                        file_name=f"proposta_{nome_empresa.replace(' ', '_')}.pdf",
+                        file_name=f"proposta_{nome_empresa.replace(' ', '_')}_{st.session_state.get('pdf_proposta_versao', 'alta')}.pdf",
                         mime="application/pdf"
                     )
     
