@@ -674,6 +674,7 @@ else:
         "Leads Arquivados",
         "Nova Proposta",
         "Proposta Comercial",
+        "Orçamentos",
         "Histórico de Vendas",
         "Link para Cliente"
     ]
