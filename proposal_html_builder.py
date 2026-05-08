@@ -62,7 +62,8 @@ def gerar_pdf_proposta_html(
     valor_mensal,
     servicos_contratados,
     respostas_cliente=None,
-    output_dir="propostas_geradas"
+    output_dir="propostas_geradas",
+    versao="alta"
 ):
     os.makedirs(output_dir, exist_ok=True)
 
