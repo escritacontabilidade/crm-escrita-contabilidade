@@ -320,7 +320,38 @@ def upload_arquivo_para_drive(uploaded_file, nome_empresa, lead_id, pasta_drive_
         "drive_link": arquivo.get("webViewLink"),
         "mime_type": uploaded_file.type
     }
+def upload_pdf_proposta_para_drive(caminho_pdf, nome_empresa, orcamento_id, pasta_drive_id):
+    service = get_drive_service()
 
+    nome_empresa_limpo = limpar_nome_arquivo(nome_empresa)
+    nome_salvo = f"{pd.Timestamp.today().date()}__orcamento_{orcamento_id}__{nome_empresa_limpo}__proposta.pdf"
+
+    file_metadata = {
+        "name": nome_salvo,
+        "parents": [pasta_drive_id]
+    }
+
+    with open(caminho_pdf, "rb") as f:
+        file_bytes = io.BytesIO(f.read())
+
+    media = MediaIoBaseUpload(
+        file_bytes,
+        mimetype="application/pdf",
+        resumable=True
+    )
+
+    arquivo = service.files().create(
+        body=file_metadata,
+        media_body=media,
+        fields="id, webViewLink",
+        supportsAllDrives=True
+    ).execute()
+
+    return {
+        "pdf_nome": nome_salvo,
+        "pdf_drive_file_id": arquivo.get("id"),
+        "pdf_drive_link": arquivo.get("webViewLink")
+    }
 # --- 1. CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(page_title="CRM & Precificação Escrita", layout="wide", page_icon="📄")
 
