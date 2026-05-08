@@ -7,6 +7,40 @@ from PIL import Image
 
 ASSETS_DIR = "assets_proposta_v2"
 
+ASSETS_EMAIL_DIR = "assets_proposta_email"
+
+
+def preparar_assets_email(
+    origem=ASSETS_DIR,
+    destino=ASSETS_EMAIL_DIR,
+    largura=1280,
+    qualidade=72
+):
+    os.makedirs(destino, exist_ok=True)
+
+    for n in range(1, 16):
+        entrada = os.path.join(origem, f"{n}.png")
+        saida = os.path.join(destino, f"{n}.jpg")
+
+        if not os.path.exists(entrada):
+            continue
+
+        img = Image.open(entrada).convert("RGB")
+
+        w, h = img.size
+        nova_altura = int((largura / w) * h)
+
+        img = img.resize((largura, nova_altura))
+
+        img.save(
+            saida,
+            "JPEG",
+            quality=qualidade,
+            optimize=True,
+            progressive=True
+        )
+
+    return destino
 
 def formatar_moeda_pdf(valor):
     try:
