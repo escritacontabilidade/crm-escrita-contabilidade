@@ -292,7 +292,7 @@ def gerar_pdf_proposta_html(
 
     {% for n in range(1, 16) %}
         <section class="slide">
-            <img class="slide-bg" src="{{ assets_dir }}/{{ n }}.png">
+            <img class="slide-bg" src="{{ assets_dir }}/{{ n }}.{{ extensao_img }}">
 
             {% if n == 1 %}
                 <div class="empresa-slide-1">{{ nome_empresa }}</div>
