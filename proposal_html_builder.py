@@ -341,15 +341,25 @@ def gerar_pdf_proposta_html(
     {% endfor %}
 
     <section class="anexo">
-        <h1>Anexo — Respostas do Cliente</h1>
-
+        <h1>Anexo — Dados da Proposta</h1>
+    
         <div class="anexo-meta">
             <strong>Empresa:</strong> {{ nome_empresa }}<br>
+            <strong>Segmento:</strong> {{ segmento }}<br>
+            <strong>Regime Tributário:</strong> {{ regime }}<br>
             <strong>Plano:</strong> {{ plano }}<br>
-            <strong>Valor mensal:</strong> {{ valor_formatado }}<br>
-            <strong>Serviços contratados:</strong> {{ servicos_texto }}<br>
+            <strong>Serviços Prestados:</strong> {{ servicos_texto }}<br>
+            <strong>Faturamento Informado:</strong> {{ faturamento_formatado }}<br>
+            <strong>Tabela Base Utilizada:</strong> {{ tabela_base }}<br>
+            <strong>Preço Base Inicial:</strong> {{ preco_base_formatado }}<br>
+            <strong>Acréscimos Aplicados:</strong> {{ acrescimos_formatado }}<br>
+            <strong>Valor Final da Proposta:</strong> {{ valor_formatado }}<br>
             <strong>Data de geração:</strong> {{ data_geracao }}
         </div>
+    
+        <h1 style="margin-top: 50px;">
+            Respostas do Questionário
+        </h1>
 
         {% for pergunta, resposta in respostas.items() %}
             <div class="qa">
