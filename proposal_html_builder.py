@@ -383,6 +383,12 @@ def gerar_pdf_proposta_html(
         valor_formatado=valor_formatado,
         valor_extenso=valor_extenso,
         servicos_texto=servicos_texto,
+        segmento=segmento,
+        regime=regime,
+        faturamento_formatado=faturamento_formatado,
+        tabela_base=tabela_base,
+        preco_base_formatado=preco_base_formatado,
+        acrescimos_formatado=acrescimos_formatado,
         respostas=respostas_cliente,
         data_geracao=datetime.now().strftime("%d/%m/%Y %H:%M"),
     )
