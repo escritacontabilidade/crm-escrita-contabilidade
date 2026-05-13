@@ -1214,7 +1214,16 @@ else:
                         plano=opcao_valor,
                         valor_mensal=valor_final_proposta,
                         servicos_contratados=servicos_contratados,
+                    
                         respostas_cliente=proposta_atual.get("respostas_formulario", {}),
+                    
+                        faturamento_medio=proposta_atual.get("faturamento_medio", 0),
+                        regime=proposta_atual.get("regime", ""),
+                        segmento=proposta_atual.get("segmento", ""),
+                        tabela_base=proposta_atual.get("tabela_base", ""),
+                        preco_base_inicial=proposta_atual.get("preco_base_inicial", 0),
+                        total_acrescimos=proposta_atual.get("total_acrescimos", 0),
+                    
                         versao=versao_pdf
                     )
             
