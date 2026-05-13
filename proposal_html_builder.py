@@ -347,12 +347,8 @@ def gerar_pdf_proposta_html(
             <strong>Empresa:</strong> {{ nome_empresa }}<br>
             <strong>Segmento:</strong> {{ segmento }}<br>
             <strong>Regime Tributário:</strong> {{ regime }}<br>
-            <strong>Plano:</strong> {{ plano }}<br>
-            <strong>Serviços Prestados:</strong> {{ servicos_texto }}<br>
             <strong>Faturamento Informado:</strong> {{ faturamento_formatado }}<br>
-            <strong>Tabela Base Utilizada:</strong> {{ tabela_base }}<br>
-            <strong>Preço Base Inicial:</strong> {{ preco_base_formatado }}<br>
-            <strong>Acréscimos Aplicados:</strong> {{ acrescimos_formatado }}<br>
+            <strong>Serviços Prestados:</strong> {{ servicos_texto }}<br>
             <strong>Valor Final da Proposta:</strong> {{ valor_formatado }}<br>
             <strong>Data de geração:</strong> {{ data_geracao }}
         </div>
