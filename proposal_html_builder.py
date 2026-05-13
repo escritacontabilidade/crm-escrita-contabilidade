@@ -88,6 +88,9 @@ def gerar_pdf_proposta_html(
     servicos_contratados = servicos_contratados or ["Contábil", "Fiscal", "Pessoal", "Societário"]
 
     valor_formatado = formatar_moeda_pdf(valor_mensal)
+    faturamento_formatado = formatar_moeda_pdf(faturamento_medio)
+    preco_base_formatado = formatar_moeda_pdf(preco_base_inicial)
+    acrescimos_formatado = formatar_moeda_pdf(total_acrescimos)
     valor_extenso = num2words(
         float(valor_mensal),
         lang='pt_BR',
