@@ -62,6 +62,14 @@ def gerar_pdf_proposta_html(
     valor_mensal,
     servicos_contratados,
     respostas_cliente=None,
+
+    faturamento_medio=0,
+    regime="",
+    segmento="",
+    tabela_base="",
+    preco_base_inicial=0,
+    total_acrescimos=0,
+
     output_dir="propostas_geradas",
     versao="alta"
 ):
