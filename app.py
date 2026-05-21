@@ -28,6 +28,7 @@ import fitz
 from openpyxl import load_workbook
 from proposal_builder_v2 import gerar_pdf_proposta_comercial_v2
 from proposal_html_builder import gerar_pdf_proposta_html
+from email_sender import enviar_email_proposta
 
 def autenticar_usuario(usuario, senha):
     try:
