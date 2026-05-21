@@ -1230,11 +1230,37 @@ else:
             
                     st.session_state["pdf_proposta_path"] = caminho_pdf
                     st.session_state["pdf_proposta_versao"] = versao_pdf
-            
+                    
+                    try:
+                    
+                        supabase.table("orcamentos").insert({
+                    
+                            "cliente": nome_empresa,
+                            "segmento": segmento,
+                            "regime": regime,
+                    
+                            "plano": opcao_valor,
+                            "valor_final": valor_final_proposta,
+                    
+                            "servicos_contratados": servicos_contratados,
+                    
+                            "status": "Em aberto",
+                            "ativo": True,
+                    
+                            "pdf_local": caminho_pdf,
+                    
+                            "created_at":
+                            pd.Timestamp.now().isoformat()
+                    
+                        }).execute()
+                    
+                    except Exception as erro:
+                        st.warning(f"Erro salvando orçamento: {erro}")
+                    
                     if versao_pdf == "email":
-                        st.success("PDF leve para e-mail preparado com sucesso.")
+                        st.success("PDF leve salvo e preparado.")
                     else:
-                        st.success("PDF em alta qualidade preparado com sucesso.")
+                        st.success("Proposta salva com sucesso.")
             
                 except Exception as e:
                     st.error(f"Erro ao preparar PDF profissional: {e}")
