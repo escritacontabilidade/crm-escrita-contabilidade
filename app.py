@@ -1249,7 +1249,49 @@ else:
                         file_name=f"proposta_{nome_empresa.replace(' ', '_')}_{st.session_state.get('pdf_proposta_versao', 'alta')}.pdf",
                         mime="application/pdf"
                     )
-
+                st.divider()
+                st.subheader("📧 Enviar proposta")
+                
+                email_cliente = st.text_input(
+                    "E-mail destinatário",
+                    value=proposta_atual.get("email", "")
+                )
+                
+                assunto_email = st.text_input(
+                    "Assunto",
+                    value="Proposta Comercial - Escrita Contabilidade"
+                )
+                
+                mensagem_email = st.text_area(
+                    "Mensagem",
+                    value="""
+                Olá,
+                
+                Segue em anexo a proposta comercial elaborada pela Escrita Contabilidade.
+                
+                Permanecemos à disposição para esclarecer dúvidas.
+                
+                Atenciosamente,
+                Equipe Escrita Contabilidade
+                """
+                )
+                
+                if st.button("Enviar proposta por e-mail"):
+                
+                    try:
+                
+                        enviar_email_proposta(
+                            destinatario=email_cliente,
+                            assunto=assunto_email,
+                            mensagem=mensagem_email,
+                            caminho_pdf=caminho_pdf
+                        )
+                
+                        st.success("Proposta enviada com sucesso")
+                
+                    except Exception as e:
+                
+                        st.error(f"Erro ao enviar: {e}")
     elif menu == "Orçamentos":
         st.title("📂 Orçamentos")
 
