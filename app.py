@@ -1257,10 +1257,35 @@ else:
                     except Exception as erro:
                         st.warning(f"Erro salvando orçamento: {erro}")
                     
+                    try:
+                        dados_orcamento = {
+                            "cliente": nome_empresa,
+                            "segmento": segmento,
+                            "regime": regime,
+                            "plano": opcao_valor,
+                            "valor_calculado": valor_apresentado,
+                            "valor_final": valor_final_proposta,
+                            "servicos_contratados": servicos_contratados,
+                            "respostas_formulario": proposta_atual.get("respostas_formulario", {}),
+                            "proposta_json": proposta_atual,
+                            "status": "Em aberto",
+                            "ativo": True
+                        }
+                    
+                        res_orc = supabase.table("orcamentos").insert(dados_orcamento).execute()
+                    
+                        if res_orc.data:
+                            st.success("Orçamento salvo no CRM com sucesso.")
+                        else:
+                            st.warning("PDF gerado, mas o orçamento não foi salvo no CRM.")
+                    
+                    except Exception as erro:
+                        st.error(f"Erro ao salvar orçamento no CRM: {erro}")
+                    
                     if versao_pdf == "email":
-                        st.success("PDF leve salvo e preparado.")
+                        st.success("PDF leve para e-mail preparado com sucesso.")
                     else:
-                        st.success("Proposta salva com sucesso.")
+                        st.success("PDF em alta qualidade preparado com sucesso.")
             
                 except Exception as e:
                     st.error(f"Erro ao preparar PDF profissional: {e}")
