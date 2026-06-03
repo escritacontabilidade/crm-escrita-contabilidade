@@ -1272,9 +1272,31 @@ else:
                         }
                     
                         res_orc = supabase.table("orcamentos").insert(dados_orcamento).execute()
-                    
+
                         if res_orc.data:
-                            st.success("Orçamento salvo no CRM com sucesso.")
+                            orcamento_id = res_orc.data[0]["id"]
+                        
+                            try:
+                                pasta_drive_id = st.secrets["drive_propostas_folder_id"]
+                        
+                                pdf_info = upload_pdf_proposta_para_drive(
+                                    caminho_pdf=caminho_pdf,
+                                    nome_empresa=nome_empresa,
+                                    orcamento_id=orcamento_id,
+                                    pasta_drive_id=pasta_drive_id
+                                )
+                        
+                                supabase.table("orcamentos").update({
+                                    "pdf_nome": pdf_info["pdf_nome"],
+                                    "pdf_drive_file_id": pdf_info["pdf_drive_file_id"],
+                                    "pdf_drive_link": pdf_info["pdf_drive_link"]
+                                }).eq("id", orcamento_id).execute()
+                        
+                                st.success("Orçamento salvo no CRM e PDF enviado para o Drive com sucesso.")
+                        
+                            except Exception as erro_drive:
+                                st.warning(f"Orçamento salvo, mas erro ao enviar PDF para o Drive: {erro_drive}")
+                        
                         else:
                             st.warning("PDF gerado, mas o orçamento não foi salvo no CRM.")
                     
