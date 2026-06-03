@@ -1247,8 +1247,7 @@ else:
                             "status": "Em aberto",
                             "ativo": True,
                     
-                            "pdf_local": caminho_pdf,
-                    
+                                                
                             "created_at":
                             pd.Timestamp.now().isoformat()
                     
