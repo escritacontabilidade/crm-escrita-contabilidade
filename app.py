@@ -971,7 +971,8 @@ else:
                     preco_base_calculado, total_acrescimos, detalhamento_acrescimos = calcular_preco_completo(
                         valor_base=preco_base_inicial,
                         respostas_formulario=respostas_formulario,
-                        regras=regras_precificacao
+                        regras=regras_precificacao,
+                        segmento=seg_sel
                     )
                     
                     v_bronze = preco_base_calculado 
