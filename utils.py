@@ -126,7 +126,10 @@ def upload_pdf_proposta_para_drive(caminho_pdf, nome_empresa, orcamento_id, past
     return {
         "pdf_nome": nome_salvo,
         "pdf_drive_file_id": arquivo.get("id"),
-        
+        "pdf_drive_link": arquivo.get("webViewLink")
+    }
+
+
 def criar_pasta_drive(nome_pasta, pasta_pai_id):
     service = get_drive_service()
 
