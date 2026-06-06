@@ -9,6 +9,7 @@ from utils import (
     upload_documento_radar_para_drive
 )
 
+
 DOCUMENTOS_RADAR = [
     ("Documento de identificação do responsável", "Obrigatório"),
     ("Contrato Social", "Obrigatório"),
@@ -33,9 +34,22 @@ DOCUMENTOS_RADAR = [
 ]
 
 
-def tela_radar(supabase):
-    st.title("🛰️ Radar Importador")
+def calcular_percentual_checklist(checklist):
+    if not checklist:
+        return 0
 
+    total = len(checklist)
+    concluidos = 0
+
+    for item in checklist:
+        status = str(item.get("status", "")).strip()
+        if status in ["Enviado", "Dispensado", "Não aplicável"]:
+            concluidos += 1
+
+    return round((concluidos / total) * 100, 1)
+
+
+def tela_novo_processo_radar(supabase):
     st.info("Módulo para proposta e checklist documental do pedido de revisão de Radar.")
 
     st.subheader("Dados da proposta")
@@ -150,11 +164,9 @@ def tela_radar(supabase):
             dados["drive_folder_id"] = pasta_info["folder_id"]
             dados["drive_folder_link"] = pasta_info["folder_link"]
 
-            documentos_uploadados = []
-
             for item in checklist:
                 arquivo_obj = item.get("arquivo_obj")
-            
+
                 if arquivo_obj:
                     upload_info = upload_documento_radar_para_drive(
                         uploaded_file=arquivo_obj,
@@ -162,14 +174,12 @@ def tela_radar(supabase):
                         documento_nome=item["documento"],
                         pasta_drive_id=pasta_info["folder_id"]
                     )
-            
+
                     item["drive_link"] = upload_info["drive_link"]
                     item["drive_file_id"] = upload_info["drive_file_id"]
-            
-                    documentos_uploadados.append(upload_info)
-            
+
                 item.pop("arquivo_obj", None)
-            
+
             res = supabase.table("radar_processos").insert(dados).execute()
 
             if res.data:
@@ -181,3 +191,112 @@ def tela_radar(supabase):
 
         except Exception as e:
             st.error(f"Erro ao salvar processo Radar: {e}")
+
+
+def tela_processos_radar(supabase):
+    st.subheader("Processos Radar")
+
+    try:
+        res = supabase.table("radar_processos") \
+            .select("*") \
+            .eq("ativo", True) \
+            .order("created_at", desc=True) \
+            .execute()
+
+        if not res.data:
+            st.info("Nenhum processo Radar salvo ainda.")
+            return
+
+        df = pd.DataFrame(res.data)
+
+        df["percentual_checklist"] = df["checklist"].apply(calcular_percentual_checklist)
+
+        colunas = [
+            "id",
+            "nome_empresa",
+            "modalidade",
+            "tipo_cliente",
+            "honorario",
+            "status",
+            "percentual_checklist",
+            "created_at",
+            "drive_folder_link"
+        ]
+
+        colunas = [c for c in colunas if c in df.columns]
+
+        st.dataframe(df[colunas], use_container_width=True)
+
+        opcoes = [
+            f"{row['id']} | {row.get('nome_empresa', '')} | {row.get('status', '')} | {row.get('percentual_checklist', 0)}%"
+            for _, row in df.iterrows()
+        ]
+
+        escolhido = st.selectbox("Selecione um processo Radar", opcoes)
+
+        processo_id = int(escolhido.split("|")[0].strip())
+        processo = df[df["id"] == processo_id].iloc[0].to_dict()
+
+        st.divider()
+        st.subheader("Detalhes do processo")
+
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Empresa", processo.get("nome_empresa", ""))
+        c2.metric("Modalidade", processo.get("modalidade", ""))
+        c3.metric("Checklist", f"{processo.get('percentual_checklist', 0)}%")
+
+        novo_status = st.selectbox(
+            "Status do processo",
+            ["Em aberto", "Em análise", "Aguardando documentos", "Documentos completos", "Protocolado", "Concluído", "Arquivado"],
+            index=["Em aberto", "Em análise", "Aguardando documentos", "Documentos completos", "Protocolado", "Concluído", "Arquivado"].index(
+                processo.get("status") if processo.get("status") in ["Em aberto", "Em análise", "Aguardando documentos", "Documentos completos", "Protocolado", "Concluído", "Arquivado"] else "Em aberto"
+            )
+        )
+
+        novo_honorario_txt = st.text_input(
+            "Honorários",
+            value=formatar_numero_br(processo.get("honorario") or 0)
+        )
+
+        novo_honorario = converter_numero_br(novo_honorario_txt)
+
+        checklist = processo.get("checklist") or []
+
+        st.subheader("Checklist salvo")
+
+        for i, item in enumerate(checklist, start=1):
+            with st.expander(f"{i}. {item.get('documento', '')}"):
+                st.write(f"**Observação:** {item.get('observacao', '')}")
+                st.write(f"**Status:** {item.get('status', '')}")
+                st.write(f"**Comentário:** {item.get('comentario', '')}")
+
+                if item.get("drive_link"):
+                    st.link_button("Abrir documento", item.get("drive_link"))
+
+        if processo.get("drive_folder_link"):
+            st.link_button("Abrir pasta do processo no Drive", processo.get("drive_folder_link"))
+
+        if st.button("Salvar alterações do processo Radar"):
+            supabase.table("radar_processos").update({
+                "status": novo_status,
+                "honorario": novo_honorario,
+                "updated_at": pd.Timestamp.now().isoformat()
+            }).eq("id", processo_id).execute()
+
+            st.success("Processo Radar atualizado com sucesso.")
+            st.rerun()
+
+    except Exception as e:
+        st.error(f"Erro ao carregar processos Radar: {e}")
+
+
+def tela_radar(supabase):
+    st.title("🛰️ Radar Importador")
+
+    aba_novo, aba_processos = st.tabs(["Novo Processo", "Processos Radar"])
+
+    with aba_novo:
+        tela_novo_processo_radar(supabase)
+
+    with aba_processos:
+        tela_processos_radar(supabase)
