@@ -18,7 +18,15 @@ from validators import (
     validar_pergunta_segmento,
 )
 from pdf_builder import gerar_pdf, gerar_pdf_proposta_comercial
-from utils import formatar_moeda
+from utils import (
+    formatar_moeda,
+    formatar_numero_br,
+    converter_numero_br,
+    limpar_nome_arquivo,
+    get_drive_service,
+    upload_arquivo_para_drive,
+    upload_pdf_proposta_para_drive
+)
 import io
 import re
 from google.oauth2.service_account import Credentials
