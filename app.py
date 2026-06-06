@@ -552,6 +552,7 @@ else:
         "Nova Proposta",
         "Proposta Comercial",
         "Orçamentos",
+        "Radar",
         "Histórico de Vendas",
         "Link para Cliente"
     ]
