@@ -65,7 +65,13 @@ def upload_arquivo_para_drive(uploaded_file, nome_empresa, lead_id, pasta_drive_
     nome_empresa_limpo = limpar_nome_arquivo(nome_empresa)
     nome_original = limpar_nome_arquivo(uploaded_file.name)
 
-    nome_salvo = f"{pd.Timestamp.today().date()}__lead_{lead_id}__{nome_empresa_limpo}__balancete__{nome_original}"
+    nome_salvo = (
+        f"{pd.Timestamp.today().date()}"
+        f"__lead_{lead_id}"
+        f"__{nome_empresa_limpo}"
+        f"__balancete"
+        f"__{nome_original}"
+    )
 
     file_metadata = {
         "name": nome_salvo,
@@ -100,7 +106,12 @@ def upload_pdf_proposta_para_drive(caminho_pdf, nome_empresa, orcamento_id, past
     service = get_drive_service()
 
     nome_empresa_limpo = limpar_nome_arquivo(nome_empresa)
-    nome_salvo = f"{pd.Timestamp.today().date()}__orcamento_{orcamento_id}__{nome_empresa_limpo}__proposta.pdf"
+    nome_salvo = (
+        f"{pd.Timestamp.today().date()}"
+        f"__orcamento_{orcamento_id}"
+        f"__{nome_empresa_limpo}"
+        f"__proposta.pdf"
+    )
 
     file_metadata = {
         "name": nome_salvo,
@@ -151,4 +162,3 @@ def criar_pasta_drive(nome_pasta, pasta_pai_id):
         "folder_id": pasta.get("id"),
         "folder_link": pasta.get("webViewLink")
     }
-        
