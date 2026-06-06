@@ -126,5 +126,27 @@ def upload_pdf_proposta_para_drive(caminho_pdf, nome_empresa, orcamento_id, past
     return {
         "pdf_nome": nome_salvo,
         "pdf_drive_file_id": arquivo.get("id"),
+        
+def criar_pasta_drive(nome_pasta, pasta_pai_id):
+    service = get_drive_service()
+
+    nome_pasta_limpo = limpar_nome_arquivo(nome_pasta)
+
+    file_metadata = {
+        "name": nome_pasta_limpo,
+        "mimeType": "application/vnd.google-apps.folder",
+        "parents": [pasta_pai_id]
+    }
+
+    pasta = service.files().create(
+        body=file_metadata,
+        fields="id, webViewLink",
+        supportsAllDrives=True
+    ).execute()
+
+    return {
+        "folder_id": pasta.get("id"),
+        "folder_link": pasta.get("webViewLink")
+    }
         "pdf_drive_link": arquivo.get("webViewLink")
     }
