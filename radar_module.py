@@ -150,6 +150,26 @@ def tela_radar(supabase):
             dados["drive_folder_id"] = pasta_info["folder_id"]
             dados["drive_folder_link"] = pasta_info["folder_link"]
 
+            documentos_uploadados = []
+
+            for item in checklist:
+                arquivo_obj = item.get("arquivo_obj")
+            
+                if arquivo_obj:
+                    upload_info = upload_documento_radar_para_drive(
+                        uploaded_file=arquivo_obj,
+                        nome_empresa=nome_empresa,
+                        documento_nome=item["documento"],
+                        pasta_drive_id=pasta_info["folder_id"]
+                    )
+            
+                    item["drive_link"] = upload_info["drive_link"]
+                    item["drive_file_id"] = upload_info["drive_file_id"]
+            
+                    documentos_uploadados.append(upload_info)
+            
+                item.pop("arquivo_obj", None)
+            
             res = supabase.table("radar_processos").insert(dados).execute()
 
             if res.data:
