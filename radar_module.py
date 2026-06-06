@@ -5,9 +5,9 @@ from utils import (
     formatar_moeda,
     formatar_numero_br,
     converter_numero_br,
-    criar_pasta_drive
+    criar_pasta_drive,
+    upload_documento_radar_para_drive
 )
-
 
 DOCUMENTOS_RADAR = [
     ("Documento de identificação do responsável", "Obrigatório"),
