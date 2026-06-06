@@ -162,3 +162,40 @@ def criar_pasta_drive(nome_pasta, pasta_pai_id):
         "folder_id": pasta.get("id"),
         "folder_link": pasta.get("webViewLink")
     }
+
+def upload_documento_radar_para_drive(uploaded_file, nome_empresa, documento_nome, pasta_drive_id):
+    service = get_drive_service()
+
+    nome_empresa_limpo = limpar_nome_arquivo(nome_empresa)
+    documento_limpo = limpar_nome_arquivo(documento_nome)
+    nome_original = limpar_nome_arquivo(uploaded_file.name)
+
+    nome_salvo = f"{pd.Timestamp.today().date()}__{nome_empresa_limpo}__{documento_limpo}__{nome_original}"
+
+    file_metadata = {
+        "name": nome_salvo,
+        "parents": [pasta_drive_id]
+    }
+
+    file_bytes = io.BytesIO(uploaded_file.getvalue())
+
+    media = MediaIoBaseUpload(
+        file_bytes,
+        mimetype=uploaded_file.type or "application/octet-stream",
+        resumable=True
+    )
+
+    arquivo = service.files().create(
+        body=file_metadata,
+        media_body=media,
+        fields="id, webViewLink",
+        supportsAllDrives=True
+    ).execute()
+
+    return {
+        "nome_original": uploaded_file.name,
+        "nome_salvo": nome_salvo,
+        "drive_file_id": arquivo.get("id"),
+        "drive_link": arquivo.get("webViewLink"),
+        "mime_type": uploaded_file.type
+    }
