@@ -151,5 +151,4 @@ def criar_pasta_drive(nome_pasta, pasta_pai_id):
         "folder_id": pasta.get("id"),
         "folder_link": pasta.get("webViewLink")
     }
-        "pdf_drive_link": arquivo.get("webViewLink")
-    }
+        
