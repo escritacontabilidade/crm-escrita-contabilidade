@@ -138,7 +138,25 @@ def tela_radar(supabase):
             "created_at": pd.Timestamp.now().isoformat()
         }
 
-        st.session_state["radar_proposta_atual"] = dados
-
-        st.success("Proposta Radar preparada em memória. Próxima etapa: salvar no Supabase e enviar documentos ao Drive.")
-        st.json(dados)
+       try:
+            pasta_pai_id = st.secrets["drive_radar_folder_id"]
+        
+            pasta_info = criar_pasta_drive(
+                nome_pasta=f"RADAR__{nome_empresa}",
+                pasta_pai_id=pasta_pai_id
+            )
+        
+            dados["drive_folder_id"] = pasta_info["folder_id"]
+            dados["drive_folder_link"] = pasta_info["folder_link"]
+        
+            res = supabase.table("radar_processos").insert(dados).execute()
+        
+            if res.data:
+                st.session_state["radar_proposta_atual"] = res.data[0]
+                st.success("Processo Radar salvo e pasta criada no Google Drive.")
+                st.link_button("Abrir pasta no Drive", pasta_info["folder_link"])
+            else:
+                st.warning("A pasta foi criada no Drive, mas o processo não foi salvo no Supabase.")
+        
+        except Exception as e:
+            st.error(f"Erro ao salvar processo Radar: {e}")
