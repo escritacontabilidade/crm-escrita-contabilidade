@@ -115,6 +115,7 @@ def tela_radar(supabase):
                 "documento": documento,
                 "observacao": observacao,
                 "status": status,
+                "arquivo_obj": arquivo,
                 "arquivo": arquivo.name if arquivo else None,
                 "comentario": comentario
             })
