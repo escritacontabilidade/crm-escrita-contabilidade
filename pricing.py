@@ -164,25 +164,26 @@ def calcular_valor_regra(regra, resposta):
             return qtd * valor_ate_29
         else:
             return qtd * valor_a_partir_30
-        elif tipo == "processos_faixa":
-            try:
-                qtd = float(resposta)
-            except:
-                return 0.0
-    
-            if qtd <= 0:
-                return 0.0
-    
-            valor_ate_100 = float(regra.get("valor_ate_100") or 0)
-            valor_101_500 = float(regra.get("valor_101_500") or 0)
-            valor_acima_500 = float(regra.get("valor_acima_500") or 0)
-    
-            if qtd <= 100:
-                return qtd * valor_ate_100
-            elif qtd <= 500:
-                return qtd * valor_101_500
-            else:
-                return qtd * valor_acima_500
+
+    elif tipo == "processos_faixa":
+        try:
+            qtd = float(resposta)
+        except:
+            return 0.0
+
+        if qtd <= 0:
+            return 0.0
+
+        valor_ate_100 = float(regra.get("valor_ate_100") or 0)
+        valor_101_500 = float(regra.get("valor_101_500") or 0)
+        valor_acima_500 = float(regra.get("valor_acima_500") or 0)
+
+        if qtd <= 100:
+            return qtd * valor_ate_100
+        elif qtd <= 500:
+            return qtd * valor_101_500
+        else:
+            return qtd * valor_acima_500
     return 0.0
         
 def calcular_preco_completo(valor_base, respostas_formulario, regras):
