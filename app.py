@@ -1376,7 +1376,10 @@ else:
                 st.write("Nenhum lead preenchido ainda.")
         except Exception as e:
             st.error(f"Erro ao carregar leads: {e}")
-            
+   
+    elif menu == "Radar":
+        tela_radar(supabase)
+    
     elif menu == "Histórico de Vendas":
         st.title("📊 Histórico de Orçamentos")
 
