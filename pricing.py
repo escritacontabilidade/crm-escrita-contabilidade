@@ -186,7 +186,7 @@ def calcular_valor_regra(regra, resposta):
             return qtd * valor_acima_500
     return 0.0
         
-def calcular_preco_completo(valor_base, respostas_formulario, regras):
+def calcular_preco_completo(valor_base, respostas_formulario, regras, segmento=None):
     total_acrescimos = 0
     detalhamento = []
 
@@ -208,6 +208,67 @@ def calcular_preco_completo(valor_base, respostas_formulario, regras):
             })
 
             total_acrescimos += valor
+
+    # Regra especial: conciliação bancária
+    pergunta_conciliacao = "- A empresa faz conciliação bancária no financeiro? (saldos dos extratos bancários fecham com sistema/planilha)"
+    pergunta_qtd_contas_conciliar = "- Caso NÃO faça conciliação bancária, quantas contas bancárias precisam ser conciliadas?"
+
+    resposta_conciliacao = str(respostas_formulario.get(pergunta_conciliacao, "")).strip().lower()
+
+    if resposta_conciliacao == "não" or resposta_conciliacao == "nao":
+        try:
+            qtd_contas = float(respostas_formulario.get(pergunta_qtd_contas_conciliar, 0) or 0)
+        except:
+            qtd_contas = 0
+
+        valor_conciliacao = qtd_contas * 500
+
+        if valor_conciliacao > 0:
+            total_acrescimos += valor_conciliacao
+            detalhamento.append({
+                "pergunta": pergunta_qtd_contas_conciliar,
+                "resposta": qtd_contas,
+                "valor": valor_conciliacao,
+                "tipo": "conciliacao_bancaria"
+            })
+
+    # Regra especial: processos por mês
+    pergunta_processos = "- Quantos processos por mês?"
+
+    try:
+        qtd_processos = float(respostas_formulario.get(pergunta_processos, 0) or 0)
+    except:
+        qtd_processos = 0
+
+    segmento_normalizado = str(segmento or "").strip().lower()
+
+    valor_processos = 0
+
+    if qtd_processos > 0:
+        if segmento_normalizado == "agente de carga":
+            if qtd_processos <= 100:
+                valor_processos = qtd_processos * 50
+            elif qtd_processos <= 500:
+                valor_processos = qtd_processos * 40
+            else:
+                valor_processos = qtd_processos * 30
+
+        elif segmento_normalizado == "despachante aduaneiro":
+            if qtd_processos <= 100:
+                valor_processos = qtd_processos * 30
+            elif qtd_processos <= 500:
+                valor_processos = qtd_processos * 25
+            else:
+                valor_processos = qtd_processos * 20
+
+    if valor_processos > 0:
+        total_acrescimos += valor_processos
+        detalhamento.append({
+            "pergunta": pergunta_processos,
+            "resposta": qtd_processos,
+            "valor": valor_processos,
+            "tipo": "processos_por_faixa"
+        })
 
     preco_base_calculado = valor_base + total_acrescimos
 
