@@ -342,6 +342,7 @@ def tela_lead_site():
 query_params = st.query_params
 is_cliente = query_params.get("modo") == "cliente"
 is_site = query_params.get("modo") == "site"
+is_cliente_radar = query_params.get("modo") == "cliente_radar"
 
 if is_site:
     tela_lead_site()
