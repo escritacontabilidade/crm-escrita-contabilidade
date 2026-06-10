@@ -265,7 +265,18 @@ def tela_processos_radar(supabase):
         st.subheader("Checklist salvo")
 
         for i, item in enumerate(checklist, start=1):
-            with st.expander(f"{i}. {item.get('documento', '')}"):
+            status_item = str(item.get("status", "")).strip()
+        
+            if status_item == "Enviado":
+                icone = "🟢"
+            elif status_item in ["Dispensado", "Não aplicável"]:
+                icone = "🔵"
+            else:
+                icone = "🔴"
+        
+            titulo = f"{icone} {i}. {item.get('documento', '')} — {status_item}"
+        
+            with st.expander(titulo):
                 st.write(f"**Observação:** {item.get('observacao', '')}")
                 st.write(f"**Status:** {item.get('status', '')}")
                 st.write(f"**Comentário:** {item.get('comentario', '')}")
