@@ -311,3 +311,109 @@ def tela_radar(supabase):
 
     with aba_processos:
         tela_processos_radar(supabase)
+
+def tela_cliente_radar(supabase, token):
+    st.image("Logo Escrita.png", width=200)
+    st.title("📎 Envio de Documentos - Radar Importador")
+
+    try:
+        res = supabase.table("radar_processos") \
+            .select("*") \
+            .eq("token_cliente", token) \
+            .eq("ativo", True) \
+            .limit(1) \
+            .execute()
+
+        if not res.data:
+            st.error("Link inválido ou processo não encontrado.")
+            st.stop()
+
+        processo = res.data[0]
+        processo_id = processo["id"]
+
+        st.subheader("Dados cadastrais")
+
+        with st.form("form_cliente_radar"):
+            razao_social = st.text_input("Razão Social", value=processo.get("razao_social") or processo.get("nome_empresa") or "")
+            cnpj = st.text_input("CNPJ", value=processo.get("cnpj") or "")
+            responsavel = st.text_input("Responsável", value=processo.get("responsavel") or "")
+            email = st.text_input("E-mail", value=processo.get("email") or "")
+            telefone = st.text_input("Telefone / WhatsApp", value=processo.get("telefone") or "")
+
+            salvar_dados = st.form_submit_button("Salvar dados cadastrais")
+
+            if salvar_dados:
+                supabase.table("radar_processos").update({
+                    "razao_social": razao_social,
+                    "cnpj": cnpj,
+                    "responsavel": responsavel,
+                    "email": email,
+                    "telefone": telefone,
+                    "dados_cliente_preenchidos": True,
+                    "updated_at": pd.Timestamp.now().isoformat()
+                }).eq("id", processo_id).execute()
+
+                st.success("Dados cadastrais salvos com sucesso.")
+                st.rerun()
+
+        st.divider()
+        st.subheader("Checklist de documentos")
+
+        checklist = processo.get("checklist") or []
+
+        for i, item in enumerate(checklist, start=1):
+            status_atual = item.get("status", "Pendente")
+
+            if status_atual == "Enviado":
+                icone = "🟢"
+            elif status_atual in ["Dispensado", "Não aplicável"]:
+                icone = "🔵"
+            else:
+                icone = "🔴"
+
+            with st.expander(f"{icone} {i}. {item.get('documento', '')} — {status_atual}"):
+                st.write(f"**Observação:** {item.get('observacao', '')}")
+
+                if item.get("drive_link"):
+                    st.success("Documento já enviado.")
+                    st.link_button("Abrir documento enviado", item.get("drive_link"))
+                else:
+                    arquivo = st.file_uploader(
+                        "Anexar documento",
+                        type=["pdf", "png", "jpg", "jpeg", "xlsx", "xlsm", "doc", "docx"],
+                        key=f"cliente_radar_upload_{processo_id}_{i}"
+                    )
+
+                    if st.button("Enviar este documento", key=f"cliente_radar_btn_{processo_id}_{i}"):
+                        if not arquivo:
+                            st.warning("Selecione um arquivo antes de enviar.")
+                            st.stop()
+
+                        pasta_drive_id = processo.get("drive_folder_id")
+
+                        if not pasta_drive_id:
+                            st.error("Pasta do processo no Drive não encontrada.")
+                            st.stop()
+
+                        upload_info = upload_documento_radar_para_drive(
+                            uploaded_file=arquivo,
+                            nome_empresa=razao_social or processo.get("nome_empresa"),
+                            documento_nome=item.get("documento"),
+                            pasta_drive_id=pasta_drive_id
+                        )
+
+                        item["status"] = "Enviado"
+                        item["arquivo"] = arquivo.name
+                        item["drive_link"] = upload_info["drive_link"]
+                        item["drive_file_id"] = upload_info["drive_file_id"]
+
+                        supabase.table("radar_processos").update({
+                            "checklist": checklist,
+                            "updated_at": pd.Timestamp.now().isoformat()
+                        }).eq("id", processo_id).execute()
+
+                        st.success("Documento enviado com sucesso.")
+                        st.rerun()
+
+    except Exception as e:
+        st.error(f"Erro no portal Radar: {e}")
