@@ -250,7 +250,7 @@ def tela_processos_radar(supabase):
         if token_cliente:
             link_cliente = (
                 f"https://crm-escrita-contabilidade.streamlit.app/"
-                f"?modo=cliente_radar&token={token_cliente}"
+                f"?modo=cliente_radar&token={token_cliente}&embed=true"
             )
         
             st.divider()
