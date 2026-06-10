@@ -348,6 +348,16 @@ if is_site:
     tela_lead_site()
     st.stop()
 
+if is_cliente_radar:
+    token = query_params.get("token")
+
+    if not token:
+        st.error("Link inválido. Token não informado.")
+        st.stop()
+
+    tela_cliente_radar(supabase, token)
+    st.stop()
+
 if "autenticado" not in st.session_state:
     st.session_state["autenticado"] = False
 
