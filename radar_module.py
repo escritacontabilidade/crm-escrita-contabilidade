@@ -245,6 +245,32 @@ def tela_processos_radar(supabase):
         c2.metric("Modalidade", processo.get("modalidade", ""))
         c3.metric("Checklist", f"{processo.get('percentual_checklist', 0)}%")
 
+        token_cliente = processo.get("token_cliente")
+
+        if token_cliente:
+            link_cliente = (
+                f"https://crm-escrita-contabilidade.streamlit.app/"
+                f"?modo=cliente_radar&token={token_cliente}"
+            )
+        
+            st.divider()
+            st.subheader("Portal do Cliente")
+        
+            st.code(link_cliente)
+        
+            col_link1, col_link2 = st.columns(2)
+        
+            with col_link1:
+                st.link_button(
+                    "🔗 Abrir Portal do Cliente",
+                    link_cliente
+                )
+        
+            with col_link2:
+                st.markdown(
+                    f"[📋 Copiar Link]({link_cliente})"
+                )
+
         novo_status = st.selectbox(
             "Status do processo",
             ["Em aberto", "Em análise", "Aguardando documentos", "Documentos completos", "Protocolado", "Concluído", "Arquivado"],
