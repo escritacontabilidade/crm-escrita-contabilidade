@@ -1393,6 +1393,9 @@ else:
     elif menu == "Radar":
         tela_radar(supabase)
     
+    elif menu == "Matriz de Precificação":
+        tela_exportar_matriz_precificacao(supabase)
+    
     elif menu == "Histórico de Vendas":
         st.title("📊 Histórico de Orçamentos")
 
