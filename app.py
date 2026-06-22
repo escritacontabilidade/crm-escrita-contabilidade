@@ -566,6 +566,7 @@ else:
         "Proposta Comercial",
         "Orçamentos",
         "Radar",
+        "Matriz de Precificação",
         "Histórico de Vendas",
         "Link para Cliente"
     ]
