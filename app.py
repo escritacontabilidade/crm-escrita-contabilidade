@@ -39,6 +39,7 @@ from proposal_html_builder import gerar_pdf_proposta_html
 from email_sender import enviar_email_proposta
 from radar_module import tela_radar, tela_cliente_radar
 from export_precificacao import tela_exportar_matriz_precificacao
+from grupos_module import tela_grupos_economicos
 
 def autenticar_usuario(usuario, senha):
     try:
