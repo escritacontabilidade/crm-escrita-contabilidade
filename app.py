@@ -1394,6 +1394,9 @@ else:
    
     elif menu == "Radar":
         tela_radar(supabase)
+
+    elif menu == "Grupos Econômicos":
+        tela_grupos_economicos(supabase)
     
     elif menu == "Matriz de Precificação":
         tela_exportar_matriz_precificacao(supabase)
