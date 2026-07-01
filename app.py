@@ -738,8 +738,8 @@ else:
             else:
                 st.info("Nenhum lead recebido ainda.")
     
-            except Exception as e:
-                st.error(f"Erro ao carregar leads: {e}")
+        except Exception as e:
+            st.error(f"Erro ao carregar leads: {e}")
             
     elif menu == "Leads Arquivados":
         st.title("📦 Leads Arquivados")
