@@ -582,158 +582,158 @@ else:
         menus_permitidos
     )
 
-        if menu == "Leads Recebidos":
-            st.title("📥 Leads Recebidos")
-    
-            try:
-                res_leads = supabase.table("leads_externos") \
+    if menu == "Leads Recebidos":
+        st.title("📥 Leads Recebidos")
+
+        try:
+            res_leads = supabase.table("leads_externos") \
+                .select("*") \
+                .eq("ativo", True) \
+                .order("created_at", desc=True) \
+                .execute()
+
+            if res_leads.data:
+                df_leads = pd.DataFrame(res_leads.data)
+
+                colunas_exibir = [
+                    "id",
+                    "nome_empresa",
+                    "responsavel",
+                    "tipo_unidade_cliente",
+                    "tipo_unidade",
+                    "grupo_economico",
+                    "grupo_economico_id",
+                    "empresa_principal",
+                    "segmento",
+                    "regime",
+                    "status",
+                    "created_at"
+                ]
+                colunas_exibir = [c for c in colunas_exibir if c in df_leads.columns]
+
+                st.dataframe(df_leads[colunas_exibir], use_container_width=True)
+
+                lista_opcoes = [
+                    f"{row['id']} | {row.get('nome_empresa', '')} | {row.get('segmento', '')}"
+                    for _, row in df_leads.iterrows()
+                ]
+
+                lead_escolhido = st.selectbox(
+                    "Selecione um lead para analisar",
+                    lista_opcoes
+                )
+
+                lead_id = int(lead_escolhido.split("|")[0].strip())
+                lead_data = df_leads[df_leads["id"] == lead_id].iloc[0].to_dict()
+
+                st.divider()
+                st.subheader("Validação Comercial do Lead")
+
+                c1, c2, c3 = st.columns(3)
+                c1.info(f"Empresa: {lead_data.get('nome_empresa', '')}")
+                c2.info(f"Cliente informou: {lead_data.get('tipo_unidade_cliente') or 'Não informado'}")
+                c3.info(f"Validação atual: {lead_data.get('tipo_unidade') or 'Não definido'}")
+
+                res_grupos = supabase.table("grupos_economicos") \
                     .select("*") \
                     .eq("ativo", True) \
-                    .order("created_at", desc=True) \
+                    .order("nome_grupo") \
                     .execute()
-    
-                if res_leads.data:
-                    df_leads = pd.DataFrame(res_leads.data)
-    
-                    colunas_exibir = [
-                        "id",
-                        "nome_empresa",
-                        "responsavel",
-                        "tipo_unidade_cliente",
-                        "tipo_unidade",
-                        "grupo_economico",
-                        "grupo_economico_id",
-                        "empresa_principal",
-                        "segmento",
-                        "regime",
-                        "status",
-                        "created_at"
-                    ]
-                    colunas_exibir = [c for c in colunas_exibir if c in df_leads.columns]
-    
-                    st.dataframe(df_leads[colunas_exibir], use_container_width=True)
-    
-                    lista_opcoes = [
-                        f"{row['id']} | {row.get('nome_empresa', '')} | {row.get('segmento', '')}"
-                        for _, row in df_leads.iterrows()
-                    ]
-    
-                    lead_escolhido = st.selectbox(
-                        "Selecione um lead para analisar",
-                        lista_opcoes
+
+                grupos = res_grupos.data or []
+
+                opcoes_grupo = ["Sem grupo"] + [
+                    f"{g['id']} | {g.get('nome_grupo', '')}"
+                    for g in grupos
+                ]
+
+                grupo_atual_id = lead_data.get("grupo_economico_id")
+                index_grupo = 0
+
+                if grupo_atual_id:
+                    for idx, opcao in enumerate(opcoes_grupo):
+                        if opcao.startswith(f"{grupo_atual_id} |"):
+                            index_grupo = idx
+                            break
+
+                tipo_atual = lead_data.get("tipo_unidade")
+                opcoes_tipo = ["Não definido", "Matriz", "Filial"]
+
+                if tipo_atual not in opcoes_tipo:
+                    tipo_atual = "Não definido"
+
+                with st.form("form_validacao_lead"):
+                    tipo_validado = st.selectbox(
+                        "Tipo validado pela Escrita",
+                        opcoes_tipo,
+                        index=opcoes_tipo.index(tipo_atual)
                     )
-    
-                    lead_id = int(lead_escolhido.split("|")[0].strip())
-                    lead_data = df_leads[df_leads["id"] == lead_id].iloc[0].to_dict()
-    
-                    st.divider()
-                    st.subheader("Validação Comercial do Lead")
-    
-                    c1, c2, c3 = st.columns(3)
-                    c1.info(f"Empresa: {lead_data.get('nome_empresa', '')}")
-                    c2.info(f"Cliente informou: {lead_data.get('tipo_unidade_cliente') or 'Não informado'}")
-                    c3.info(f"Validação atual: {lead_data.get('tipo_unidade') or 'Não definido'}")
-    
-                    res_grupos = supabase.table("grupos_economicos") \
-                        .select("*") \
-                        .eq("ativo", True) \
-                        .order("nome_grupo") \
-                        .execute()
-    
-                    grupos = res_grupos.data or []
-    
-                    opcoes_grupo = ["Sem grupo"] + [
-                        f"{g['id']} | {g.get('nome_grupo', '')}"
-                        for g in grupos
-                    ]
-    
-                    grupo_atual_id = lead_data.get("grupo_economico_id")
-                    index_grupo = 0
-    
-                    if grupo_atual_id:
-                        for idx, opcao in enumerate(opcoes_grupo):
-                            if opcao.startswith(f"{grupo_atual_id} |"):
-                                index_grupo = idx
-                                break
-    
-                    tipo_atual = lead_data.get("tipo_unidade")
-                    opcoes_tipo = ["Não definido", "Matriz", "Filial"]
-    
-                    if tipo_atual not in opcoes_tipo:
-                        tipo_atual = "Não definido"
-    
-                    with st.form("form_validacao_lead"):
-                        tipo_validado = st.selectbox(
-                            "Tipo validado pela Escrita",
-                            opcoes_tipo,
-                            index=opcoes_tipo.index(tipo_atual)
-                        )
-    
-                        grupo_escolhido = st.selectbox(
-                            "Grupo econômico",
-                            opcoes_grupo,
-                            index=index_grupo
-                        )
-    
-                        empresa_principal = st.checkbox(
-                            "Empresa principal do grupo",
-                            value=bool(lead_data.get("empresa_principal"))
-                        )
-    
-                        salvar_validacao = st.form_submit_button("Salvar validação comercial")
-    
-                        if salvar_validacao:
-                            grupo_id = None
-                            grupo_nome = None
-    
-                            if grupo_escolhido != "Sem grupo":
-                                grupo_id = int(grupo_escolhido.split("|")[0].strip())
-                                grupo_nome = grupo_escolhido.split("|", 1)[1].strip()
-    
-                            dados_update = {
-                                "tipo_unidade": None if tipo_validado == "Não definido" else tipo_validado,
-                                "grupo_economico_id": grupo_id,
-                                "grupo_economico": grupo_nome,
-                                "empresa_principal": empresa_principal,
-                                "updated_at": pd.Timestamp.now().isoformat()
-                            }
-    
-                            supabase.table("leads_externos").update(dados_update).eq("id", lead_id).execute()
-    
-                            st.success("Validação comercial salva com sucesso.")
+
+                    grupo_escolhido = st.selectbox(
+                        "Grupo econômico",
+                        opcoes_grupo,
+                        index=index_grupo
+                    )
+
+                    empresa_principal = st.checkbox(
+                        "Empresa principal do grupo",
+                        value=bool(lead_data.get("empresa_principal"))
+                    )
+
+                    salvar_validacao = st.form_submit_button("Salvar validação comercial")
+
+                    if salvar_validacao:
+                        grupo_id = None
+                        grupo_nome = None
+
+                        if grupo_escolhido != "Sem grupo":
+                            grupo_id = int(grupo_escolhido.split("|")[0].strip())
+                            grupo_nome = grupo_escolhido.split("|", 1)[1].strip()
+
+                        dados_update = {
+                            "tipo_unidade": None if tipo_validado == "Não definido" else tipo_validado,
+                            "grupo_economico_id": grupo_id,
+                            "grupo_economico": grupo_nome,
+                            "empresa_principal": empresa_principal,
+                            "updated_at": pd.Timestamp.now().isoformat()
+                        }
+
+                        supabase.table("leads_externos").update(dados_update).eq("id", lead_id).execute()
+
+                        st.success("Validação comercial salva com sucesso.")
+                        st.rerun()
+
+                st.divider()
+
+                col_btn1, col_btn2 = st.columns(2)
+
+                with col_btn1:
+                    if st.button("Carregar para Precificação"):
+                        st.session_state["lead_em_analise"] = lead_data
+
+                        try:
+                            supabase.table("leads_externos").update({
+                                "status": "Em análise"
+                            }).eq("id", lead_id).execute()
+                        except Exception as e:
+                            st.warning(f"Não foi possível atualizar o status do lead: {e}")
+
+                        st.success("Lead carregado. Agora vá para 'Nova Proposta'.")
+
+                with col_btn2:
+                    if st.button("Arquivar Lead Selecionado"):
+                        try:
+                            supabase.table("leads_externos").update({
+                                "ativo": False,
+                                "deleted_at": pd.Timestamp.now().isoformat(),
+                                "deleted_reason": "Arquivado manualmente no CRM"
+                            }).eq("id", lead_id).execute()
+
+                            st.success("Lead arquivado com sucesso.")
                             st.rerun()
-    
-                    st.divider()
-    
-                    col_btn1, col_btn2 = st.columns(2)
-    
-                    with col_btn1:
-                        if st.button("Carregar para Precificação"):
-                            st.session_state["lead_em_analise"] = lead_data
-    
-                            try:
-                                supabase.table("leads_externos").update({
-                                    "status": "Em análise"
-                                }).eq("id", lead_id).execute()
-                            except Exception as e:
-                                st.warning(f"Não foi possível atualizar o status do lead: {e}")
-    
-                            st.success("Lead carregado. Agora vá para 'Nova Proposta'.")
-    
-                    with col_btn2:
-                        if st.button("Arquivar Lead Selecionado"):
-                            try:
-                                supabase.table("leads_externos").update({
-                                    "ativo": False,
-                                    "deleted_at": pd.Timestamp.now().isoformat(),
-                                    "deleted_reason": "Arquivado manualmente no CRM"
-                                }).eq("id", lead_id).execute()
-    
-                                st.success("Lead arquivado com sucesso.")
-                                st.rerun()
-    
-                            except Exception as e:
-                                st.error(f"Erro ao arquivar lead: {e}")
+
+                        except Exception as e:
+                            st.error(f"Erro ao arquivar lead: {e}")
     
                 else:
                     st.info("Nenhum lead recebido ainda.")
