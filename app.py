@@ -735,8 +735,8 @@ else:
                         except Exception as e:
                             st.error(f"Erro ao arquivar lead: {e}")
     
-                else:
-                    st.info("Nenhum lead recebido ainda.")
+            else:
+                st.info("Nenhum lead recebido ainda.")
     
             except Exception as e:
                 st.error(f"Erro ao carregar leads: {e}")
