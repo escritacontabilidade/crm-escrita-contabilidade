@@ -1487,6 +1487,9 @@ else:
     
     elif menu == "Matriz de Precificação":
         tela_exportar_matriz_precificacao(supabase)
+
+    elif menu == "Analista IA":
+        tela_analista_ia(supabase)
     
     elif menu == "Histórico de Vendas":
         st.title("📊 Histórico de Orçamentos")
