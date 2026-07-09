@@ -1,6 +1,8 @@
+import io
 import pandas as pd
 import streamlit as st
 import google.generativeai as genai
+import fitz
 
 
 def formatar_brl(valor):
@@ -10,15 +12,32 @@ def formatar_brl(valor):
         return "R$ 0,00"
 
 
-def ler_excel(uploaded_file):
+def ler_excel(uploaded_file, limite_linhas=120):
     if uploaded_file is None:
         return "Arquivo não enviado."
 
     try:
         df = pd.read_excel(uploaded_file)
-        return df.head(100).to_string(index=False)
+        return df.head(limite_linhas).to_string(index=False)
     except Exception as e:
         return f"Erro ao ler Excel: {e}"
+
+
+def ler_pdf(uploaded_file, limite_caracteres=12000):
+    if uploaded_file is None:
+        return "Arquivo não enviado."
+
+    try:
+        pdf_bytes = uploaded_file.getvalue()
+        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+
+        texto = ""
+        for page in doc:
+            texto += page.get_text("text") + "\n"
+
+        return texto[:limite_caracteres]
+    except Exception as e:
+        return f"Erro ao ler PDF: {e}"
 
 
 def gerar_parecer_ia(contexto):
@@ -29,22 +48,33 @@ def gerar_parecer_ia(contexto):
     prompt = f"""
 Você é um analista sênior de precificação contábil, controller e consultor empresarial.
 
-Analise os dados abaixo para a Escrita Contabilidade.
+Analise exclusivamente os dados abaixo para a Escrita Contabilidade.
 
+Não invente dados.
+Não cite documentos que não foram enviados.
+Não use balancete.
+Use somente os arquivos informados no contexto.
+
+CONTEXTO:
 {contexto}
 
 Responda nesta estrutura:
 
 1. Diagnóstico executivo
-2. Riscos operacionais
-3. Análise da adequação do preço
-4. Pontos que justificam aumento ou desconto
-5. Preço mínimo recomendado
-6. Preço ideal recomendado
-7. Nota da oportunidade: A, B, C ou D
-8. Recomendação comercial final
+2. Análise da proposta selecionada
+3. Análise do faturamento histórico
+4. Análise das contas recebidas
+5. Análise da DRE Financeira
+6. Análise da folha por empresa
+7. Comparação com Tabela Honorários (2).xls
+8. Impacto de Valores retraballho (3).xlsx
+9. Riscos operacionais
+10. Preço mínimo recomendado
+11. Preço ideal recomendado
+12. Nota da oportunidade: A, B, C ou D
+13. Recomendação comercial final
 
-Não invente números. Se faltar dado, diga claramente.
+Se faltar dado, diga exatamente qual arquivo faltou.
 """
 
     resposta = model.generate_content(prompt)
@@ -99,8 +129,10 @@ def tela_visao_geral(supabase):
     df["diferenca_valor"] = df["valor_final"].fillna(0) - df["valor_calculado"].fillna(0)
 
     df["diferenca_percentual"] = df.apply(
-        lambda row: ((float(row.get("valor_final") or 0) - float(row.get("valor_calculado") or 0)) / float(row.get("valor_calculado") or 1)) * 100
-        if float(row.get("valor_calculado") or 0) > 0 else 0,
+        lambda row: (
+            (float(row.get("valor_final") or 0) - float(row.get("valor_calculado") or 0))
+            / float(row.get("valor_calculado") or 1)
+        ) * 100 if float(row.get("valor_calculado") or 0) > 0 else 0,
         axis=1
     )
 
@@ -166,11 +198,67 @@ def tela_analise_individual(supabase):
     c4.metric("Valor final", formatar_brl(proposta.get("valor_final") or 0))
 
     st.divider()
-    st.markdown("### Passo 2 — Anexe documentos financeiros")
+    st.markdown("### Passo 2 — Anexe exatamente estes arquivos")
 
-    dre = st.file_uploader("DRE em Excel", type=["xlsx", "xlsm"], key="ia_dre")
-    balancete = st.file_uploader("Balancete em Excel", type=["xlsx", "xlsm"], key="ia_balancete")
-    folha = st.file_uploader("Folha / colaboradores em Excel", type=["xlsx", "xlsm"], key="ia_folha")
+    arquivo_faturamento_xlsx = st.file_uploader(
+        "1-Relatorio e faturamento ultimos 12 meses .xlsx",
+        type=["xlsx"],
+        key="ia_faturamento_xlsx"
+    )
+
+    arquivo_contas_xlsx = st.file_uploader(
+        "2-Relatorio de contas recebida ultimos 12 meses.xlsx",
+        type=["xlsx"],
+        key="ia_contas_xlsx"
+    )
+
+    arquivo_dre_pdf = st.file_uploader(
+        "DRE Financeiro.pdf",
+        type=["pdf"],
+        key="ia_dre_pdf"
+    )
+
+    arquivo_dre_xlsx = st.file_uploader(
+        "DRE Financeiro.xlsx",
+        type=["xlsx"],
+        key="ia_dre_xlsx"
+    )
+
+    arquivo_funcionarios = st.file_uploader(
+        "Funcionários Cargo Salário por Empresa.xlsx",
+        type=["xlsx"],
+        key="ia_funcionarios"
+    )
+
+    arquivo_plano = st.file_uploader(
+        "Plano de Contas Financeiro.xlsx",
+        type=["xlsx"],
+        key="ia_plano"
+    )
+
+    arquivo_contas_pdf = st.file_uploader(
+        "Relatório de contas recebidas ultimos 12 meses.pdf",
+        type=["pdf"],
+        key="ia_contas_pdf"
+    )
+
+    arquivo_faturamento_pdf = st.file_uploader(
+        "Relatório de Faturamento ultimos 12 meses.pdf",
+        type=["pdf"],
+        key="ia_faturamento_pdf"
+    )
+
+    arquivo_honorarios = st.file_uploader(
+        "Tabela Honorários (2).xls",
+        type=["xls"],
+        key="ia_honorarios"
+    )
+
+    arquivo_retrabalho = st.file_uploader(
+        "Valores retraballho (3).xlsx",
+        type=["xlsx"],
+        key="ia_retrabalho"
+    )
 
     observacoes = st.text_area("Observações adicionais para a IA")
 
@@ -185,14 +273,35 @@ PROPOSTA SELECIONADA:
 OBSERVAÇÕES:
 {observacoes}
 
-DRE:
-{ler_excel(dre)}
+1-Relatorio e faturamento ultimos 12 meses .xlsx:
+{ler_excel(arquivo_faturamento_xlsx)}
 
-BALANCETE:
-{ler_excel(balancete)}
+2-Relatorio de contas recebida ultimos 12 meses.xlsx:
+{ler_excel(arquivo_contas_xlsx)}
 
-FOLHA:
-{ler_excel(folha)}
+DRE Financeiro.pdf:
+{ler_pdf(arquivo_dre_pdf)}
+
+DRE Financeiro.xlsx:
+{ler_excel(arquivo_dre_xlsx)}
+
+Funcionários Cargo Salário por Empresa.xlsx:
+{ler_excel(arquivo_funcionarios)}
+
+Plano de Contas Financeiro.xlsx:
+{ler_excel(arquivo_plano)}
+
+Relatório de contas recebidas ultimos 12 meses.pdf:
+{ler_pdf(arquivo_contas_pdf)}
+
+Relatório de Faturamento ultimos 12 meses.pdf:
+{ler_pdf(arquivo_faturamento_pdf)}
+
+Tabela Honorários (2).xls:
+{ler_excel(arquivo_honorarios)}
+
+Valores retraballho (3).xlsx:
+{ler_excel(arquivo_retrabalho)}
 """
 
         try:
@@ -210,7 +319,7 @@ def tela_analista_ia(supabase):
     st.title("🤖 Analista IA de Precificação")
 
     st.info(
-        "Fluxo: primeiro veja a visão geral das propostas; depois escolha uma proposta específica, anexe documentos e gere o parecer."
+        "Fluxo: veja a visão geral das propostas, depois escolha uma proposta e anexe exatamente os arquivos solicitados."
     )
 
     aba1, aba2 = st.tabs([
