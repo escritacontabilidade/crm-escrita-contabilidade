@@ -51,7 +51,7 @@ def extrair_linha(texto, titulo):
 def gerar_parecer_ia(contexto):
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 
-    model = genai.GenerativeModel("gemini-2.5-flash")
+    model = genai.GenerativeModel("gemini-3-flash-preview")
 
     prompt = f"""
 Você é um analista sênior de precificação contábil, controller e consultor empresarial.
