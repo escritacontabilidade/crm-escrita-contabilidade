@@ -571,6 +571,7 @@ else:
         "Grupos Econômicos",
         "Matriz de Precificação",
         "Histórico de Vendas",
+        "Analista IA",
         "Link para Cliente"
     ]
     
