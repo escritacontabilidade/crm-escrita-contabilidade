@@ -1,4 +1,4 @@
-import io
+import re
 import pandas as pd
 import streamlit as st
 import google.generativeai as genai
@@ -40,6 +40,14 @@ def ler_pdf(uploaded_file, limite_caracteres=12000):
         return f"Erro ao ler PDF: {e}"
 
 
+def extrair_linha(texto, titulo):
+    padrao = rf"{titulo}\s*[:\-]?\s*(.+)"
+    achou = re.search(padrao, texto, re.IGNORECASE)
+    if achou:
+        return achou.group(1).strip()
+    return "Não identificado"
+
+
 def gerar_parecer_ia(contexto):
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 
@@ -58,7 +66,15 @@ Use somente os arquivos informados no contexto.
 CONTEXTO:
 {contexto}
 
-Responda nesta estrutura:
+Responda obrigatoriamente neste formato:
+
+RESUMO_EXECUTIVO: escreva uma síntese objetiva em até 5 linhas.
+PRECO_MINIMO: informe o preço mínimo recomendado ou "Não identificado".
+PRECO_IDEAL: informe o preço ideal recomendado ou "Não identificado".
+NOTA_OPORTUNIDADE: informe apenas A, B, C ou D.
+RISCO: informe apenas Baixo, Médio ou Alto.
+
+Depois detalhe:
 
 1. Diagnóstico executivo
 2. Análise da proposta selecionada
@@ -71,7 +87,7 @@ Responda nesta estrutura:
 9. Riscos operacionais
 10. Preço mínimo recomendado
 11. Preço ideal recomendado
-12. Nota da oportunidade: A, B, C ou D
+12. Nota da oportunidade
 13. Recomendação comercial final
 
 Se faltar dado, diga exatamente qual arquivo faltou.
@@ -109,6 +125,128 @@ def carregar_orcamentos(supabase):
         .execute()
 
     return pd.DataFrame(res.data or [])
+
+
+def aplicar_estilo():
+    st.markdown("""
+    <style>
+    .ia-card {
+        padding: 22px;
+        border-radius: 14px;
+        color: #111827;
+        background: #f8fafc;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        min-height: 125px;
+    }
+    .ia-card h4 {
+        margin: 0;
+        font-size: 14px;
+        color: #475569;
+        font-weight: 600;
+    }
+    .ia-card h2 {
+        margin-top: 12px;
+        font-size: 26px;
+        color: #0f172a;
+    }
+    .card-green {
+        background: #dcfce7;
+        border-color: #86efac;
+    }
+    .card-yellow {
+        background: #fef9c3;
+        border-color: #fde047;
+    }
+    .card-red {
+        background: #fee2e2;
+        border-color: #fca5a5;
+    }
+    .card-blue {
+        background: #dbeafe;
+        border-color: #93c5fd;
+    }
+    .parecer-box {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 14px;
+        padding: 26px;
+        line-height: 1.65;
+        color: #111827;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+    }
+    .resumo-box {
+        background: #f8fafc;
+        border-left: 6px solid #1d4ed8;
+        padding: 18px 22px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+
+def renderizar_painel_ia(parecer):
+    resumo = extrair_linha(parecer, "RESUMO_EXECUTIVO")
+    preco_minimo = extrair_linha(parecer, "PRECO_MINIMO")
+    preco_ideal = extrair_linha(parecer, "PRECO_IDEAL")
+    nota = extrair_linha(parecer, "NOTA_OPORTUNIDADE")
+    risco = extrair_linha(parecer, "RISCO")
+
+    risco_normalizado = str(risco).lower()
+
+    if "alto" in risco_normalizado:
+        classe_risco = "card-red"
+    elif "médio" in risco_normalizado or "medio" in risco_normalizado:
+        classe_risco = "card-yellow"
+    else:
+        classe_risco = "card-green"
+
+    st.markdown("## Painel Executivo da IA")
+
+    c1, c2, c3, c4 = st.columns(4)
+
+    with c1:
+        st.markdown(
+            f'<div class="ia-card card-blue"><h4>Preço mínimo</h4><h2>{preco_minimo}</h2></div>',
+            unsafe_allow_html=True
+        )
+
+    with c2:
+        st.markdown(
+            f'<div class="ia-card card-green"><h4>Preço ideal</h4><h2>{preco_ideal}</h2></div>',
+            unsafe_allow_html=True
+        )
+
+    with c3:
+        st.markdown(
+            f'<div class="ia-card card-yellow"><h4>Nota da oportunidade</h4><h2>{nota}</h2></div>',
+            unsafe_allow_html=True
+        )
+
+    with c4:
+        st.markdown(
+            f'<div class="ia-card {classe_risco}"><h4>Risco</h4><h2>{risco}</h2></div>',
+            unsafe_allow_html=True
+        )
+
+    st.divider()
+
+    st.markdown("### Resumo executivo")
+    st.markdown(
+        f'<div class="resumo-box">{resumo}</div>',
+        unsafe_allow_html=True
+    )
+
+    texto_limpo = parecer
+    for campo in ["RESUMO_EXECUTIVO", "PRECO_MINIMO", "PRECO_IDEAL", "NOTA_OPORTUNIDADE", "RISCO"]:
+        texto_limpo = re.sub(rf"{campo}\s*[:\-]?\s*.+", "", texto_limpo, flags=re.IGNORECASE)
+
+    st.markdown("### Parecer completo")
+    st.markdown(
+        f'<div class="parecer-box">{texto_limpo}</div>',
+        unsafe_allow_html=True
+    )
 
 
 def tela_visao_geral(supabase):
@@ -200,65 +338,16 @@ def tela_analise_individual(supabase):
     st.divider()
     st.markdown("### Passo 2 — Anexe exatamente estes arquivos")
 
-    arquivo_faturamento_xlsx = st.file_uploader(
-        "1-Relatorio e faturamento ultimos 12 meses .xlsx",
-        type=["xlsx"],
-        key="ia_faturamento_xlsx"
-    )
-
-    arquivo_contas_xlsx = st.file_uploader(
-        "2-Relatorio de contas recebida ultimos 12 meses.xlsx",
-        type=["xlsx"],
-        key="ia_contas_xlsx"
-    )
-
-    arquivo_dre_pdf = st.file_uploader(
-        "DRE Financeiro.pdf",
-        type=["pdf"],
-        key="ia_dre_pdf"
-    )
-
-    arquivo_dre_xlsx = st.file_uploader(
-        "DRE Financeiro.xlsx",
-        type=["xlsx"],
-        key="ia_dre_xlsx"
-    )
-
-    arquivo_funcionarios = st.file_uploader(
-        "Funcionários Cargo Salário por Empresa.xlsx",
-        type=["xlsx"],
-        key="ia_funcionarios"
-    )
-
-    arquivo_plano = st.file_uploader(
-        "Plano de Contas Financeiro.xlsx",
-        type=["xlsx"],
-        key="ia_plano"
-    )
-
-    arquivo_contas_pdf = st.file_uploader(
-        "Relatório de contas recebidas ultimos 12 meses.pdf",
-        type=["pdf"],
-        key="ia_contas_pdf"
-    )
-
-    arquivo_faturamento_pdf = st.file_uploader(
-        "Relatório de Faturamento ultimos 12 meses.pdf",
-        type=["pdf"],
-        key="ia_faturamento_pdf"
-    )
-
-    arquivo_honorarios = st.file_uploader(
-        "Tabela Honorários (2).xls",
-        type=["xls"],
-        key="ia_honorarios"
-    )
-
-    arquivo_retrabalho = st.file_uploader(
-        "Valores retraballho (3).xlsx",
-        type=["xlsx"],
-        key="ia_retrabalho"
-    )
+    arquivo_faturamento_xlsx = st.file_uploader("1-Relatorio e faturamento ultimos 12 meses .xlsx", type=["xlsx"], key="ia_faturamento_xlsx")
+    arquivo_contas_xlsx = st.file_uploader("2-Relatorio de contas recebida ultimos 12 meses.xlsx", type=["xlsx"], key="ia_contas_xlsx")
+    arquivo_dre_pdf = st.file_uploader("DRE Financeiro.pdf", type=["pdf"], key="ia_dre_pdf")
+    arquivo_dre_xlsx = st.file_uploader("DRE Financeiro.xlsx", type=["xlsx"], key="ia_dre_xlsx")
+    arquivo_funcionarios = st.file_uploader("Funcionários Cargo Salário por Empresa.xlsx", type=["xlsx"], key="ia_funcionarios")
+    arquivo_plano = st.file_uploader("Plano de Contas Financeiro.xlsx", type=["xlsx"], key="ia_plano")
+    arquivo_contas_pdf = st.file_uploader("Relatório de contas recebidas ultimos 12 meses.pdf", type=["pdf"], key="ia_contas_pdf")
+    arquivo_faturamento_pdf = st.file_uploader("Relatório de Faturamento ultimos 12 meses.pdf", type=["pdf"], key="ia_faturamento_pdf")
+    arquivo_honorarios = st.file_uploader("Tabela Honorários (2).xls", type=["xls"], key="ia_honorarios")
+    arquivo_retrabalho = st.file_uploader("Valores retraballho (3).xlsx", type=["xlsx"], key="ia_retrabalho")
 
     observacoes = st.text_area("Observações adicionais para a IA")
 
@@ -309,13 +398,18 @@ Valores retraballho (3).xlsx:
                 parecer = gerar_parecer_ia(contexto)
 
             st.success("Parecer gerado com sucesso.")
-            st.markdown(parecer)
+            renderizar_painel_ia(parecer)
+
+            with st.expander("Ver resposta bruta da IA"):
+                st.text(parecer)
 
         except Exception as e:
             st.error(f"Erro ao gerar parecer da IA: {e}")
 
 
 def tela_analista_ia(supabase):
+    aplicar_estilo()
+
     st.title("🤖 Analista IA de Precificação")
 
     st.info(
