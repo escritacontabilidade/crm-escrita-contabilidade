@@ -12,32 +12,133 @@ def formatar_brl(valor):
         return "R$ 0,00"
 
 
-def ler_excel(uploaded_file, limite_linhas=120):
-    if uploaded_file is None:
-        return "Arquivo não enviado."
+def converter_numero(valor):
+    if pd.isna(valor):
+        return None
+    if isinstance(valor, (int, float)):
+        return float(valor)
+
+    texto = str(valor).strip()
+    texto = texto.replace("R$", "").replace(" ", "")
+    texto = texto.replace(".", "").replace(",", ".")
 
     try:
-        df = pd.read_excel(uploaded_file)
-        return df.head(limite_linhas).to_string(index=False)
-    except Exception as e:
-        return f"Erro ao ler Excel: {e}"
+        return float(texto)
+    except Exception:
+        return None
 
 
-def ler_pdf(uploaded_file, limite_caracteres=12000):
+def preparar_dataframe(df):
+    df = df.copy()
+
+    for col in df.columns:
+        if df[col].dtype == "object":
+            convertido = df[col].apply(converter_numero)
+            taxa_validos = convertido.notna().mean()
+
+            if taxa_validos >= 0.60:
+                df[col] = convertido
+
+    return df
+
+
+def resumir_dataframe(df, nome_arquivo, limite_colunas=12):
+    if df is None or df.empty:
+        return f"{nome_arquivo}: arquivo vazio ou sem dados legíveis."
+
+    df = preparar_dataframe(df)
+
+    resumo = []
+    resumo.append(f"ARQUIVO: {nome_arquivo}")
+    resumo.append(f"Linhas: {len(df)}")
+    resumo.append(f"Colunas: {len(df.columns)}")
+    resumo.append(f"Colunas identificadas: {list(df.columns)[:25]}")
+
+    numericas = df.select_dtypes(include="number").columns.tolist()
+
+    if numericas:
+        resumo.append("INDICADORES NUMÉRICOS:")
+        for col in numericas[:limite_colunas]:
+            serie = df[col].dropna()
+            if not serie.empty:
+                resumo.append(
+                    f"- {col}: soma={serie.sum():.2f}; média={serie.mean():.2f}; "
+                    f"mín={serie.min():.2f}; máx={serie.max():.2f}"
+                )
+
+    colunas_texto_importantes = [
+        c for c in df.columns
+        if any(p in str(c).lower() for p in ["cliente", "empresa", "cargo", "regime", "tribut", "status", "situação", "situacao"])
+    ]
+
+    if colunas_texto_importantes:
+        resumo.append("PRINCIPAIS CATEGORIAS:")
+        for col in colunas_texto_importantes[:6]:
+            contagem = df[col].astype(str).value_counts().head(8)
+            resumo.append(f"- {col}: {contagem.to_dict()}")
+
+    return "\n".join(resumo)
+
+
+def ler_excel_indicadores(uploaded_file, nome_arquivo):
     if uploaded_file is None:
-        return "Arquivo não enviado."
+        return f"{nome_arquivo}: arquivo não enviado."
+
+    try:
+        abas = pd.read_excel(uploaded_file, sheet_name=None)
+        partes = []
+
+        for nome_aba, df in abas.items():
+            partes.append(f"\nABA: {nome_aba}")
+            partes.append(resumir_dataframe(df, nome_arquivo))
+
+        return "\n".join(partes)
+
+    except Exception as e:
+        return f"{nome_arquivo}: erro ao ler Excel: {e}"
+
+
+def ler_pdf_indicadores(uploaded_file, nome_arquivo, max_paginas=20):
+    if uploaded_file is None:
+        return f"{nome_arquivo}: arquivo não enviado."
 
     try:
         pdf_bytes = uploaded_file.getvalue()
         doc = fitz.open(stream=pdf_bytes, filetype="pdf")
 
-        texto = ""
-        for page in doc:
-            texto += page.get_text("text") + "\n"
+        linhas_relevantes = []
+        termos = [
+            "RECEITAS TOTAIS",
+            "DESPESAS TOTAIS",
+            "LUCRO FINAL",
+            "Sub Total",
+            "Vl. Recebido",
+            "Vl. Doc",
+            "Cliente",
+            "Período",
+        ]
 
-        return texto[:limite_caracteres]
+        for i, page in enumerate(doc):
+            if i >= max_paginas:
+                break
+
+            texto = page.get_text("text")
+            for linha in texto.splitlines():
+                if any(t.lower() in linha.lower() for t in termos):
+                    linhas_relevantes.append(linha.strip())
+
+        linhas_relevantes = linhas_relevantes[:120]
+
+        return f"""
+ARQUIVO: {nome_arquivo}
+Páginas totais: {len(doc)}
+Páginas analisadas: {min(len(doc), max_paginas)}
+Linhas relevantes extraídas:
+{chr(10).join(linhas_relevantes)}
+"""
+
     except Exception as e:
-        return f"Erro ao ler PDF: {e}"
+        return f"{nome_arquivo}: erro ao ler PDF: {e}"
 
 
 def extrair_linha(texto, titulo):
@@ -50,29 +151,27 @@ def extrair_linha(texto, titulo):
 
 def gerar_parecer_ia(contexto):
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-
     model = genai.GenerativeModel("gemini-3-flash-preview")
 
     prompt = f"""
 Você é um analista sênior de precificação contábil, controller e consultor empresarial.
 
-Analise exclusivamente os dados abaixo para a Escrita Contabilidade.
-
+Analise somente os INDICADORES RESUMIDOS abaixo.
 Não invente dados.
-Não cite documentos que não foram enviados.
 Não use balancete.
-Use somente os arquivos informados no contexto.
+Não peça documentos diferentes.
+Não diga que analisou arquivo bruto; você recebeu indicadores extraídos dos arquivos enviados.
 
-CONTEXTO:
+CONTEXTO COMPACTADO:
 {contexto}
 
 Responda obrigatoriamente neste formato:
 
-RESUMO_EXECUTIVO: escreva uma síntese objetiva em até 5 linhas.
-PRECO_MINIMO: informe o preço mínimo recomendado ou "Não identificado".
-PRECO_IDEAL: informe o preço ideal recomendado ou "Não identificado".
-NOTA_OPORTUNIDADE: informe apenas A, B, C ou D.
-RISCO: informe apenas Baixo, Médio ou Alto.
+RESUMO_EXECUTIVO: síntese objetiva em até 5 linhas.
+PRECO_MINIMO: preço mínimo recomendado ou "Não identificado".
+PRECO_IDEAL: preço ideal recomendado ou "Não identificado".
+NOTA_OPORTUNIDADE: apenas A, B, C ou D.
+RISCO: apenas Baixo, Médio ou Alto.
 
 Depois detalhe:
 
@@ -89,8 +188,6 @@ Depois detalhe:
 11. Preço ideal recomendado
 12. Nota da oportunidade
 13. Recomendação comercial final
-
-Se faltar dado, diga exatamente qual arquivo faltou.
 """
 
     resposta = model.generate_content(prompt)
@@ -103,7 +200,6 @@ def classificar_proposta(row):
 
     if valor_final <= 0:
         return "🔴 Sem valor"
-
     if valor_calculado <= 0:
         return "⚪ Sem base"
 
@@ -147,25 +243,13 @@ def aplicar_estilo():
     }
     .ia-card h2 {
         margin-top: 12px;
-        font-size: 26px;
+        font-size: 22px;
         color: #0f172a;
     }
-    .card-green {
-        background: #dcfce7;
-        border-color: #86efac;
-    }
-    .card-yellow {
-        background: #fef9c3;
-        border-color: #fde047;
-    }
-    .card-red {
-        background: #fee2e2;
-        border-color: #fca5a5;
-    }
-    .card-blue {
-        background: #dbeafe;
-        border-color: #93c5fd;
-    }
+    .card-green { background: #dcfce7; border-color: #86efac; }
+    .card-yellow { background: #fef9c3; border-color: #fde047; }
+    .card-red { background: #fee2e2; border-color: #fca5a5; }
+    .card-blue { background: #dbeafe; border-color: #93c5fd; }
     .parecer-box {
         background: #ffffff;
         border: 1px solid #e5e7eb;
@@ -207,46 +291,25 @@ def renderizar_painel_ia(parecer):
     c1, c2, c3, c4 = st.columns(4)
 
     with c1:
-        st.markdown(
-            f'<div class="ia-card card-blue"><h4>Preço mínimo</h4><h2>{preco_minimo}</h2></div>',
-            unsafe_allow_html=True
-        )
-
+        st.markdown(f'<div class="ia-card card-blue"><h4>Preço mínimo</h4><h2>{preco_minimo}</h2></div>', unsafe_allow_html=True)
     with c2:
-        st.markdown(
-            f'<div class="ia-card card-green"><h4>Preço ideal</h4><h2>{preco_ideal}</h2></div>',
-            unsafe_allow_html=True
-        )
-
+        st.markdown(f'<div class="ia-card card-green"><h4>Preço ideal</h4><h2>{preco_ideal}</h2></div>', unsafe_allow_html=True)
     with c3:
-        st.markdown(
-            f'<div class="ia-card card-yellow"><h4>Nota da oportunidade</h4><h2>{nota}</h2></div>',
-            unsafe_allow_html=True
-        )
-
+        st.markdown(f'<div class="ia-card card-yellow"><h4>Nota da oportunidade</h4><h2>{nota}</h2></div>', unsafe_allow_html=True)
     with c4:
-        st.markdown(
-            f'<div class="ia-card {classe_risco}"><h4>Risco</h4><h2>{risco}</h2></div>',
-            unsafe_allow_html=True
-        )
+        st.markdown(f'<div class="ia-card {classe_risco}"><h4>Risco</h4><h2>{risco}</h2></div>', unsafe_allow_html=True)
 
     st.divider()
 
     st.markdown("### Resumo executivo")
-    st.markdown(
-        f'<div class="resumo-box">{resumo}</div>',
-        unsafe_allow_html=True
-    )
+    st.markdown(f'<div class="resumo-box">{resumo}</div>', unsafe_allow_html=True)
 
     texto_limpo = parecer
     for campo in ["RESUMO_EXECUTIVO", "PRECO_MINIMO", "PRECO_IDEAL", "NOTA_OPORTUNIDADE", "RISCO"]:
         texto_limpo = re.sub(rf"{campo}\s*[:\-]?\s*.+", "", texto_limpo, flags=re.IGNORECASE)
 
     st.markdown("### Parecer completo")
-    st.markdown(
-        f'<div class="parecer-box">{texto_limpo}</div>',
-        unsafe_allow_html=True
-    )
+    st.markdown(f'<div class="parecer-box">{texto_limpo}</div>', unsafe_allow_html=True)
 
 
 def tela_visao_geral(supabase):
@@ -362,43 +425,38 @@ PROPOSTA SELECIONADA:
 OBSERVAÇÕES:
 {observacoes}
 
-1-Relatorio e faturamento ultimos 12 meses .xlsx:
-{ler_excel(arquivo_faturamento_xlsx)}
+INDICADORES EXTRAÍDOS DOS ARQUIVOS:
 
-2-Relatorio de contas recebida ultimos 12 meses.xlsx:
-{ler_excel(arquivo_contas_xlsx)}
+{ler_excel_indicadores(arquivo_faturamento_xlsx, "1-Relatorio e faturamento ultimos 12 meses .xlsx")}
 
-DRE Financeiro.pdf:
-{ler_pdf(arquivo_dre_pdf)}
+{ler_excel_indicadores(arquivo_contas_xlsx, "2-Relatorio de contas recebida ultimos 12 meses.xlsx")}
 
-DRE Financeiro.xlsx:
-{ler_excel(arquivo_dre_xlsx)}
+{ler_pdf_indicadores(arquivo_dre_pdf, "DRE Financeiro.pdf")}
 
-Funcionários Cargo Salário por Empresa.xlsx:
-{ler_excel(arquivo_funcionarios)}
+{ler_excel_indicadores(arquivo_dre_xlsx, "DRE Financeiro.xlsx")}
 
-Plano de Contas Financeiro.xlsx:
-{ler_excel(arquivo_plano)}
+{ler_excel_indicadores(arquivo_funcionarios, "Funcionários Cargo Salário por Empresa.xlsx")}
 
-Relatório de contas recebidas ultimos 12 meses.pdf:
-{ler_pdf(arquivo_contas_pdf)}
+{ler_excel_indicadores(arquivo_plano, "Plano de Contas Financeiro.xlsx")}
 
-Relatório de Faturamento ultimos 12 meses.pdf:
-{ler_pdf(arquivo_faturamento_pdf)}
+{ler_pdf_indicadores(arquivo_contas_pdf, "Relatório de contas recebidas ultimos 12 meses.pdf")}
 
-Tabela Honorários (2).xls:
-{ler_excel(arquivo_honorarios)}
+{ler_pdf_indicadores(arquivo_faturamento_pdf, "Relatório de Faturamento ultimos 12 meses.pdf")}
 
-Valores retraballho (3).xlsx:
-{ler_excel(arquivo_retrabalho)}
+{ler_excel_indicadores(arquivo_honorarios, "Tabela Honorários (2).xls")}
+
+{ler_excel_indicadores(arquivo_retrabalho, "Valores retraballho (3).xlsx")}
 """
 
         try:
-            with st.spinner("Gerando análise da IA..."):
+            with st.spinner("Processando indicadores e gerando análise da IA..."):
                 parecer = gerar_parecer_ia(contexto)
 
             st.success("Parecer gerado com sucesso.")
             renderizar_painel_ia(parecer)
+
+            with st.expander("Ver contexto resumido enviado para IA"):
+                st.text(contexto)
 
             with st.expander("Ver resposta bruta da IA"):
                 st.text(parecer)
@@ -413,7 +471,7 @@ def tela_analista_ia(supabase):
     st.title("🤖 Analista IA de Precificação")
 
     st.info(
-        "Fluxo: veja a visão geral das propostas, depois escolha uma proposta e anexe exatamente os arquivos solicitados."
+        "Fluxo: veja a visão geral das propostas, escolha uma proposta, anexe os arquivos oficiais e gere uma análise baseada em indicadores compactos."
     )
 
     aba1, aba2 = st.tabs([
