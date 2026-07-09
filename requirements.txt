@@ -13,3 +13,5 @@ weasyprint
 jinja2
 num2words
 pypdf
+google-generativeai
+openpyxl
