@@ -1295,34 +1295,15 @@ else:
                     st.session_state["pdf_proposta_path"] = caminho_pdf
                     st.session_state["pdf_proposta_versao"] = versao_pdf
                     
-                    try:
-                    
-                        supabase.table("orcamentos").insert({
-                    
-                            "cliente": nome_empresa,
-                            "segmento": segmento,
-                            "regime": regime,
-                    
-                            "plano": opcao_valor,
-                            "valor_final": valor_final_proposta,
-                    
-                            "servicos_contratados": servicos_contratados,
-                    
-                            "status": "Em aberto",
-                            "ativo": True,
-                    
-                                                
-                            "created_at":
-                            pd.Timestamp.now().isoformat()
-                    
-                        }).execute()
-                    
-                    except Exception as erro:
-                        st.warning(f"Erro salvando orçamento: {erro}")
-                    
+                                       
                     try:
                         dados_orcamento = {
                             "cliente": nome_empresa,
+                            "cnpj": cnpj_cliente,
+                            "responsavel": responsavel_cliente,
+                            "email": email_cliente,
+                            "telefone": telefone_cliente,
+
                             "segmento": segmento,
                             "regime": regime,
                             "plano": opcao_valor,
