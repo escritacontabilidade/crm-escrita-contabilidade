@@ -63,6 +63,11 @@ def gerar_pdf_proposta_html(
     servicos_contratados,
     respostas_cliente=None,
 
+    cnpj="",
+    responsavel="",
+    email="",
+    telefone="",
+
     faturamento_medio=0,
     regime="",
     segmento="",
