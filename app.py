@@ -1126,7 +1126,41 @@ else:
             with c2:
                 st.text_input("Tabela Base Utilizada", value=tabela_base, disabled=True)
                 st.text_input("Faturamento Médio", value=formatar_moeda(faturamento_medio), disabled=True)
+                 
+                st.subheader("Dados do cliente")
 
+                contato1, contato2 = st.columns(2)
+    
+                with contato1:
+                    st.text_input(
+                        "CNPJ",
+                        value=cnpj_cliente,
+                        disabled=True,
+                        key="pc_cnpj"
+                    )
+    
+                    st.text_input(
+                        "Responsável / Contato",
+                        value=responsavel_cliente,
+                        disabled=True,
+                        key="pc_responsavel"
+                    )
+    
+                with contato2:
+                    st.text_input(
+                        "E-mail",
+                        value=email_cliente,
+                        disabled=True,
+                        key="pc_email"
+                    )
+    
+                    st.text_input(
+                        "Telefone / WhatsApp",
+                        value=telefone_cliente,
+                        disabled=True,
+                        key="pc_telefone"
+                    )
+                    
             st.divider()
 
             st.subheader("Formação do Preço")
