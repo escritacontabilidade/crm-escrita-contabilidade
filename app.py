@@ -1276,7 +1276,12 @@ else:
                         servicos_contratados=servicos_contratados,
                     
                         respostas_cliente=proposta_atual.get("respostas_formulario", {}),
-                    
+                       
+                        cnpj=cnpj_cliente,
+                        responsavel=responsavel_cliente,
+                        email=email_cliente,
+                        telefone=telefone_cliente,
+                        
                         faturamento_medio=proposta_atual.get("faturamento_medio", 0),
                         regime=proposta_atual.get("regime", ""),
                         segmento=proposta_atual.get("segmento", ""),
