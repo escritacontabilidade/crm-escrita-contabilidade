@@ -384,6 +384,11 @@ def gerar_pdf_proposta_html(
         assets_dir=assets_usados,
         extensao_img=extensao_img,
         nome_empresa=nome_empresa or "Nome da empresa",
+        cnpj=cnpj or "",
+        responsavel=responsavel or "",
+        email=email or "",
+        telefone=telefone or "",
+
         plano=plano or "",
         valor_formatado=valor_formatado,
         valor_extenso=valor_extenso,
