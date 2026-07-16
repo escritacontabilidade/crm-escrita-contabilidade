@@ -350,6 +350,10 @@ def gerar_pdf_proposta_html(
     
         <div class="anexo-meta">
             <strong>Empresa:</strong> {{ nome_empresa }}<br>
+            <strong>CNPJ:</strong> {{ cnpj or "Não informado" }}<br>
+            <strong>Responsável / Contato:</strong> {{ responsavel or "Não informado" }}<br>
+            <strong>E-mail:</strong> {{ email or "Não informado" }}<br>
+            <strong>Telefone / WhatsApp:</strong> {{ telefone or "Não informado" }}<br>
             <strong>Segmento:</strong> {{ segmento }}<br>
             <strong>Regime Tributário:</strong> {{ regime }}<br>
             <strong>Faturamento Informado:</strong> {{ faturamento_formatado }}<br>
