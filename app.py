@@ -820,7 +820,41 @@ else:
                 opcoes_regime,
                 index=opcoes_regime.index(regime_padrao)
             )
-                       
+
+                        st.subheader("Dados de contato do cliente")
+
+                        contato_col1, contato_col2 = st.columns(2)
+            
+                        with contato_col1:
+                            cnpj_cliente = st.text_input(
+                                "CNPJ:",
+                                value=str(lead_em_analise.get("cnpj") or ""),
+                                key="np_cnpj_cliente"
+                            )
+            
+                            responsavel_cliente = st.text_input(
+                                "Responsável / Contato:",
+                                value=str(lead_em_analise.get("responsavel") or ""),
+                                key="np_responsavel_cliente"
+                            )
+            
+                        with contato_col2:
+                            email_cliente = st.text_input(
+                                "E-mail:",
+                                value=str(lead_em_analise.get("email") or ""),
+                                key="np_email_cliente"
+                            )
+            
+                            telefone_cliente = st.text_input(
+                                "Telefone / WhatsApp:",
+                                value=str(
+                                    lead_em_analise.get("telefone")
+                                    or lead_em_analise.get("whatsapp")
+                                    or ""
+                                ),
+                                key="np_telefone_cliente"
+                            )
+        
             st.divider()
             st.subheader("Informações Gerais")
             
