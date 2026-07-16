@@ -1427,6 +1427,10 @@ else:
                 colunas = [
                     "id",
                     "cliente",
+                    "cnpj",
+                    "responsavel",
+                    "email",
+                    "telefone",
                     "segmento",
                     "regime",
                     "plano",
