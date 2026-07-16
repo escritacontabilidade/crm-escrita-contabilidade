@@ -1046,6 +1046,11 @@ else:
 
                 st.session_state["proposta_atual"] = {
                     "cliente": nome_cliente,
+                    "cnpj": cnpj_cliente,
+                    "responsavel": responsavel_cliente,
+                    "email": email_cliente,
+                    "telefone": telefone_cliente,
+
                     "regime": regime_sel,
                     "segmento": seg_sel,
                     "origem_perguntas": origem_perguntas,
