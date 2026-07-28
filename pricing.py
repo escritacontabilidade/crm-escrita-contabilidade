@@ -246,7 +246,11 @@ def calcular_preco_completo(
         if resposta is None:
             continue
 
-        valor = calcular_valor_regra(regra, resposta)
+        valor = calcular_valor_regra(
+            regra,
+            resposta,
+            faixas_precificacao
+        )
 
         if valor > 0:
             detalhamento.append({
