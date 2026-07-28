@@ -100,5 +100,30 @@ def get_perguntas_por_origem(origem):
     return float(res.data[0]["horas_esforco"])
 
 def get_regras_precificacao():
-    res = supabase.table("regras_perguntas").select("*").eq("ativo", True).execute()
+    supabase = get_supabase()
+
+    res = (
+        supabase
+        .table("regras_perguntas_precificacao")
+        .select("*")
+        .eq("ativo", True)
+        .execute()
+    )
+
+    return res.data if res.data else []
+
+
+def get_faixas_precificacao(regra_pergunta_id):
+    supabase = get_supabase()
+
+    res = (
+        supabase
+        .table("faixas_precificacao")
+        .select("*")
+        .eq("regra_pergunta_id", regra_pergunta_id)
+        .eq("ativo", True)
+        .order("ordem")
+        .execute()
+    )
+
     return res.data if res.data else []
