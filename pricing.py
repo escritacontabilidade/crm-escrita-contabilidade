@@ -233,6 +233,8 @@ def calcular_preco_completo(
     total_acrescimos = 0
     detalhamento = []
 
+    faixas_precificacao = get_faixas_precificacao()
+
     for regra in regras:
         pergunta = str(regra.get("pergunta") or "").strip()
 
