@@ -112,17 +112,31 @@ def get_regras_precificacao():
     return res.data if res.data else []
 
 
-def get_faixas_precificacao(regra_pergunta_id):
+@st.cache_data(ttl=300)
+def get_faixas_precificacao():
     supabase = get_supabase()
 
     res = (
         supabase
         .table("faixas_precificacao")
         .select("*")
-        .eq("regra_pergunta_id", regra_pergunta_id)
         .eq("ativo", True)
+        .order("regra_pergunta_id")
         .order("ordem")
         .execute()
     )
 
-    return res.data if res.data else []
+    if not res.data:
+        return {}
+
+    faixas = {}
+
+    for linha in res.data:
+        regra = linha["regra_pergunta_id"]
+
+        if regra not in faixas:
+            faixas[regra] = []
+
+        faixas[regra].append(linha)
+
+    return faixas
