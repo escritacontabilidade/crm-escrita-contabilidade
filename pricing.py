@@ -1,4 +1,8 @@
-from database import get_config_val, get_peso_esforco
+from database import (
+    get_config_val,
+    get_peso_esforco,
+    get_faixas_precificacao,
+)
 
 
 def calcular_custo_hora_real():
