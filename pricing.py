@@ -253,6 +253,7 @@ def calcular_preco_completo(
 
         if valor > 0:
             detalhamento.append({
+                "regra_id": regra.get("id"),
                 "pergunta": pergunta,
                 "resposta": resposta,
                 "valor": valor,
