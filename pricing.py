@@ -224,29 +224,45 @@ def calcular_valor_regra(regra, resposta):
 
     return 0.0
         
-def calcular_preco_completo(valor_base, respostas_formulario, regras, segmento=None):
+def calcular_preco_completo(
+    valor_base,
+    respostas_formulario,
+    regras,
+    segmento=None
+):
     total_acrescimos = 0
     detalhamento = []
 
-    for r in regras:
-        pergunta = str(r.get("pergunta")).strip()
+    for regra in regras:
+        pergunta = str(regra.get("pergunta") or "").strip()
+
+        if not pergunta:
+            continue
+
         resposta = respostas_formulario.get(pergunta)
 
         if resposta is None:
             continue
 
-        valor = calcular_valor_regra(r, resposta)
+        valor = calcular_valor_regra(regra, resposta)
 
         if valor > 0:
             detalhamento.append({
                 "pergunta": pergunta,
                 "resposta": resposta,
                 "valor": valor,
-                "tipo": r.get("tipo_calculo")
+                "tipo": regra.get("tipo_calculo"),
             })
 
             total_acrescimos += valor
 
+    preco_base_calculado = valor_base + total_acrescimos
+
+    return (
+        preco_base_calculado,
+        total_acrescimos,
+        detalhamento,
+    )
     # Regra especial: conciliação bancária
     pergunta_conciliacao = "- A empresa faz conciliação bancária no financeiro? (saldos dos extratos bancários fecham com sistema/planilha)"
     pergunta_qtd_contas_conciliar = "- Caso NÃO faça conciliação bancária, quantas contas bancárias precisam ser conciliadas?"
