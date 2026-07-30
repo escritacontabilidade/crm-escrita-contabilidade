@@ -164,11 +164,10 @@ def calcular_valor_regra(regra, resposta, faixas_precificacao):
         if qtd <= 0:
             return 0.0
 
-        regra_id = regra.get("id")
+        regra_id = str(regra.get("id") or "").strip()
 
         faixas = faixas_precificacao.get(regra_id, [])
-
-      
+        
         for faixa in faixas:
             quantidade_inicial = float(
                 faixa.get("quantidade_inicial") or 0
