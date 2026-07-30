@@ -1,4 +1,3 @@
-from functools import lru_cache
 from database import (
     get_config_val,
     get_peso_esforco,
