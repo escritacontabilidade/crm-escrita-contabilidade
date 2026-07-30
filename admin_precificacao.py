@@ -1,6 +1,8 @@
 import pandas as pd
 import streamlit as st
 
+from admin_precificacao_reajuste import renderizar_aba_reajuste
+
 from database import (
     listar_versoes_precificacao,
     obter_versao_precificacao,
@@ -585,10 +587,7 @@ def tela_admin_precificacao(supabase):
         )
 
     with abas[3]:
-        renderizar_aba_em_desenvolvimento(
-            "Reajuste Geral",
-            "Nesta área será possível aplicar reajustes em massa com prévia, confirmação e backup automático.",
-        )
+        renderizar_aba_reajuste(supabase)
 
     with abas[4]:
         renderizar_aba_em_desenvolvimento(
