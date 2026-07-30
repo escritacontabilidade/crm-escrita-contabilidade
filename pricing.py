@@ -166,6 +166,14 @@ def calcular_valor_regra(regra, resposta, faixas_precificacao):
         regra_id = int(regra.get("id"))
 
         faixas = faixas_precificacao.get(regra_id, [])
+
+        regra_id = int(regra.get("id"))
+
+        faixas = faixas_precificacao.get(regra_id, [])
+        
+        st.write("REGRA:", regra_id)
+        st.write("TOTAL DE FAIXAS:", len(faixas))
+        st.write(faixas)
         
         for faixa in faixas:
             quantidade_inicial = float(
