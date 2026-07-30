@@ -132,7 +132,7 @@ def get_faixas_precificacao():
     faixas = {}
 
     for linha in res.data:
-        regra = linha["regra_pergunta_id"]
+        regra = str(linha["regra_pergunta_id"]).strip()
 
         if regra not in faixas:
             faixas[regra] = []
