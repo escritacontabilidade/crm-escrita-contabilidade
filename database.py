@@ -188,3 +188,45 @@ def criar_backup_precificacao(
         .insert(dados)
         .execute()
     )
+
+@st.cache_data(ttl=60)
+def listar_versoes_precificacao(supabase):
+    """
+    Retorna todas as versões de precificação,
+    da mais recente para a mais antiga.
+    """
+
+    resultado = (
+        supabase
+        .table("precificacao_versoes")
+        .select(
+            "id,nome,descricao,tipo,percentual_reajuste,"
+            "quantidade_precos_base,"
+            "quantidade_regras,"
+            "quantidade_faixas,"
+            "criado_por,"
+            "criado_em,"
+            "restaurada_em"
+        )
+        .order("criado_em", desc=True)
+        .execute()
+    )
+
+    return resultado.data or []
+
+@st.cache_data(ttl=60)
+def obter_versao_precificacao(supabase, versao_id):
+    """
+    Retorna uma versão completa da precificação.
+    """
+
+    resultado = (
+        supabase
+        .table("precificacao_versoes")
+        .select("*")
+        .eq("id", versao_id)
+        .single()
+        .execute()
+    )
+
+    return resultado.data
