@@ -1558,6 +1558,9 @@ else:
     elif menu == "Matriz de Precificação":
         tela_exportar_matriz_precificacao(supabase)
 
+    elif menu == "Administração da Precificação":
+        tela_admin_precificacao(supabase)
+
     elif menu == "Analista IA":
         tela_analista_ia(supabase)
     
