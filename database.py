@@ -140,3 +140,51 @@ def get_faixas_precificacao():
         faixas[regra_id].append(linha)
 
     return faixas
+
+def criar_backup_precificacao(
+    supabase,
+    nome,
+    descricao="",
+    tipo="manual",
+    percentual_reajuste=None,
+    criado_por="Sistema"
+):
+    """
+    Cria um snapshot completo da precificação.
+    """
+
+    precos = supabase.table(
+        "precos_base_precificacao"
+    ).select("*").execute().data
+
+    regras = supabase.table(
+        "regras_perguntas_precificacao"
+    ).select("*").execute().data
+
+    faixas = supabase.table(
+        "faixas_precificacao"
+    ).select("*").execute().data
+
+    dados = {
+        "nome": nome,
+        "descricao": descricao,
+        "tipo": tipo,
+        "percentual_reajuste": percentual_reajuste,
+
+        "snapshot_precos_base": precos,
+        "snapshot_regras": regras,
+        "snapshot_faixas": faixas,
+
+        "quantidade_precos_base": len(precos),
+        "quantidade_regras": len(regras),
+        "quantidade_faixas": len(faixas),
+
+        "criado_por": criado_por
+    }
+
+    return (
+        supabase
+        .table("precificacao_versoes")
+        .insert(dados)
+        .execute()
+    )
