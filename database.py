@@ -126,23 +126,17 @@ def get_faixas_precificacao():
         .execute()
     )
 
-    print("TOTAL DE REGISTROS:", len(res.data))
-    print("PRIMEIRO REGISTRO:", res.data[0] if res.data else None)
-
     if not res.data:
         return {}
 
     faixas = {}
 
     for linha in res.data:
-        regra = str(linha["regra_pergunta_id"])
+        regra_id = int(linha["regra_pergunta_id"])
 
-        if regra not in faixas:
-            faixas[regra] = []
+        if regra_id not in faixas:
+            faixas[regra_id] = []
 
-        faixas[regra].append(linha)
-
-    print("CHAVES:", list(faixas.keys()))
-    print("REGRA 193:", faixas.get("193"))
+        faixas[regra_id].append(linha)
 
     return faixas
