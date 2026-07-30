@@ -162,10 +162,7 @@ def calcular_valor_regra(regra, resposta, faixas_precificacao):
 
         if qtd <= 0:
             return 0.0
-
-        regra_id = int(regra.get("id"))
-
-        faixas = faixas_precificacao.get(regra_id, [])
+        
 
         regra_id = int(regra.get("id"))
 
