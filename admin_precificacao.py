@@ -1,6 +1,9 @@
 import pandas as pd
 import streamlit as st
-
+from database import (
+    listar_versoes_precificacao,
+    obter_versao_precificacao,
+)
 
 def limpar_cache_precificacao():
     """
