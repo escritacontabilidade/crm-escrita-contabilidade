@@ -571,6 +571,7 @@ else:
         "Radar",
         "Grupos Econômicos",
         "Matriz de Precificação",
+        "Administração da Precificação",
         "Histórico de Vendas",
         "Analista IA",
         "Link para Cliente"
