@@ -115,7 +115,9 @@ def calcular_preco_final(valor_base, respostas, regras):
 def calcular_valor_regra(regra, resposta, faixas_precificacao):
     tipo = str(regra.get("tipo_calculo") or "").strip()
     modo = str(regra.get("modo_aplicacao") or "").strip()
-    resposta_gatilho = str(regra.get("resposta_gatilho") or "").strip()
+    resposta_gatilho = str(
+        regra.get("resposta_gatilho") or ""
+    ).strip()
 
     if resposta is None:
         return 0.0
@@ -129,45 +131,60 @@ def calcular_valor_regra(regra, resposta, faixas_precificacao):
 
     elif modo == "quantidade_maior_que_zero":
         try:
-            qtd = float(resposta)
-            if qtd <= 0:
-                return 0.0
+            quantidade = float(resposta)
         except (TypeError, ValueError):
+            return 0.0
+
+        if quantidade <= 0:
             return 0.0
 
     elif modo == "resposta_preenchida":
         if resposta_str == "":
             return 0.0
 
-    # 2. Cálculo fixo
+    # 2. Regra com valor fixo
     if tipo == "fixo":
         return float(regra.get("valor_fixo") or 0)
 
-    # 3. Cálculo por quantidade
+    # 3. Regra com valor unitário simples
     if tipo == "por_quantidade":
         try:
-            qtd = float(resposta)
+            quantidade = float(resposta)
         except (TypeError, ValueError):
             return 0.0
 
-        valor_unitario = float(regra.get("valor_unitario") or 0)
-        return qtd * valor_unitario
+        if quantidade <= 0:
+            return 0.0
 
-    # 4. Cálculo por faixas dinâmicas
+        valor_unitario = float(
+            regra.get("valor_unitario") or 0
+        )
+
+        return quantidade * valor_unitario
+
+    # 4. Regra baseada em faixas dinâmicas
     if tipo in ["escalonado", "processos_faixa", "faixas"]:
         try:
-            qtd = float(resposta)
+            quantidade = float(resposta)
         except (TypeError, ValueError):
             return 0.0
 
-        if qtd <= 0:
+        if quantidade <= 0:
             return 0.0
-        
 
         regra_id = int(regra.get("id"))
-
         faixas = faixas_precificacao.get(regra_id, [])
-                       
+
+        if not faixas:
+            pergunta = str(
+                regra.get("pergunta") or regra_id
+            ).strip()
+
+            raise ValueError(
+                f"A regra '{pergunta}' não possui faixas "
+                "de precificação cadastradas."
+            )
+
         for faixa in faixas:
             quantidade_inicial = float(
                 faixa.get("quantidade_inicial") or 0
@@ -178,51 +195,33 @@ def calcular_valor_regra(regra, resposta, faixas_precificacao):
             if quantidade_final is not None:
                 quantidade_final = float(quantidade_final)
 
-            valor_faixa = float(faixa.get("valor") or 0)
-
-            dentro_do_inicio = qtd >= quantidade_inicial
+            dentro_do_inicio = (
+                quantidade >= quantidade_inicial
+            )
 
             dentro_do_final = (
                 quantidade_final is None
-                or qtd <= quantidade_final
+                or quantidade <= quantidade_final
             )
 
             if dentro_do_inicio and dentro_do_final:
-                return qtd * valor_faixa
+                valor_unitario = float(
+                    faixa.get("valor") or 0
+                )
 
-        # Compatibilidade temporária com regras antigas
-        if tipo == "escalonado":
-            valor_ate_29 = float(regra.get("valor_ate_29") or 0)
-            valor_a_partir_30 = float(
-                regra.get("valor_a_partir_30") or 0
-            )
+                return quantidade * valor_unitario
 
-            if qtd <= 29:
-                return qtd * valor_ate_29
+        pergunta = str(
+            regra.get("pergunta") or regra_id
+        ).strip()
 
-            return qtd * valor_a_partir_30
-
-        if tipo == "processos_faixa":
-            valor_ate_100 = float(
-                regra.get("valor_ate_100") or 0
-            )
-            valor_101_500 = float(
-                regra.get("valor_101_500") or 0
-            )
-            valor_acima_500 = float(
-                regra.get("valor_acima_500") or 0
-            )
-
-            if qtd <= 100:
-                return qtd * valor_ate_100
-
-            if qtd <= 500:
-                return qtd * valor_101_500
-
-            return qtd * valor_acima_500
+        raise ValueError(
+            f"A quantidade {quantidade:g} não está coberta "
+            f"pelas faixas da regra '{pergunta}'."
+        )
 
     return 0.0
-        
+    
 def calcular_preco_completo(
     valor_base,
     respostas_formulario,
