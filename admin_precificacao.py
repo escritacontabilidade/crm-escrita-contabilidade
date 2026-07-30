@@ -171,7 +171,12 @@ def tela_admin_precificacao(supabase):
             "Nenhuma regra escalonada ativa foi encontrada."
         )
         return
-
+        
+    abas = st.tabs([
+        "📊 Faixas",
+        "📜 Histórico"
+    ])
+    
     segmentos = sorted({
         str(regra.get("segmento_origem") or "").strip()
         for regra in regras
