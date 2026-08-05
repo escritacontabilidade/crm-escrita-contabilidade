@@ -321,6 +321,9 @@ def renderizar_aba_reajuste(supabase):
             key="reajuste_todos_segmentos",
         )
 
+        st.write("SEGMENTOS DISPONÍVEIS:")
+        st.write(SEGMENTOS_PRECIFICACAO)
+        
         segmentos_escolhidos = st.multiselect(
             "Selecione os segmentos",
             options=SEGMENTOS_PRECIFICACAO,
