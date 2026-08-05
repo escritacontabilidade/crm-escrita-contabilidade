@@ -1,23 +1,261 @@
+import pandas as pd
 import streamlit as st
+
+from admin_precificacao_reajuste_service import (
+    aplicar_reajuste_com_backup,
+    gerar_previa_reajuste,
+)
+
+
+SEGMENTOS_PRECIFICACAO = [
+    "Comércio",
+    "Geral Completo",
+    "Holding",
+    "Importadoras",
+    "Indústria",
+    "Prestadoras de Serviço",
+    "Serviços - Clinica Médica",
+]
+
+
+def formatar_moeda_br(valor):
+    valor = float(valor or 0)
+    texto = f"{valor:,.2f}"
+
+    return (
+        "R$ "
+        + texto
+        .replace(",", "X")
+        .replace(".", ",")
+        .replace("X", ".")
+    )
+
+
+def limpar_previa_anterior():
+    st.session_state.pop("reajuste_previa", None)
+
+
+def montar_configuracao(
+    tipo_reajuste,
+    valor_reajuste,
+    aplicar_precos_base,
+    aplicar_faixas,
+    aplicar_regras_valor_fixo,
+    aplicar_todos_segmentos,
+    segmentos_escolhidos,
+    arredondamento,
+    motivo,
+    observacoes,
+):
+    return {
+        "tipo": tipo_reajuste,
+        "valor": float(valor_reajuste),
+        "aplicar_precos_base": aplicar_precos_base,
+        "aplicar_faixas": aplicar_faixas,
+        "aplicar_regras_valor_fixo": aplicar_regras_valor_fixo,
+        "todos_segmentos": aplicar_todos_segmentos,
+        "segmentos": segmentos_escolhidos,
+        "arredondamento": arredondamento,
+        "motivo": motivo.strip(),
+        "observacoes": observacoes.strip(),
+    }
+
+
+def validar_configuracao(configuracao):
+    erros = []
+
+    if not any([
+        configuracao["aplicar_precos_base"],
+        configuracao["aplicar_faixas"],
+        configuracao["aplicar_regras_valor_fixo"],
+    ]):
+        erros.append(
+            "Selecione pelo menos um grupo para reajustar."
+        )
+
+    if (
+        not configuracao["todos_segmentos"]
+        and not configuracao["segmentos"]
+    ):
+        erros.append(
+            "Selecione pelo menos um segmento."
+        )
+
+    if not configuracao["motivo"]:
+        erros.append(
+            "Informe o motivo do reajuste."
+        )
+
+    return erros
+
+
+def exibir_resumo_previa(preview):
+    resumo = preview["resumo"]
+
+    st.markdown("### Resumo da prévia")
+
+    coluna1, coluna2, coluna3 = st.columns(3)
+
+    coluna1.metric(
+        "Registros encontrados",
+        resumo["total_encontrados"],
+    )
+
+    coluna2.metric(
+        "Registros alterados",
+        resumo["total_alterados"],
+    )
+
+    coluna3.metric(
+        "Permanecerão iguais",
+        resumo["total_iguais"],
+    )
+
+    coluna4, coluna5, coluna6 = st.columns(3)
+
+    coluna4.metric(
+        "Soma dos valores atuais",
+        formatar_moeda_br(resumo["total_antes"]),
+    )
+
+    coluna5.metric(
+        "Soma dos valores novos",
+        formatar_moeda_br(resumo["total_depois"]),
+    )
+
+    coluna6.metric(
+        "Diferença total",
+        formatar_moeda_br(resumo["diferenca_total"]),
+    )
+
+
+def exibir_tabela_previa(preview):
+    itens = preview["itens"]
+
+    if not itens:
+        st.warning(
+            "Nenhum registro ativo foi encontrado "
+            "com os filtros selecionados."
+        )
+        return
+
+    linhas = []
+
+    for item in itens:
+        linhas.append({
+            "Tipo": item["tipo"],
+            "Segmento": item["segmento"],
+            "Descrição": item["descricao"],
+            "Valor atual": item["valor_atual"],
+            "Valor novo": item["valor_novo"],
+            "Diferença": item["diferenca"],
+            "Será alterado": (
+                "Sim" if item["alterado"] else "Não"
+            ),
+        })
+
+    st.markdown("### Comparação antes x depois")
+
+    st.dataframe(
+        pd.DataFrame(linhas),
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "Valor atual": st.column_config.NumberColumn(
+                "Valor atual",
+                format="R$ %.2f",
+            ),
+            "Valor novo": st.column_config.NumberColumn(
+                "Valor novo",
+                format="R$ %.2f",
+            ),
+            "Diferença": st.column_config.NumberColumn(
+                "Diferença",
+                format="R$ %.2f",
+            ),
+        },
+    )
+
+
+def renderizar_area_aplicacao(
+    supabase,
+    preview,
+    configuracao,
+):
+    st.divider()
+    st.markdown("## Aplicar reajuste")
+
+    st.error(
+        "Esta operação altera os valores reais da precificação."
+    )
+
+    confirmar = st.checkbox(
+        "Confirmo que revisei a prévia e desejo aplicar o reajuste",
+        key="reajuste_confirmar_aplicacao",
+    )
+
+    texto_confirmacao = st.text_input(
+        "Digite APLICAR para liberar o botão",
+        key="reajuste_texto_confirmacao",
+    )
+
+    liberado = (
+        confirmar
+        and texto_confirmacao.strip().upper() == "APLICAR"
+        and preview["resumo"]["total_alterados"] > 0
+    )
+
+    if st.button(
+        "Aplicar Reajuste",
+        disabled=not liberado,
+        type="primary",
+        use_container_width=True,
+        key="reajuste_aplicar",
+    ):
+        try:
+            with st.spinner(
+                "Criando backup e aplicando o reajuste..."
+            ):
+                resultado = aplicar_reajuste_com_backup(
+                    supabase=supabase,
+                    preview=preview,
+                    configuracao=configuracao,
+                    criado_por=st.session_state.get(
+                        "perfil_usuario",
+                        "Sistema",
+                    ),
+                )
+
+            st.cache_data.clear()
+            limpar_previa_anterior()
+
+            st.success("Reajuste aplicado com sucesso.")
+            st.write(
+                f"Backup criado: "
+                f"{resultado.get('backup_id') or '-'}"
+            )
+            st.write(
+                f"Registros atualizados: "
+                f"{resultado.get('total_enviado')}"
+            )
+            st.info(
+                "Gere uma nova prévia para conferir "
+                "os valores atualizados."
+            )
+
+        except Exception as erro:
+            st.error(
+                "O reajuste não foi aplicado: "
+                f"{erro}"
+            )
 
 
 def renderizar_aba_reajuste(supabase):
-    """
-    Exibe a estrutura inicial da tela de Reajuste Geral.
-
-    Nesta etapa, a tela apenas coleta os parâmetros.
-    A prévia e a gravação no banco serão implementadas
-    nas próximas etapas.
-    """
     st.subheader("Reajuste Geral")
 
     st.info(
-        "Configure o reajuste e gere uma prévia antes de alterar "
-        "qualquer valor da precificação."
-    )
-
-    st.warning(
-        "Nesta primeira etapa, nenhum valor será alterado no banco."
+        "O sistema calcula uma prévia antes de permitir "
+        "qualquer alteração."
     )
 
     with st.form("form_reajuste_geral"):
@@ -25,10 +263,7 @@ def renderizar_aba_reajuste(supabase):
 
         tipo_reajuste = st.radio(
             "Como deseja calcular o reajuste?",
-            options=[
-                "Percentual",
-                "Valor fixo",
-            ],
+            options=["Percentual", "Valor fixo"],
             horizontal=True,
             key="reajuste_tipo",
         )
@@ -40,34 +275,15 @@ def renderizar_aba_reajuste(supabase):
                 step=0.10,
                 value=10.0,
                 format="%.2f",
-                help=(
-                    "Use valor positivo para aumentar e valor "
-                    "negativo para reduzir."
-                ),
                 key="reajuste_percentual",
             )
-
-            st.caption(
-                f"Exemplo: R$ 100,00 passaria para "
-                f"R$ {100 * (1 + valor_reajuste / 100):,.2f}."
-            )
-
         else:
             valor_reajuste = st.number_input(
                 "Valor fixo do reajuste (R$)",
                 step=1.00,
                 value=10.00,
                 format="%.2f",
-                help=(
-                    "Use valor positivo para aumentar e valor "
-                    "negativo para reduzir."
-                ),
                 key="reajuste_valor_fixo",
-            )
-
-            st.caption(
-                f"Exemplo: R$ 100,00 passaria para "
-                f"R$ {100 + valor_reajuste:,.2f}."
             )
 
         st.divider()
@@ -107,28 +323,11 @@ def renderizar_aba_reajuste(supabase):
 
         segmentos_escolhidos = st.multiselect(
             "Selecione os segmentos",
-            options=[
-                "Comércio",
-                "Geral Completo",
-                "Holding",
-                "Importadoras",
-                "Indústria",
-                "Prestadoras de Serviço",
-                "Serviços - Clinica Médica",
-            ],
+            options=SEGMENTOS_PRECIFICACAO,
             default=[],
             disabled=aplicar_todos_segmentos,
             key="reajuste_segmentos",
         )
-
-        if aplicar_todos_segmentos:
-            st.caption(
-                "O reajuste considerará todos os segmentos ativos."
-            )
-        elif not segmentos_escolhidos:
-            st.warning(
-                "Selecione pelo menos um segmento."
-            )
 
         st.divider()
         st.markdown("### 4. Arredondamento")
@@ -151,181 +350,94 @@ def renderizar_aba_reajuste(supabase):
 
         motivo = st.text_input(
             "Motivo do reajuste",
-            placeholder=(
-                "Exemplo: Reajuste anual 2027, revisão comercial "
-                "ou adequação de custos"
-            ),
+            placeholder="Exemplo: Reajuste anual 2027",
             max_chars=150,
             key="reajuste_motivo",
         )
 
         observacoes = st.text_area(
             "Observações",
-            placeholder=(
-                "Campo opcional para registrar detalhes, "
-                "critérios ou justificativas."
-            ),
             height=100,
             key="reajuste_observacoes",
         )
 
-        st.divider()
-        st.markdown("### 6. Resumo da configuração")
-
-        resumo_coluna1, resumo_coluna2, resumo_coluna3 = st.columns(3)
-
-        resumo_coluna1.metric(
-            "Tipo",
-            tipo_reajuste,
-        )
-
-        if tipo_reajuste == "Percentual":
-            resumo_coluna2.metric(
-                "Valor",
-                f"{valor_reajuste:.2f}%",
-            )
-        else:
-            resumo_coluna2.metric(
-                "Valor",
-                f"R$ {valor_reajuste:,.2f}",
-            )
-
-        resumo_coluna3.metric(
-            "Arredondamento",
-            arredondamento,
-        )
-
-        objetos_selecionados = []
-
-        if aplicar_precos_base:
-            objetos_selecionados.append("Preços Base")
-
-        if aplicar_faixas:
-            objetos_selecionados.append("Faixas")
-
-        if aplicar_regras_valor_fixo:
-            objetos_selecionados.append(
-                "Regras de valor fixo"
-            )
-
-        st.write(
-            "**Itens selecionados:** "
-            + (
-                ", ".join(objetos_selecionados)
-                if objetos_selecionados
-                else "Nenhum"
-            )
-        )
-
-        if aplicar_todos_segmentos:
-            st.write("**Segmentos:** Todos")
-        else:
-            st.write(
-                "**Segmentos:** "
-                + (
-                    ", ".join(segmentos_escolhidos)
-                    if segmentos_escolhidos
-                    else "Nenhum"
-                )
-            )
-
-        st.write(
-            f"**Motivo:** {motivo.strip() if motivo.strip() else 'Não informado'}"
-        )
-
-        st.divider()
-        st.markdown("### 7. Próximas ações")
-
-        botao_previa = st.form_submit_button(
+        gerar_previa = st.form_submit_button(
             "Gerar Prévia",
             use_container_width=True,
         )
 
-        if botao_previa:
-            erros = []
+    if gerar_previa:
+        configuracao = montar_configuracao(
+            tipo_reajuste=tipo_reajuste,
+            valor_reajuste=valor_reajuste,
+            aplicar_precos_base=aplicar_precos_base,
+            aplicar_faixas=aplicar_faixas,
+            aplicar_regras_valor_fixo=(
+                aplicar_regras_valor_fixo
+            ),
+            aplicar_todos_segmentos=(
+                aplicar_todos_segmentos
+            ),
+            segmentos_escolhidos=segmentos_escolhidos,
+            arredondamento=arredondamento,
+            motivo=motivo,
+            observacoes=observacoes,
+        )
 
-            if not objetos_selecionados:
-                erros.append(
-                    "Selecione pelo menos um grupo para reajustar."
-                )
+        erros = validar_configuracao(configuracao)
 
-            if (
-                not aplicar_todos_segmentos
-                and not segmentos_escolhidos
-            ):
-                erros.append(
-                    "Selecione pelo menos um segmento."
-                )
+        if erros:
+            limpar_previa_anterior()
 
-            if not motivo.strip():
-                erros.append(
-                    "Informe o motivo do reajuste."
-                )
+            for erro in erros:
+                st.warning(erro)
+        else:
+            try:
+                with st.spinner("Calculando a prévia..."):
+                    preview = gerar_previa_reajuste(
+                        supabase=supabase,
+                        configuracao=configuracao,
+                    )
 
-            if erros:
-                for erro in erros:
-                    st.warning(erro)
-            else:
-                st.success(
-                    "Configuração validada. Na próxima etapa, "
-                    "este botão carregará os registros e mostrará "
-                    "a comparação entre os valores atuais e os "
-                    "valores reajustados."
-                )
-
-                st.session_state[
-                    "reajuste_configuracao_validada"
-                ] = {
-                    "tipo": tipo_reajuste,
-                    "valor": valor_reajuste,
-                    "aplicar_precos_base": aplicar_precos_base,
-                    "aplicar_faixas": aplicar_faixas,
-                    "aplicar_regras_valor_fixo": (
-                        aplicar_regras_valor_fixo
-                    ),
-                    "todos_segmentos": aplicar_todos_segmentos,
-                    "segmentos": segmentos_escolhidos,
-                    "arredondamento": arredondamento,
-                    "motivo": motivo.strip(),
-                    "observacoes": observacoes.strip(),
+                st.session_state["reajuste_previa"] = {
+                    "configuracao": configuracao,
+                    "resultado": preview,
                 }
 
-    st.divider()
-    st.markdown("### Prévia do reajuste")
+                st.success(
+                    "Prévia calculada. Nenhum valor foi alterado."
+                )
 
-    if "reajuste_configuracao_validada" not in st.session_state:
+            except Exception as erro:
+                limpar_previa_anterior()
+                st.error(
+                    "Não foi possível gerar a prévia: "
+                    f"{erro}"
+                )
+
+    st.divider()
+    st.markdown("## Prévia do reajuste")
+
+    dados_sessao = st.session_state.get("reajuste_previa")
+
+    if not dados_sessao:
         st.info(
             "Preencha os campos e clique em Gerar Prévia."
         )
-    else:
-        st.info(
-            "A configuração foi validada. A leitura dos valores "
-            "do Supabase e o cálculo da prévia serão adicionados "
-            "na próxima etapa."
-        )
+        return
 
-    coluna_simulacao, coluna_aplicacao = st.columns(2)
+    preview = dados_sessao["resultado"]
+    configuracao = dados_sessao["configuracao"]
 
-    with coluna_simulacao:
-        st.button(
-            "Salvar como Simulação",
-            disabled=True,
-            use_container_width=True,
-            help=(
-                "Será habilitado depois que a prévia estiver "
-                "calculada."
-            ),
-            key="reajuste_salvar_simulacao",
-        )
+    st.caption(
+        f"Motivo: {configuracao['motivo']}"
+    )
 
-    with coluna_aplicacao:
-        st.button(
-            "Aplicar Reajuste",
-            disabled=True,
-            use_container_width=True,
-            help=(
-                "Será habilitado depois que a prévia estiver "
-                "calculada e confirmada."
-            ),
-            key="reajuste_aplicar",
-        )
+    exibir_resumo_previa(preview)
+    exibir_tabela_previa(preview)
+
+    renderizar_area_aplicacao(
+        supabase=supabase,
+        preview=preview,
+        configuracao=configuracao,
+    )
