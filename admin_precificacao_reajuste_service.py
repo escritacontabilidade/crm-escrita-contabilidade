@@ -1,3 +1,5 @@
+from database import criar_backup_precificacao
+
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
 
@@ -478,4 +480,77 @@ def gerar_previa_reajuste(supabase, configuracao):
             "diferenca_total": float(total_depois - total_antes),
         },
         "avisos": avisos,
+    }
+
+
+def preparar_itens_para_aplicacao(preview):
+    itens = []
+
+    for item in preview.get("itens", []):
+        if not item.get("alterado"):
+            continue
+
+        itens.append({
+            "tabela": item["tabela"],
+            "registro_id": int(item["registro_id"]),
+            "campo": item["campo"],
+            "valor_novo": float(item["valor_novo"]),
+        })
+
+    return itens
+
+
+def aplicar_reajuste_com_backup(
+    supabase,
+    preview,
+    configuracao,
+    criado_por="Sistema",
+):
+    itens = preparar_itens_para_aplicacao(preview)
+
+    if not itens:
+        raise ValueError(
+            "A prévia não possui registros para alterar."
+        )
+
+    percentual = None
+
+    if configuracao.get("tipo") == "Percentual":
+        percentual = float(configuracao.get("valor") or 0)
+
+    descricao = (
+        configuracao.get("observacoes")
+        or configuracao.get("motivo")
+    )
+
+    backup = criar_backup_precificacao(
+        supabase=supabase,
+        nome=(
+            "Backup automático antes do reajuste - "
+            f"{configuracao.get('motivo')}"
+        ),
+        descricao=descricao,
+        tipo="antes_reajuste",
+        percentual_reajuste=percentual,
+        criado_por=criado_por,
+    )
+
+    backup_id = None
+
+    if getattr(backup, "data", None):
+        backup_id = backup.data[0].get("id")
+
+    resultado = (
+        supabase
+        .rpc(
+            "aplicar_reajuste_precificacao",
+            {"p_itens": itens},
+        )
+        .execute()
+    )
+
+    return {
+        "backup_id": backup_id,
+        "resultado": resultado.data,
+        "total_enviado": len(itens),
     }
