@@ -324,12 +324,11 @@ def renderizar_aba_reajuste(supabase):
         st.write("SEGMENTOS DISPONÍVEIS:")
         st.write(SEGMENTOS_PRECIFICACAO)
         
-        segmentos_escolhidos = st.multiselect(
+        segmentos_escolhidos = st.selectbox(
             "Selecione os segmentos",
             options=SEGMENTOS_PRECIFICACAO,
-            default=[],
             disabled=aplicar_todos_segmentos,
-            key="reajuste_segmentos",
+            key="teste_segmento",
         )
 
         st.divider()
