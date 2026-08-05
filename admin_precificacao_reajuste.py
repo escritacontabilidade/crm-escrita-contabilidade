@@ -321,15 +321,18 @@ def renderizar_aba_reajuste(supabase):
             key="reajuste_todos_segmentos",
         )
 
-        st.write("SEGMENTOS DISPONÍVEIS:")
-        st.write(SEGMENTOS_PRECIFICACAO)
-        
-        segmentos_escolhidos = st.selectbox(
+        segmentos_escolhidos = st.multiselect(
             "Selecione os segmentos",
             options=SEGMENTOS_PRECIFICACAO,
-            disabled=aplicar_todos_segmentos,
-            key="teste_segmento",
+            default=[],
+            key="reajuste_segmentos",
         )
+
+        if aplicar_todos_segmentos:
+            st.caption(
+                "A opção 'Aplicar em todos os segmentos' está marcada. "
+                "As escolhas abaixo serão ignoradas."
+            )
 
         st.divider()
         st.markdown("### 4. Arredondamento")
