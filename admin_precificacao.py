@@ -2,11 +2,8 @@ import pandas as pd
 import streamlit as st
 
 from admin_precificacao_reajuste import renderizar_aba_reajuste
+from admin_precificacao_historico import renderizar_aba_historico
 
-from database import (
-    listar_versoes_precificacao,
-    obter_versao_precificacao,
-)
 
 
 def limpar_cache_precificacao():
@@ -467,91 +464,6 @@ def renderizar_aba_faixas(supabase):
                 except Exception as erro:
                     st.error(f"Erro ao inativar a faixa: {erro}")
 
-
-def renderizar_aba_historico(supabase):
-    st.subheader("Histórico de versões")
-
-    try:
-        versoes = listar_versoes_precificacao(supabase)
-    except Exception as erro:
-        st.error(f"Não foi possível carregar o histórico: {erro}")
-        return
-
-    if not versoes:
-        st.info(
-            "Nenhuma versão foi criada ainda. "
-            "Os backups aparecerão aqui."
-        )
-        return
-
-    linhas = []
-    for versao in versoes:
-        linhas.append({
-            "ID": versao.get("id"),
-            "Nome": versao.get("nome"),
-            "Tipo": versao.get("tipo"),
-            "Reajuste (%)": versao.get("percentual_reajuste"),
-            "Preços base": versao.get("quantidade_precos_base"),
-            "Regras": versao.get("quantidade_regras"),
-            "Faixas": versao.get("quantidade_faixas"),
-            "Criado por": versao.get("criado_por"),
-            "Criado em": versao.get("criado_em"),
-        })
-
-    st.dataframe(
-        pd.DataFrame(linhas),
-        use_container_width=True,
-        hide_index=True,
-    )
-
-    opcoes = {
-        f"{versao.get('id')} | {versao.get('nome')}": versao.get("id")
-        for versao in versoes
-    }
-
-    versao_escolhida = st.selectbox(
-        "Selecione uma versão para consultar",
-        list(opcoes.keys()),
-        key="admin_historico_versao",
-    )
-
-    if not versao_escolhida:
-        return
-
-    try:
-        dados = obter_versao_precificacao(
-            supabase,
-            opcoes[versao_escolhida],
-        )
-    except Exception as erro:
-        st.error(f"Não foi possível abrir a versão: {erro}")
-        return
-
-    if not dados:
-        st.warning("A versão selecionada não foi encontrada.")
-        return
-
-    st.markdown("### Informações da versão")
-    coluna1, coluna2, coluna3 = st.columns(3)
-
-    coluna1.metric("Preços base", dados.get("quantidade_precos_base") or 0)
-    coluna2.metric("Regras", dados.get("quantidade_regras") or 0)
-    coluna3.metric("Faixas", dados.get("quantidade_faixas") or 0)
-
-    st.write(f"**Nome:** {dados.get('nome') or '-'}")
-    st.write(f"**Descrição:** {dados.get('descricao') or '-'}")
-    st.write(f"**Tipo:** {dados.get('tipo') or '-'}")
-    st.write(f"**Criado por:** {dados.get('criado_por') or '-'}")
-    st.write(f"**Criado em:** {dados.get('criado_em') or '-'}")
-
-    percentual = dados.get("percentual_reajuste")
-    if percentual is not None:
-        st.write(f"**Percentual de reajuste:** {float(percentual):.2f}%")
-
-    st.info(
-        "A restauração desta versão será habilitada "
-        "em uma próxima etapa."
-    )
 
 
 def renderizar_aba_em_desenvolvimento(titulo, descricao):
