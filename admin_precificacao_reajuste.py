@@ -91,6 +91,7 @@ def validar_configuracao(configuracao):
 
 def exibir_resumo_previa(preview):
     resumo = preview["resumo"]
+    itens = preview.get("itens", [])
 
     st.markdown("### Resumo da prévia")
 
@@ -102,7 +103,7 @@ def exibir_resumo_previa(preview):
     )
 
     coluna2.metric(
-        "Registros alterados",
+        "Registros que serão alterados",
         resumo["total_alterados"],
     )
 
@@ -128,6 +129,73 @@ def exibir_resumo_previa(preview):
         formatar_moeda_br(resumo["diferenca_total"]),
     )
 
+    alterados = [
+        item
+        for item in itens
+        if item.get("alterado")
+    ]
+
+    contagem_por_tipo = {}
+
+    for item in alterados:
+        tipo = str(item.get("tipo") or "Outros")
+        contagem_por_tipo[tipo] = (
+            contagem_por_tipo.get(tipo, 0) + 1
+        )
+
+    st.markdown("#### Registros por grupo")
+
+    grupo1, grupo2, grupo3 = st.columns(3)
+
+    grupo1.metric(
+        "Preços Base",
+        contagem_por_tipo.get("Preço Base", 0),
+    )
+
+    grupo2.metric(
+        "Faixas",
+        contagem_por_tipo.get("Faixa", 0),
+    )
+
+    grupo3.metric(
+        "Regras de valor fixo",
+        contagem_por_tipo.get(
+            "Regra de valor fixo",
+            0,
+        ),
+    )
+
+    diferencas = [
+        float(item.get("diferenca") or 0)
+        for item in alterados
+    ]
+
+    if diferencas:
+        st.markdown("#### Impacto por registro")
+
+        impacto1, impacto2, impacto3 = st.columns(3)
+
+        impacto1.metric(
+            "Menor diferença",
+            formatar_moeda_br(min(diferencas)),
+        )
+
+        impacto2.metric(
+            "Maior diferença",
+            formatar_moeda_br(max(diferencas)),
+        )
+
+        impacto3.metric(
+            "Diferença média",
+            formatar_moeda_br(
+                sum(diferencas) / len(diferencas)
+            ),
+        )
+
+    st.success(
+        "O backup completo será criado automaticamente "
+        "antes da aplicação do reajuste."
+    )
 
 def exibir_tabela_previa(preview):
     itens = preview["itens"]
@@ -186,7 +254,9 @@ def renderizar_area_aplicacao(
     st.markdown("## Aplicar reajuste")
 
     st.error(
-        "Esta operação altera os valores reais da precificação."
+        "Esta operação altera os valores reais da precificação. "
+        "Antes da alteração, o sistema criará automaticamente "
+        "uma versão completa para restauração."
     )
 
     confirmar = st.checkbox(
