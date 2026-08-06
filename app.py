@@ -569,6 +569,7 @@ else:
         "Leads Arquivados",
         "Nova Proposta",
         "Proposta Comercial",
+        "Dashboard Comercial",
         "Orçamentos",
         "Radar",
         "Grupos Econômicos",
