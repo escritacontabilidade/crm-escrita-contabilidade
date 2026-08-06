@@ -5,6 +5,7 @@ from admin_precificacao_reajuste import renderizar_aba_reajuste
 from admin_precificacao_historico import renderizar_aba_historico
 from admin_precificacao_precos_base import renderizar_aba_precos_base
 from admin_precificacao_regras import renderizar_aba_regras
+from admin_precificacao_simulador import renderizar_aba_simulador
 
 
 def limpar_cache_precificacao():
@@ -497,10 +498,7 @@ def tela_admin_precificacao(supabase):
         renderizar_aba_reajuste(supabase)
 
     with abas[4]:
-        renderizar_aba_em_desenvolvimento(
-            "Simulador",
-            "Nesta área será possível testar a precificação sem criar uma proposta comercial.",
-        )
+        renderizar_aba_simulador(supabase)
 
     with abas[5]:
         renderizar_aba_historico(supabase)
