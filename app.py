@@ -1421,6 +1421,8 @@ else:
     elif menu == "Dashboard Comercial":
         tela_dashboard_comercial(supabase)
 
+    elif menu == "Análise do Balancete":
+        tela_analise_balancete(supabase)
     
     elif menu == "Orçamentos":
         st.title("📂 Orçamentos")
