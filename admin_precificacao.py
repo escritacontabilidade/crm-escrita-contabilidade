@@ -4,7 +4,7 @@ import streamlit as st
 from admin_precificacao_reajuste import renderizar_aba_reajuste
 from admin_precificacao_historico import renderizar_aba_historico
 from admin_precificacao_precos_base import renderizar_aba_precos_base
-
+from admin_precificacao_regras import renderizar_aba_regras
 
 
 def limpar_cache_precificacao():
@@ -491,10 +491,7 @@ def tela_admin_precificacao(supabase):
         renderizar_aba_precos_base(supabase)
 
     with abas[2]:
-        renderizar_aba_em_desenvolvimento(
-            "Regras de Precificação",
-            "Nesta área será possível administrar as regras, os tipos de cálculo e a ativação de cada regra.",
-        )
+        renderizar_aba_regras(supabase)
 
     with abas[3]:
         renderizar_aba_reajuste(supabase)
