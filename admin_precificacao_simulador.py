@@ -746,4 +746,3 @@ def renderizar_aba_simulador(
         "Esta simulação não criou proposta, lead "
         "ou histórico comercial."
     )
-    )
