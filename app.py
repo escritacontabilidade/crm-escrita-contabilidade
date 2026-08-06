@@ -589,6 +589,8 @@ else:
 
     if menu == "Leads Recebidos":
         st.title("📥 Leads Recebidos")
+    
+        renderizar_dashboard_leads(supabase)
 
         try:
             res_leads = supabase.table("leads_externos") \
