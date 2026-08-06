@@ -581,7 +581,6 @@ else:
     ]
     
     if perfil_usuario == "admin":
-        menus_permitidos.insert(3, "Dashboard de Custos")
         menus_permitidos.append("Configurações")
     
     menu = st.sidebar.selectbox(
