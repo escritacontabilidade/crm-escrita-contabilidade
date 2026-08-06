@@ -715,11 +715,12 @@ else:
 
                 st.divider()
 
-                col_btn1, col_btn2 = st.columns(2)
+                col_btn1, col_btn2, col_btn3 = st.columns(3)
 
                 with col_btn1:
                     if st.button("Carregar para Precificação"):
                         st.session_state["lead_em_analise"] = lead_data
+                        st.session_state["lead_balancete"] = lead_data
 
                         try:
                             supabase.table("leads_externos").update({
@@ -744,6 +745,13 @@ else:
 
                         except Exception as e:
                             st.error(f"Erro ao arquivar lead: {e}")
+
+                with col_btn3:
+                    if st.button("Analisar Balancete"):
+                        st.session_state["lead_balancete"] = lead_data
+                        st.session_state["menu"] = "Análise do Balancete"
+                        st.rerun()
+                
     
             else:
                 st.info("Nenhum lead recebido ainda.")
