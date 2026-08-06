@@ -28,7 +28,7 @@ def restaurar_versao_com_backup(
             "Backup criado automaticamente antes de restaurar "
             f"a versão {versao_id}: {nome_versao}"
         ),
-        tipo="antes_restauracao",
+        tipo="antes_reajuste",
         percentual_reajuste=None,
         criado_por=criado_por,
     )
