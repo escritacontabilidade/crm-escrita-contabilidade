@@ -488,10 +488,7 @@ def tela_admin_precificacao(supabase):
         renderizar_aba_faixas(supabase)
 
     with abas[1]:
-        renderizar_aba_em_desenvolvimento(
-            "Preços Base",
-            "Nesta área será possível cadastrar, editar, copiar e organizar os preços base por segmento.",
-        )
+        renderizar_aba_precos_base(supabase)
 
     with abas[2]:
         renderizar_aba_em_desenvolvimento(
