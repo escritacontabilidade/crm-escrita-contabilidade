@@ -40,6 +40,18 @@ def carregar_segmentos_simulador(supabase):
     return resposta.data or []
 
 
+def carregar_mapa_segmentos_simulador(supabase):
+    resposta = (
+        supabase
+        .table("mapa_segmento_precificacao")
+        .select("segmento_questionario,tabela_base,ativo")
+        .eq("ativo", True)
+        .execute()
+    )
+
+    return resposta.data or []
+
+
 def carregar_precos_base(supabase):
     resposta = (
         supabase
@@ -344,6 +356,12 @@ def renderizar_aba_simulador(
             )
         )
 
+        mapa_segmentos = (
+            carregar_mapa_segmentos_simulador(
+                supabase
+            )
+        )
+
         regras_todas = (
             get_regras_precificacao()
         )
@@ -401,14 +419,32 @@ def renderizar_aba_simulador(
         or segmento_escolhido
     )
 
-    tabela_base = (
-        texto_limpo(
-            configuracao_segmento.get(
-                "tabela_base"
+    tabela_base = None
+
+    for item_mapa in mapa_segmentos:
+        segmento_mapa = texto_limpo(
+            item_mapa.get(
+                "segmento_questionario"
             )
         )
-        or segmento_escolhido
-    )
+
+        if (
+            segmento_mapa.lower()
+            == segmento_escolhido.lower()
+        ):
+            tabela_base = texto_limpo(
+                item_mapa.get(
+                    "tabela_base"
+                )
+            )
+            break
+
+    if not tabela_base:
+        st.warning(
+            "Não foi encontrado o vínculo entre o segmento "
+            "selecionado e a tabela de preços base."
+        )
+        return
 
     regimes_disponiveis = sorted({
         texto_limpo(
@@ -709,4 +745,5 @@ def renderizar_aba_simulador(
     st.caption(
         "Esta simulação não criou proposta, lead "
         "ou histórico comercial."
+    )
     )
