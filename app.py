@@ -571,6 +571,7 @@ else:
         "Nova Proposta",
         "Proposta Comercial",
         "Dashboard Comercial",
+        "Análise do Balancete",
         "Orçamentos",
         "Radar",
         "Grupos Econômicos",
