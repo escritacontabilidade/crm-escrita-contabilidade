@@ -3,6 +3,7 @@ import streamlit as st
 
 from admin_precificacao_reajuste import renderizar_aba_reajuste
 from admin_precificacao_historico import renderizar_aba_historico
+from admin_precificacao_precos_base import renderizar_aba_precos_base
 
 
 
