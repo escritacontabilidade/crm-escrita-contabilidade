@@ -1416,6 +1416,11 @@ else:
                     except Exception as e:
                 
                         st.error(f"Erro ao enviar: {e}")
+
+    elif menu == "Dashboard Comercial":
+        tela_dashboard_comercial(supabase)
+
+    
     elif menu == "Orçamentos":
         st.title("📂 Orçamentos")
 
