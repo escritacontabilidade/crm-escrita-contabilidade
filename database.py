@@ -190,14 +190,17 @@ def criar_backup_precificacao(
     )
 
 @st.cache_data(ttl=60)
-def listar_versoes_precificacao(supabase):
+def listar_versoes_precificacao(_supabase):
     """
     Retorna todas as versões de precificação,
     da mais recente para a mais antiga.
+
+    O underline em _supabase impede que o Streamlit
+    tente calcular o hash do cliente Supabase.
     """
 
     resultado = (
-        supabase
+        _supabase
         .table("precificacao_versoes")
         .select(
             "id,nome,descricao,tipo,percentual_reajuste,"
@@ -215,16 +218,19 @@ def listar_versoes_precificacao(supabase):
     return resultado.data or []
 
 @st.cache_data(ttl=60)
-def obter_versao_precificacao(supabase, versao_id):
+def obter_versao_precificacao(_supabase, versao_id):
     """
     Retorna uma versão completa da precificação.
+
+    O underline em _supabase impede que o Streamlit
+    tente calcular o hash do cliente Supabase.
     """
 
     resultado = (
-        supabase
+        _supabase
         .table("precificacao_versoes")
         .select("*")
-        .eq("id", versao_id)
+        .eq("id", int(versao_id))
         .single()
         .execute()
     )
