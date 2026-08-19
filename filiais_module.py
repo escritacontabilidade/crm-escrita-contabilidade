@@ -59,6 +59,7 @@ def renderizar_detalhes_filiais(
             "adicional_total": float
         }
     """
+
     if str(resposta_possui_filial or "").strip() != "Sim":
         return {
             "quantidade_filiais": 0,
@@ -106,8 +107,10 @@ def renderizar_detalhes_filiais(
 
         inicial = (
             filiais_iniciais[indice]
-            if indice < len(filiais_iniciais)
-            and isinstance(filiais_iniciais[indice], dict)
+            if (
+                indice < len(filiais_iniciais)
+                and isinstance(filiais_iniciais[indice], dict)
+            )
             else {}
         )
 
@@ -136,12 +139,16 @@ def renderizar_detalhes_filiais(
                     ["Sim", "Não"],
                     index=0 if movimento_inicial == "Sim" else 1,
                     horizontal=True,
-                    key=f"{prefixo}_filial_{numero_filial}_movimento",
+                    key=(
+                        f"{prefixo}_filial_"
+                        f"{numero_filial}_movimento"
+                    ),
                 )
 
             with col2:
                 responsabilidade_escrita = st.radio(
-                    "A Escrita será responsável pela contabilidade desta filial?",
+                    "A Escrita será responsável pela "
+                    "contabilidade desta filial?",
                     ["Sim", "Não"],
                     index=(
                         0
@@ -155,27 +162,14 @@ def renderizar_detalhes_filiais(
                     ),
                 )
 
-            adicional_filial = 0.0
+        adicional_filial = 0.0
 
-            if responsabilidade_escrita == "Sim":
-                adicional_filial = (
-                    VALOR_FILIAL_COM_MOVIMENTO
-                    if possui_movimento == "Sim"
-                    else VALOR_FILIAL_SEM_MOVIMENTO
-                )
-
-                st.caption(
-                    "Acréscimo desta filial: "
-                    f"R$ {adicional_filial:,.2f}"
-                    .replace(",", "X")
-                    .replace(".", ",")
-                    .replace("X", ".")
-                )
-            else:
-                st.caption(
-                    "Sem acréscimo: a Escrita não será "
-                    "responsável pela contabilidade desta filial."
-                )
+        if responsabilidade_escrita == "Sim":
+            adicional_filial = (
+                VALOR_FILIAL_COM_MOVIMENTO
+                if possui_movimento == "Sim"
+                else VALOR_FILIAL_SEM_MOVIMENTO
+            )
 
         filiais.append({
             "numero": numero_filial,
@@ -185,14 +179,6 @@ def renderizar_detalhes_filiais(
         })
 
     adicional_total = calcular_adicional_filiais(filiais)
-
-    st.info(
-        "Acréscimo total pelas filiais: "
-        f"R$ {adicional_total:,.2f}"
-        .replace(",", "X")
-        .replace(".", ",")
-        .replace("X", ".")
-    )
 
     return {
         "quantidade_filiais": int(quantidade_filiais),
