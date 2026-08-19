@@ -1037,6 +1037,18 @@ else:
                         regras=regras_precificacao,
                         segmento=seg_sel
                     )
+
+                    preco_base_calculado += adicional_filiais
+                    total_acrescimos += adicional_filiais
+                    
+                    if adicional_filiais > 0:
+                        detalhamento_acrescimos.append({
+                            "regra_id": "FILIAIS",
+                            "pergunta": "Filiais sob responsabilidade da Escrita",
+                            "resposta": detalhamento_filiais,
+                            "valor": adicional_filiais,
+                            "tipo": "filiais"
+                        })
                     
                     v_bronze = preco_base_calculado 
                     v_prata = preco_base_calculado * 1.15
