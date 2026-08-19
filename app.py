@@ -921,6 +921,9 @@ else:
 
             respostas_formulario = {}
             res_perg_data = []
+            
+            adicional_filiais = 0.0
+            detalhamento_filiais = {}
 
             if seg_sel:
                 try:
