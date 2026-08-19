@@ -45,6 +45,11 @@ from admin_precificacao import tela_admin_precificacao
 from dashboard_leads import renderizar_dashboard_leads
 from dashboard_comercial import tela_dashboard_comercial
 from analise_balancete import tela_analise_balancete
+from filiais_module import (
+    eh_pergunta_filial,
+    renderizar_detalhes_filiais,
+    CHAVE_DETALHAMENTO_FILIAIS,
+)
 
 def autenticar_usuario(usuario, senha):
     try:
