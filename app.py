@@ -983,6 +983,30 @@ else:
                         )
 
                     respostas_formulario[pergunta_texto] = resposta
+
+                    if eh_pergunta_filial(pergunta_texto):
+                        detalhamento_inicial = respostas_lead.get(
+                            CHAVE_DETALHAMENTO_FILIAIS,
+                            {}
+                        )
+                    
+                        detalhamento_filiais = renderizar_detalhes_filiais(
+                            resposta_possui_filial=resposta,
+                            prefixo=f"np_filiais_{p['id']}",
+                            respostas_iniciais=detalhamento_inicial,
+                        )
+                    
+                        adicional_filiais = float(
+                            detalhamento_filiais.get(
+                                "adicional_total",
+                                0
+                            )
+                        )
+                    
+                        respostas_formulario[
+                            CHAVE_DETALHAMENTO_FILIAIS
+                        ] = detalhamento_filiais
+                    
                     st.write("")
 
             st.divider()
