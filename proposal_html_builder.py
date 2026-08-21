@@ -4,6 +4,7 @@ from jinja2 import Template
 from weasyprint import HTML
 from num2words import num2words
 from PIL import Image
+from markupsafe import Markup, escape
 
 ASSETS_DIR = "assets_proposta_v2"
 
@@ -56,6 +57,71 @@ def limpar_nome_arquivo(nome):
     return nome.replace(" ", "_") or "proposta"
 
 
+
+def formatar_resposta_questionario(pergunta, resposta):
+    """
+    Formata respostas especiais antes de enviá-las ao HTML da proposta.
+
+    O detalhamento das filiais é transformado em texto legível
+    e os valores internos de precificação não são exibidos.
+    """
+    pergunta_texto = str(pergunta or "").strip().lower()
+
+    if (
+        pergunta_texto == "detalhamento das filiais"
+        and isinstance(resposta, dict)
+    ):
+        filiais = resposta.get("filiais") or []
+
+        if not filiais:
+            return Markup("Nenhuma filial informada.")
+
+        blocos = []
+
+        for filial in filiais:
+            numero = escape(filial.get("numero", "-"))
+            possui_movimento = escape(
+                filial.get("possui_movimento") or "Não informado"
+            )
+            responsabilidade = escape(
+                filial.get("responsabilidade_escrita") or "Não informado"
+            )
+
+            blocos.append(
+                Markup(
+                    f"""
+                    <div class="filial-detalhe">
+                        <strong>Filial {numero}</strong><br>
+                        Possui movimento: {possui_movimento}<br>
+                        Contabilidade sob responsabilidade da Escrita: {responsabilidade}
+                    </div>
+                    """
+                )
+            )
+
+        return Markup("").join(blocos)
+
+    if resposta is None:
+        return Markup("Não informado")
+
+    return Markup(str(escape(resposta)))
+
+
+def preparar_respostas_questionario(respostas_cliente):
+    respostas_formatadas = []
+
+    for pergunta, resposta in (respostas_cliente or {}).items():
+        respostas_formatadas.append({
+            "pergunta": pergunta,
+            "resposta_html": formatar_resposta_questionario(
+                pergunta,
+                resposta,
+            ),
+        })
+
+    return respostas_formatadas
+
+
 def gerar_pdf_proposta_html(
     nome_empresa,
     plano,
@@ -90,6 +156,7 @@ def gerar_pdf_proposta_html(
         sufixo = "alta"
     
     respostas_cliente = respostas_cliente or {}
+    respostas_formatadas = preparar_respostas_questionario(respostas_cliente)
     servicos_contratados = servicos_contratados or ["Contábil", "Fiscal", "Pessoal", "Societário"]
 
     valor_formatado = formatar_moeda_pdf(valor_mensal)
@@ -300,6 +367,14 @@ def gerar_pdf_proposta_html(
     .resposta {
         font-size: 18px;
         color: #333333;
+        line-height: 1.45;
+    }
+
+    .filial-detalhe {
+        margin-top: 8px;
+        margin-bottom: 14px;
+        padding-left: 16px;
+        border-left: 4px solid #b19745;
     }
 </style>
 </head>
@@ -366,10 +441,10 @@ def gerar_pdf_proposta_html(
             Respostas do Questionário
         </h1>
 
-        {% for pergunta, resposta in respostas.items() %}
+        {% for item in respostas_formatadas %}
             <div class="qa">
-                <div class="pergunta">{{ pergunta }}</div>
-                <div class="resposta">{{ resposta }}</div>
+                <div class="pergunta">{{ item.pergunta }}</div>
+                <div class="resposta">{{ item.resposta_html|safe }}</div>
             </div>
         {% endfor %}
     </section>
@@ -399,7 +474,7 @@ def gerar_pdf_proposta_html(
         tabela_base=tabela_base,
         preco_base_formatado=preco_base_formatado,
         acrescimos_formatado=acrescimos_formatado,
-        respostas=respostas_cliente,
+        respostas_formatadas=respostas_formatadas,
         data_geracao=datetime.now().strftime("%d/%m/%Y %H:%M"),
     )
 
