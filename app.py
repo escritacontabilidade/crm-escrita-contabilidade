@@ -1616,6 +1616,64 @@ else:
                     default=servicos_atuais
                 )
 
+                st.divider()
+
+                if st.button(
+                    "✏️ Abrir proposta completa para edição",
+                    use_container_width=True
+                ):
+                    proposta_salva = orc.get("proposta_json")
+                
+                    if not isinstance(proposta_salva, dict):
+                        proposta_salva = {}
+                
+                    respostas_salvas = orc.get("respostas_formulario")
+                
+                    if not isinstance(respostas_salvas, dict):
+                        respostas_salvas = {}
+                
+                    # Identifica exatamente qual orçamento está sendo editado
+                    st.session_state["orcamento_atual_id"] = orcamento_id
+                    st.session_state["proposta_em_edicao"] = True
+                
+                    # Reconstrói a proposta salva
+                    st.session_state["proposta_atual"] = {
+                        **proposta_salva,
+                        "cliente": orc.get("cliente") or proposta_salva.get("cliente", ""),
+                        "cnpj": orc.get("cnpj") or proposta_salva.get("cnpj", ""),
+                        "responsavel": orc.get("responsavel") or proposta_salva.get("responsavel", ""),
+                        "email": orc.get("email") or proposta_salva.get("email", ""),
+                        "telefone": orc.get("telefone") or proposta_salva.get("telefone", ""),
+                        "segmento": orc.get("segmento") or proposta_salva.get("segmento", ""),
+                        "regime": orc.get("regime") or proposta_salva.get("regime", ""),
+                        "respostas_formulario": respostas_salvas,
+                    }
+                
+                    # Prepara os dados que a tela Nova Proposta já sabe carregar
+                    st.session_state["lead_em_analise"] = {
+                        "id": proposta_salva.get("lead_id"),
+                        "nome_empresa": orc.get("cliente") or proposta_salva.get("cliente", ""),
+                        "cnpj": orc.get("cnpj") or proposta_salva.get("cnpj", ""),
+                        "responsavel": orc.get("responsavel") or proposta_salva.get("responsavel", ""),
+                        "email": orc.get("email") or proposta_salva.get("email", ""),
+                        "telefone": orc.get("telefone") or proposta_salva.get("telefone", ""),
+                        "whatsapp": orc.get("telefone") or proposta_salva.get("telefone", ""),
+                        "regime": orc.get("regime") or proposta_salva.get("regime", ""),
+                        "segmento": orc.get("segmento") or proposta_salva.get("segmento", ""),
+                        "faturamento_medio": proposta_salva.get("faturamento_medio", 0),
+                        "descricao_atividades": proposta_salva.get(
+                            "descricao_atividades",
+                            ""
+                        ),
+                        "respostas_segmento": respostas_salvas,
+                    }
+                
+                    # Usa o mecanismo de navegação que já corrigimos anteriormente
+                    st.session_state["proximo_menu"] = "Nova Proposta"
+                
+                    st.rerun()
+                
+
                 if st.button("Salvar alterações do orçamento"):
                     supabase.table("orcamentos").update({
                         "status": novo_status,
