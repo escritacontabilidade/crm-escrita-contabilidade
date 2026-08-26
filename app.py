@@ -254,18 +254,6 @@ except Exception as e:
     st.error(f"Erro de conexão com o Supabase: {e}")
     st.stop()
 
-# --- 3. ESTILOS VISUAIS ---
-st.markdown("""
-    <style>
-    .metric-card { 
-        background-color: #1a2a44; padding: 25px; border-radius: 12px; 
-        color: white; text-align: center; border: 1px solid #d4af37;
-    }
-    .metric-card h2 { color: #d4af37 !important; margin: 10px 0 !important; }
-    div.stButton > button { border-radius: 5px; font-weight: bold; width: 100%; height: 3em; }
-    </style>
-    """, unsafe_allow_html=True)
-
 def tela_lead_site():
     st.image("Logo Escrita.png", width=200)
     st.title("Fale com a Escrita Contabilidade")
