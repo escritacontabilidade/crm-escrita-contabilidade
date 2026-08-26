@@ -1130,25 +1130,12 @@ else:
                     "valor_escolhido": v_prata
                 }
 
-                # 7. Salvamento
-                if st.button("💾 Salvar Orçamento Final"):
-                    try:
-                        lead_id_atual = lead_em_analise.get("id")
-
-                        dados_venda = {
-                            "lead_id": lead_id_atual,
-                            "cliente": nome_cliente,
-                            "regime": regime_sel,
-                            "segmento": seg_sel,
-                            "faturamento_medio": faturamento_medio,
-                            "descricao_atividades": descricao_atividades,
-                            "valor_total": v_prata,
-                            "observacoes_comerciais": str(memoria)
-                        }
-                        insert_data("historico_vendas", dados_venda)
-                        st.success("Orçamento salvo com sucesso!")
-                    except Exception as e:
-                        st.error(f"Erro ao salvar orçamento: {e}")
+                if st.button(
+                    "➡️ Revisar Proposta Comercial",
+                    use_container_width=True
+                ):
+                    st.session_state["proximo_menu"] = "Proposta Comercial"
+                    st.rerun()
 
     
     # --- MÓDULOS DE APOIO (MANTIDOS E INTEGRADOS) ---
