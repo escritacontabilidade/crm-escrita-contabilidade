@@ -1172,6 +1172,46 @@ else:
         if not nome_empresa:
             st.warning("Gere uma proposta primeiro na tela 'Nova Proposta'.")
         else:
+            col_editar, col_status = st.columns([1, 3])
+
+            with col_editar:
+                if st.button(
+                    "✏️ Editar dados e respostas",
+                    use_container_width=True
+                ):
+                    proposta = st.session_state.get(
+                        "proposta_atual",
+                        {}
+                    )
+            
+                    st.session_state["lead_em_analise"] = {
+                        "id": proposta.get("lead_id"),
+                        "nome_empresa": proposta.get("cliente", ""),
+                        "cnpj": proposta.get("cnpj", ""),
+                        "responsavel": proposta.get("responsavel", ""),
+                        "email": proposta.get("email", ""),
+                        "telefone": proposta.get("telefone", ""),
+                        "whatsapp": proposta.get("telefone", ""),
+                        "regime": proposta.get("regime", ""),
+                        "segmento": proposta.get("segmento", ""),
+                        "faturamento_medio": proposta.get(
+                            "faturamento_medio",
+                            0
+                        ),
+                        "descricao_atividades": proposta.get(
+                            "descricao_atividades",
+                            ""
+                        ),
+                        "respostas_segmento": proposta.get(
+                            "respostas_formulario",
+                            {}
+                        ),
+                    }
+            
+                    st.session_state["proposta_em_edicao"] = True
+                    st.session_state["menu_principal"] = "Nova Proposta"
+            
+                    st.rerun()
             st.subheader("Resumo da Proposta")
             c1, c2 = st.columns(2)
 
