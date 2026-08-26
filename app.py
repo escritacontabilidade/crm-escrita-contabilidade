@@ -1424,7 +1424,11 @@ else:
                                 .eq("id", orcamento_id)
                                 .execute()
                             )
-                        
+
+                            # A edição foi concluída.
+                            # O orçamento continua com o mesmo ID.
+                            st.session_state["proposta_em_edicao"] = False
+                            
                         else:
                             # Primeira gravação desta proposta:
                             # cria o orçamento uma única vez.
