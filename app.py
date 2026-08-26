@@ -1217,7 +1217,7 @@ else:
                     }
             
                     st.session_state["proposta_em_edicao"] = True
-                    st.session_state["menu_principal"] = "Nova Proposta"
+                    st.session_state["proximo_menu"] = "Nova Proposta"
             
                     st.rerun()
             st.subheader("Resumo da Proposta")
