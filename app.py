@@ -1100,6 +1100,7 @@ else:
                     st.json(memoria)
 
                 st.session_state["proposta_atual"] = {
+                    "lead_id": lead_em_analise.get("id"),
                     "cliente": nome_cliente,
                     "cnpj": cnpj_cliente,
                     "responsavel": responsavel_cliente,
