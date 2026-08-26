@@ -584,6 +584,13 @@ else:
     if "menu_principal" not in st.session_state:
         st.session_state["menu_principal"] = "Leads Recebidos"
     
+    # Se alguma tela solicitou mudança de menu,
+    # aplica antes de criar o selectbox.
+    if "proximo_menu" in st.session_state:
+        st.session_state["menu_principal"] = st.session_state.pop(
+            "proximo_menu"
+        )
+    
     menu = st.sidebar.selectbox(
         "Navegação",
         menus_permitidos,
