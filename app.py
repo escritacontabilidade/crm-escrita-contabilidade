@@ -1142,8 +1142,10 @@ else:
     # --- MÓDULOS DE APOIO (MANTIDOS E INTEGRADOS) ---
     
     elif menu == "Proposta Comercial":
-        st.title("📑 Proposta Comercial")
-
+        cabecalho_pagina(
+            "Proposta Comercial",
+            "Revise valores, dados do cliente, plano e documentos antes do envio."
+        )
         proposta_atual = st.session_state.get("proposta_atual", {})
 
         nome_empresa = proposta_atual.get("cliente", "")
