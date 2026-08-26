@@ -1369,10 +1369,32 @@ else:
                             "ativo": True
                         }
                     
-                        res_orc = supabase.table("orcamentos").insert(dados_orcamento).execute()
+                        orcamento_id = st.session_state.get("orcamento_atual_id")
 
-                        if res_orc.data:
-                            orcamento_id = res_orc.data[0]["id"]
+                        if orcamento_id:
+                            # Já existe orçamento desta proposta:
+                            # atualiza o mesmo registro, sem duplicar.
+                            res_orc = (
+                                supabase.table("orcamentos")
+                                .update(dados_orcamento)
+                                .eq("id", orcamento_id)
+                                .execute()
+                            )
+                        
+                        else:
+                            # Primeira gravação desta proposta:
+                            # cria o orçamento uma única vez.
+                            res_orc = (
+                                supabase.table("orcamentos")
+                                .insert(dados_orcamento)
+                                .execute()
+                            )
+                        
+                            if res_orc.data:
+                                orcamento_id = res_orc.data[0]["id"]
+                                st.session_state["orcamento_atual_id"] = orcamento_id
+                        
+                        if res_orc.data and orcamento_id:
                         
                             try:
                                 pasta_drive_id = st.secrets["drive_propostas_folder_id"]
