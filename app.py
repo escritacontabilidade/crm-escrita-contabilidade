@@ -246,6 +246,7 @@ def arquivo_parece_balancete(uploaded_file):
 
 # --- 1. CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(page_title="CRM & Precificação Escrita", layout="wide", page_icon="📄")
+aplicar_tema_escrita()
 
 try:
     supabase = get_supabase()
