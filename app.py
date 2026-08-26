@@ -581,9 +581,13 @@ else:
     if perfil_usuario == "admin":
         menus_permitidos.append("Configurações")
     
+    if "menu_principal" not in st.session_state:
+        st.session_state["menu_principal"] = "Leads Recebidos"
+    
     menu = st.sidebar.selectbox(
         "Navegação",
-        menus_permitidos
+        menus_permitidos,
+        key="menu_principal"
     )
 
     if menu == "Leads Recebidos":
