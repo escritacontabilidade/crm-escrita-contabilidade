@@ -822,6 +822,11 @@ else:
             st.error(f"Erro ao carregar leads arquivados: {e}")
             
     if menu == "Nova Proposta":
+            # Protege a edição de orçamento existente.
+            # Se não estivermos editando, garante que uma nova proposta
+            # não reutilize o ID de um orçamento anterior.
+            if not st.session_state.get("proposta_em_edicao", False):
+                st.session_state.pop("orcamento_atual_id", None)
             st.title("📄 Elaboração de Proposta Precificada")
             lead_em_analise = st.session_state.get("lead_em_analise", {})
         
