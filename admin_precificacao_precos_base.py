@@ -376,7 +376,7 @@ def renderizar_aba_precos_base(supabase):
                 )
 
             if salvar_edicao:
-                faixa_final_salvar = None if sem_limite_editar else faixa_final_editar
+                faixa_final_salvar = 0.0 if sem_limite_editar else faixa_final_editar
                 erros = validar_preco_base(
                     tabela_base=tabela_base_editar,
                     regime=regime_editar,
