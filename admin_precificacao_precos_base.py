@@ -276,7 +276,7 @@ def renderizar_aba_precos_base(supabase):
             )
 
         if salvar_novo:
-            faixa_final_salvar = None if sem_limite_novo else faixa_final_nova
+            faixa_final_salvar = 0.0 if sem_limite_novo else faixa_final_nova
             erros = validar_preco_base(
                 tabela_base=tabela_base_nova,
                 regime=regime_novo,
