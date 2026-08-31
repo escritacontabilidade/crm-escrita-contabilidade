@@ -347,6 +347,111 @@ is_cliente = query_params.get("modo") == "cliente"
 is_site = query_params.get("modo") == "site"
 is_cliente_radar = query_params.get("modo") == "cliente_radar"
 
+# Correção exclusiva do formulário externo para celulares em modo escuro.
+if is_cliente:
+    st.markdown("""
+    <style>
+    html, body, .stApp,
+    [data-testid="stAppViewContainer"],
+    [data-testid="stMain"],
+    [data-testid="stMainBlockContainer"],
+    .block-container {
+        background-color: #FFFFFF !important;
+        color: #0D2F4F !important;
+        color-scheme: light !important;
+    }
+
+    [data-testid="stAppViewContainer"] h1,
+    [data-testid="stAppViewContainer"] h2,
+    [data-testid="stAppViewContainer"] h3,
+    [data-testid="stAppViewContainer"] p,
+    [data-testid="stAppViewContainer"] label,
+    [data-testid="stAppViewContainer"] [data-testid="stWidgetLabel"],
+    [data-testid="stAppViewContainer"] [data-testid="stWidgetLabel"] p {
+        color: #0D2F4F !important;
+    }
+
+    [data-testid="stAppViewContainer"] input,
+    [data-testid="stAppViewContainer"] textarea,
+    [data-testid="stAppViewContainer"] [data-baseweb="input"],
+    [data-testid="stAppViewContainer"] [data-baseweb="input"] > div,
+    [data-testid="stAppViewContainer"] [data-baseweb="textarea"],
+    [data-testid="stAppViewContainer"] [data-baseweb="textarea"] > div {
+        background-color: #FFFFFF !important;
+        color: #111827 !important;
+        -webkit-text-fill-color: #111827 !important;
+        caret-color: #111827 !important;
+    }
+
+    [data-testid="stAppViewContainer"] input::placeholder,
+    [data-testid="stAppViewContainer"] textarea::placeholder {
+        color: #6B7280 !important;
+        -webkit-text-fill-color: #6B7280 !important;
+        opacity: 1 !important;
+    }
+
+    [data-testid="stAppViewContainer"] [data-baseweb="select"] > div {
+        background-color: #FFFFFF !important;
+        color: #111827 !important;
+    }
+
+    [data-testid="stAppViewContainer"] [data-baseweb="select"] span,
+    [data-testid="stAppViewContainer"] [data-baseweb="select"] div,
+    [data-testid="stAppViewContainer"] [role="radiogroup"] *,
+    [data-testid="stAppViewContainer"] [data-testid="stFileUploader"] * {
+        color: #111827 !important;
+    }
+
+    [data-testid="stAppViewContainer"] [data-baseweb="select"] svg {
+        fill: #111827 !important;
+        color: #111827 !important;
+    }
+
+    [data-testid="stAppViewContainer"] [data-testid="stFileUploaderDropzone"] {
+        background-color: #F8FAFC !important;
+        color: #111827 !important;
+    }
+
+    [data-testid="stAppViewContainer"] hr {
+        border-color: #D7DEE7 !important;
+    }
+
+    [data-testid="stAppViewContainer"] .stButton > button,
+    [data-testid="stAppViewContainer"] .stFormSubmitButton > button {
+        background-color: #0D2F4F !important;
+        color: #FFFFFF !important;
+        border-color: #0D2F4F !important;
+    }
+
+    [data-testid="stAppViewContainer"] .stButton > button *,
+    [data-testid="stAppViewContainer"] .stFormSubmitButton > button * {
+        color: #FFFFFF !important;
+    }
+
+    @media (prefers-color-scheme: dark) {
+        html, body, .stApp,
+        [data-testid="stAppViewContainer"],
+        [data-testid="stMain"],
+        [data-testid="stMainBlockContainer"],
+        .block-container {
+            background-color: #FFFFFF !important;
+            color: #0D2F4F !important;
+            color-scheme: light !important;
+        }
+
+        [data-testid="stAppViewContainer"] input,
+        [data-testid="stAppViewContainer"] textarea,
+        [data-testid="stAppViewContainer"] [data-baseweb="input"],
+        [data-testid="stAppViewContainer"] [data-baseweb="textarea"],
+        [data-testid="stAppViewContainer"] [data-baseweb="select"] > div {
+            background-color: #FFFFFF !important;
+            color: #111827 !important;
+            -webkit-text-fill-color: #111827 !important;
+        }
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
 if is_site:
     tela_lead_site()
     st.stop()
