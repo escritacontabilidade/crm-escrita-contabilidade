@@ -6,6 +6,36 @@ VALOR_FILIAL_COM_MOVIMENTO = 500.00
 
 CHAVE_DETALHAMENTO_FILIAIS = "Detalhamento das filiais"
 
+UFS_BRASIL = [
+    "AC",
+    "AL",
+    "AP",
+    "AM",
+    "BA",
+    "CE",
+    "DF",
+    "ES",
+    "GO",
+    "MA",
+    "MT",
+    "MS",
+    "MG",
+    "PA",
+    "PB",
+    "PR",
+    "PE",
+    "PI",
+    "RJ",
+    "RN",
+    "RS",
+    "RO",
+    "RR",
+    "SC",
+    "SP",
+    "SE",
+    "TO",
+]
+
 
 def eh_pergunta_filial(pergunta):
     """
@@ -21,6 +51,13 @@ def calcular_adicional_filiais(filiais):
     """
     Soma apenas as filiais cuja contabilidade ficará
     sob responsabilidade da Escrita.
+
+    Mantém a regra atual:
+    - Com movimento: R$ 500,00
+    - Sem movimento: R$ 300,00
+
+    As informações de funcionários e folha são coletadas
+    separadamente e não alteram o valor da filial neste momento.
     """
     total = 0.0
 
@@ -51,6 +88,13 @@ def renderizar_detalhes_filiais(
 ):
     """
     Renderiza a estrutura dinâmica das filiais.
+
+    Para cada filial coleta:
+    - UF
+    - Possui movimento?
+    - Escrita responsável pela contabilidade?
+    - Possui funcionários?
+    - Escrita responsável pela apuração da folha?
 
     Retorna:
         {
@@ -114,12 +158,31 @@ def renderizar_detalhes_filiais(
             else {}
         )
 
+        # -----------------------------------------------------
+        # UF
+        # -----------------------------------------------------
+
+        uf_inicial = str(
+            inicial.get("uf") or ""
+        ).strip().upper()
+
+        if uf_inicial not in UFS_BRASIL:
+            uf_inicial = ""
+
+        # -----------------------------------------------------
+        # MOVIMENTO
+        # -----------------------------------------------------
+
         movimento_inicial = str(
             inicial.get("possui_movimento") or "Não"
         ).strip()
 
         if movimento_inicial not in ["Sim", "Não"]:
             movimento_inicial = "Não"
+
+        # -----------------------------------------------------
+        # RESPONSABILIDADE CONTÁBIL
+        # -----------------------------------------------------
 
         responsabilidade_inicial = str(
             inicial.get("responsabilidade_escrita") or "Não"
@@ -128,8 +191,62 @@ def renderizar_detalhes_filiais(
         if responsabilidade_inicial not in ["Sim", "Não"]:
             responsabilidade_inicial = "Não"
 
+        # -----------------------------------------------------
+        # FUNCIONÁRIOS
+        # -----------------------------------------------------
+
+        funcionarios_inicial = str(
+            inicial.get("possui_funcionarios") or "Não"
+        ).strip()
+
+        if funcionarios_inicial not in ["Sim", "Não"]:
+            funcionarios_inicial = "Não"
+
+        # -----------------------------------------------------
+        # RESPONSABILIDADE PELA FOLHA
+        # -----------------------------------------------------
+
+        folha_inicial = str(
+            inicial.get("responsabilidade_folha") or "Não"
+        ).strip()
+
+        if folha_inicial not in ["Sim", "Não"]:
+            folha_inicial = "Não"
+
         with st.container(border=True):
             st.markdown(f"**Filial {numero_filial}**")
+
+            # =================================================
+            # UF
+            # =================================================
+
+            opcoes_uf = ["Selecione"] + UFS_BRASIL
+
+            indice_uf = (
+                opcoes_uf.index(uf_inicial)
+                if uf_inicial in opcoes_uf
+                else 0
+            )
+
+            uf_selecionada = st.selectbox(
+                "UF da filial",
+                opcoes_uf,
+                index=indice_uf,
+                key=(
+                    f"{prefixo}_filial_"
+                    f"{numero_filial}_uf"
+                ),
+            )
+
+            uf = (
+                ""
+                if uf_selecionada == "Selecione"
+                else uf_selecionada
+            )
+
+            # =================================================
+            # MOVIMENTO / CONTABILIDADE
+            # =================================================
 
             col1, col2 = st.columns(2)
 
@@ -137,7 +254,11 @@ def renderizar_detalhes_filiais(
                 possui_movimento = st.radio(
                     "Possui movimento?",
                     ["Sim", "Não"],
-                    index=0 if movimento_inicial == "Sim" else 1,
+                    index=(
+                        0
+                        if movimento_inicial == "Sim"
+                        else 1
+                    ),
                     horizontal=True,
                     key=(
                         f"{prefixo}_filial_"
@@ -162,6 +283,50 @@ def renderizar_detalhes_filiais(
                     ),
                 )
 
+            # =================================================
+            # FUNCIONÁRIOS / FOLHA
+            # =================================================
+
+            st.markdown("**Folha de pagamento**")
+
+            possui_funcionarios = st.radio(
+                "Esta filial possui funcionários?",
+                ["Sim", "Não"],
+                index=(
+                    0
+                    if funcionarios_inicial == "Sim"
+                    else 1
+                ),
+                horizontal=True,
+                key=(
+                    f"{prefixo}_filial_"
+                    f"{numero_filial}_funcionarios"
+                ),
+            )
+
+            if possui_funcionarios == "Sim":
+                responsabilidade_folha = st.radio(
+                    "A Escrita será responsável pela "
+                    "apuração da folha desta filial?",
+                    ["Sim", "Não"],
+                    index=(
+                        0
+                        if folha_inicial == "Sim"
+                        else 1
+                    ),
+                    horizontal=True,
+                    key=(
+                        f"{prefixo}_filial_"
+                        f"{numero_filial}_folha"
+                    ),
+                )
+            else:
+                responsabilidade_folha = "Não"
+
+        # =====================================================
+        # VALOR DA FILIAL
+        # =====================================================
+
         adicional_filial = 0.0
 
         if responsabilidade_escrita == "Sim":
@@ -171,10 +336,17 @@ def renderizar_detalhes_filiais(
                 else VALOR_FILIAL_SEM_MOVIMENTO
             )
 
+        # =====================================================
+        # DADOS DA FILIAL
+        # =====================================================
+
         filiais.append({
             "numero": numero_filial,
+            "uf": uf,
             "possui_movimento": possui_movimento,
             "responsabilidade_escrita": responsabilidade_escrita,
+            "possui_funcionarios": possui_funcionarios,
+            "responsabilidade_folha": responsabilidade_folha,
             "adicional": float(adicional_filial),
         })
 
