@@ -9,6 +9,13 @@ from database import (
 )
 from pricing import calcular_preco_completo
 
+from filiais_module import (
+    CHAVE_DETALHAMENTO_FILIAIS,
+    calcular_adicional_filiais,
+    eh_pergunta_filial,
+    renderizar_detalhes_filiais,
+)
+
 
 def texto_limpo(valor):
     return str(valor or "").strip()
@@ -536,6 +543,11 @@ def renderizar_aba_simulador(
     )
 
     respostas = {}
+    detalhamento_filiais = {
+        "quantidade_filiais": 0,
+        "filiais": [],
+        "adicional_total": 0.0,
+    }
 
     with st.form(
         "form_simulador_precificacao"
@@ -546,12 +558,32 @@ def renderizar_aba_simulador(
                     pergunta
                 )
 
-                respostas[nome] = (
+                resposta = (
                     renderizar_campo_resposta(
                         pergunta=pergunta,
                         prefixo="simulador",
                     )
                 )
+
+                respostas[nome] = resposta
+
+                # =============================================
+                # DETALHAMENTO DINÂMICO DAS FILIAIS
+                # =============================================
+
+                if eh_pergunta_filial(nome):
+                    detalhamento_filiais = (
+                        renderizar_detalhes_filiais(
+                            resposta_possui_filial=resposta,
+                            prefixo="simulador",
+                            respostas_iniciais=None,
+                        )
+                    )
+
+                    respostas[
+                        CHAVE_DETALHAMENTO_FILIAIS
+                    ] = detalhamento_filiais
+
         else:
             st.info(
                 "O segmento não possui perguntas "
@@ -599,6 +631,45 @@ def renderizar_aba_simulador(
                 ),
             )
 
+            # =============================================
+            # ACRÉSCIMO DAS FILIAIS
+            # =============================================
+
+            adicional_filiais = (
+                calcular_adicional_filiais(
+                    detalhamento_filiais.get(
+                        "filiais",
+                        [],
+                    )
+                )
+            )
+
+            if adicional_filiais:
+                total_acrescimos = (
+                    float(total_acrescimos)
+                    + float(adicional_filiais)
+                )
+
+                preco_calculado = (
+                    float(preco_calculado)
+                    + float(adicional_filiais)
+                )
+
+                detalhamento.append({
+                    "regra_id": None,
+                    "pergunta": (
+                        "Detalhamento das filiais"
+                    ),
+                    "resposta": (
+                        f"{detalhamento_filiais.get('quantidade_filiais', 0)} "
+                        "filial(is)"
+                    ),
+                    "tipo": "filiais",
+                    "valor": float(
+                        adicional_filiais
+                    ),
+                })
+
             bronze = float(
                 preco_calculado
             )
@@ -638,6 +709,9 @@ def renderizar_aba_simulador(
                 "bronze": bronze,
                 "prata": prata,
                 "ouro": ouro,
+                "detalhamento_filiais": (
+                    detalhamento_filiais
+                ),
                 "detalhamento": (
                     detalhamento
                 ),
