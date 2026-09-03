@@ -52,7 +52,7 @@ def calcular_adicional_filiais(filiais):
     Soma apenas as filiais cuja contabilidade ficará
     sob responsabilidade da Escrita.
 
-    Mantém a regra atual:
+    Regra atual:
     - Com movimento: R$ 500,00
     - Sem movimento: R$ 300,00
 
@@ -158,20 +158,12 @@ def renderizar_detalhes_filiais(
             else {}
         )
 
-        # -----------------------------------------------------
-        # UF
-        # -----------------------------------------------------
-
         uf_inicial = str(
             inicial.get("uf") or ""
         ).strip().upper()
 
         if uf_inicial not in UFS_BRASIL:
             uf_inicial = ""
-
-        # -----------------------------------------------------
-        # MOVIMENTO
-        # -----------------------------------------------------
 
         movimento_inicial = str(
             inicial.get("possui_movimento") or "Não"
@@ -180,10 +172,6 @@ def renderizar_detalhes_filiais(
         if movimento_inicial not in ["Sim", "Não"]:
             movimento_inicial = "Não"
 
-        # -----------------------------------------------------
-        # RESPONSABILIDADE CONTÁBIL
-        # -----------------------------------------------------
-
         responsabilidade_inicial = str(
             inicial.get("responsabilidade_escrita") or "Não"
         ).strip()
@@ -191,20 +179,12 @@ def renderizar_detalhes_filiais(
         if responsabilidade_inicial not in ["Sim", "Não"]:
             responsabilidade_inicial = "Não"
 
-        # -----------------------------------------------------
-        # FUNCIONÁRIOS
-        # -----------------------------------------------------
-
         funcionarios_inicial = str(
             inicial.get("possui_funcionarios") or "Não"
         ).strip()
 
         if funcionarios_inicial not in ["Sim", "Não"]:
             funcionarios_inicial = "Não"
-
-        # -----------------------------------------------------
-        # RESPONSABILIDADE PELA FOLHA
-        # -----------------------------------------------------
 
         folha_inicial = str(
             inicial.get("responsabilidade_folha") or "Não"
@@ -215,10 +195,6 @@ def renderizar_detalhes_filiais(
 
         with st.container(border=True):
             st.markdown(f"**Filial {numero_filial}**")
-
-            # =================================================
-            # UF
-            # =================================================
 
             opcoes_uf = ["Selecione"] + UFS_BRASIL
 
@@ -243,10 +219,6 @@ def renderizar_detalhes_filiais(
                 if uf_selecionada == "Selecione"
                 else uf_selecionada
             )
-
-            # =================================================
-            # MOVIMENTO / CONTABILIDADE
-            # =================================================
 
             col1, col2 = st.columns(2)
 
@@ -283,28 +255,27 @@ def renderizar_detalhes_filiais(
                     ),
                 )
 
-            # =================================================
-            # FUNCIONÁRIOS / FOLHA
-            # =================================================
-
             st.markdown("**Folha de pagamento**")
 
-            possui_funcionarios = st.radio(
-                "Esta filial possui funcionários?",
-                ["Sim", "Não"],
-                index=(
-                    0
-                    if funcionarios_inicial == "Sim"
-                    else 1
-                ),
-                horizontal=True,
-                key=(
-                    f"{prefixo}_filial_"
-                    f"{numero_filial}_funcionarios"
-                ),
-            )
+            col3, col4 = st.columns(2)
 
-            if possui_funcionarios == "Sim":
+            with col3:
+                possui_funcionarios = st.radio(
+                    "A filial possui funcionários?",
+                    ["Sim", "Não"],
+                    index=(
+                        0
+                        if funcionarios_inicial == "Sim"
+                        else 1
+                    ),
+                    horizontal=True,
+                    key=(
+                        f"{prefixo}_filial_"
+                        f"{numero_filial}_funcionarios"
+                    ),
+                )
+
+            with col4:
                 responsabilidade_folha = st.radio(
                     "A Escrita será responsável pela "
                     "apuração da folha desta filial?",
@@ -320,12 +291,6 @@ def renderizar_detalhes_filiais(
                         f"{numero_filial}_folha"
                     ),
                 )
-            else:
-                responsabilidade_folha = "Não"
-
-        # =====================================================
-        # VALOR DA FILIAL
-        # =====================================================
 
         adicional_filial = 0.0
 
@@ -335,10 +300,6 @@ def renderizar_detalhes_filiais(
                 if possui_movimento == "Sim"
                 else VALOR_FILIAL_SEM_MOVIMENTO
             )
-
-        # =====================================================
-        # DADOS DA FILIAL
-        # =====================================================
 
         filiais.append({
             "numero": numero_filial,
