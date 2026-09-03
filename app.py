@@ -50,6 +50,7 @@ from filiais_module import (
     renderizar_detalhes_filiais,
     CHAVE_DETALHAMENTO_FILIAIS,
 )
+from constituicao_module import renderizar_formulario_constituicao
 from theme_escrita import aplicar_tema_escrita
 from ui_escrita import cabecalho_pagina, badge_status
 
