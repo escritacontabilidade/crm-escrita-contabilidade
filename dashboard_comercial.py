@@ -2,7 +2,156 @@ import pandas as pd
 import streamlit as st
 
 
-def tela_dashboard_comercial(supabase):
+STATUS_FECHADO = "Contrato fechado"
+
+
+def _texto(valor):
+    return str(valor or "").strip()
+
+
+def _calcular_prazo_medio(df):
+    """
+    Calcula a média de dias entre apresentação e fechamento.
+    Ignora registros sem as duas datas e intervalos negativos.
+    """
+    if df.empty:
+        return 0.0
+
+    if (
+        "data_apresentacao" not in df.columns
+        or "data_fechamento" not in df.columns
+    ):
+        return 0.0
+
+    dados = df.copy()
+
+    dados["data_apresentacao"] = pd.to_datetime(
+        dados["data_apresentacao"],
+        errors="coerce",
+    )
+
+    dados["data_fechamento"] = pd.to_datetime(
+        dados["data_fechamento"],
+        errors="coerce",
+    )
+
+    dados = dados.dropna(
+        subset=[
+            "data_apresentacao",
+            "data_fechamento",
+        ]
+    )
+
+    if dados.empty:
+        return 0.0
+
+    dados["dias_ate_fechamento"] = (
+        dados["data_fechamento"]
+        - dados["data_apresentacao"]
+    ).dt.days
+
+    dados = dados[
+        dados["dias_ate_fechamento"] >= 0
+    ]
+
+    if dados.empty:
+        return 0.0
+
+    return float(
+        dados["dias_ate_fechamento"].mean()
+    )
+
+
+def _montar_indicadores_segmento(
+    df_historico,
+):
+    """
+    Monta indicadores comerciais por segmento.
+    """
+
+    if df_historico.empty:
+        return pd.DataFrame()
+
+    if (
+        "segmento" not in df_historico.columns
+        or "status_comercial" not in df_historico.columns
+    ):
+        return pd.DataFrame()
+
+    dados = df_historico.copy()
+
+    dados["segmento"] = (
+        dados["segmento"]
+        .fillna("Não informado")
+        .astype(str)
+        .str.strip()
+        .replace("", "Não informado")
+    )
+
+    linhas = []
+
+    for segmento, grupo in dados.groupby(
+        "segmento",
+        dropna=False,
+    ):
+        total = len(grupo)
+
+        fechados = grupo[
+            grupo["status_comercial"]
+            .fillna("")
+            .astype(str)
+            .str.strip()
+            == STATUS_FECHADO
+        ].copy()
+
+        total_fechados = len(fechados)
+
+        taxa = (
+            total_fechados / total * 100
+            if total > 0
+            else 0.0
+        )
+
+        prazo = _calcular_prazo_medio(
+            fechados
+        )
+
+        linhas.append({
+            "Segmento": segmento,
+            "Oportunidades": total,
+            "Contratos fechados": total_fechados,
+            "Taxa de conversão (%)": round(
+                taxa,
+                1,
+            ),
+            "Prazo médio (dias)": round(
+                prazo,
+                1,
+            ),
+        })
+
+    resultado = pd.DataFrame(
+        linhas
+    )
+
+    if resultado.empty:
+        return resultado
+
+    return resultado.sort_values(
+        [
+            "Taxa de conversão (%)",
+            "Contratos fechados",
+        ],
+        ascending=[
+            False,
+            False,
+        ],
+    )
+
+
+def tela_dashboard_comercial(
+    supabase,
+):
     st.title("📊 Dashboard Comercial")
 
     try:
@@ -35,69 +184,61 @@ def tela_dashboard_comercial(supabase):
 
     except Exception as erro:
         st.error(
-            "Não foi possível carregar os dados do dashboard: "
+            "Não foi possível carregar os dados "
+            "do dashboard: "
             f"{erro}"
         )
         return
 
+    # =========================================================
+    # INDICADORES GERAIS
+    # =========================================================
+
     total_leads = len(leads)
-    total_orcamentos = len(orcamentos)
+
+    total_orcamentos = len(
+        orcamentos
+    )
 
     contratos_fechados = [
         item
         for item in historico
-        if str(
-            item.get("status_comercial") or ""
-        ).strip() == "Contrato fechado"
+        if _texto(
+            item.get(
+                "status_comercial"
+            )
+        ) == STATUS_FECHADO
     ]
 
-    total_contratos = len(contratos_fechados)
-
-    taxa_conversao = (
-        total_contratos / total_leads * 100
-        if total_leads > 0
-        else 0
+    total_contratos = len(
+        contratos_fechados
     )
 
-    prazo_medio = 0.0
+    taxa_conversao = (
+        total_contratos
+        / total_leads
+        * 100
+        if total_leads > 0
+        else 0.0
+    )
 
     df_fechados = pd.DataFrame(
         contratos_fechados
     )
 
-    if not df_fechados.empty:
-        if (
-            "data_apresentacao" in df_fechados.columns
-            and "data_fechamento" in df_fechados.columns
-        ):
-            df_fechados["data_apresentacao"] = pd.to_datetime(
-                df_fechados["data_apresentacao"],
-                errors="coerce",
-            )
+    prazo_medio = (
+        _calcular_prazo_medio(
+            df_fechados
+        )
+    )
 
-            df_fechados["data_fechamento"] = pd.to_datetime(
-                df_fechados["data_fechamento"],
-                errors="coerce",
-            )
+    # =========================================================
+    # CARDS
+    # =========================================================
 
-            df_fechados = df_fechados.dropna(
-                subset=[
-                    "data_apresentacao",
-                    "data_fechamento",
-                ]
-            )
-
-            if not df_fechados.empty:
-                df_fechados["dias"] = (
-                    df_fechados["data_fechamento"]
-                    - df_fechados["data_apresentacao"]
-                ).dt.days
-
-                prazo_medio = float(
-                    df_fechados["dias"].mean()
-                )
-
-    c1, c2, c3, c4 = st.columns(4)
+    c1, c2, c3, c4, c5 = (
+        st.columns(5)
+    )
 
     c1.metric(
         "Leads recebidos",
@@ -119,101 +260,160 @@ def tela_dashboard_comercial(supabase):
         f"{taxa_conversao:.1f}%",
     )
 
-    st.divider()
+    c5.metric(
+        "Prazo médio",
+        f"{prazo_medio:.1f} dias",
+    )
 
-    esquerda, direita = st.columns(2)
-
-    with esquerda:
-        st.subheader("Funil comercial")
-
-        df_funil = pd.DataFrame({
-            "Etapa": [
-                "Leads",
-                "Orçamentos",
-                "Contratos",
-            ],
-            "Quantidade": [
-                total_leads,
-                total_orcamentos,
-                total_contratos,
-            ],
-        })
-
-        st.bar_chart(
-            df_funil.set_index("Etapa")
-        )
-
-    with direita:
-        st.subheader("Prazo médio de conversão")
-
-        st.metric(
-            "Dias entre apresentação e fechamento",
-            f"{prazo_medio:.1f} dias",
-        )
+    st.caption(
+        "Taxa de conversão = contratos fechados ÷ "
+        "leads recebidos. Prazo médio = dias entre "
+        "apresentação da proposta e fechamento."
+    )
 
     st.divider()
 
-    if historico:
-        df_historico = pd.DataFrame(
-            historico
-        )
+    # =========================================================
+    # FUNIL
+    # =========================================================
 
-        if (
-            "segmento" in df_historico.columns
-            and "status_comercial" in df_historico.columns
-        ):
-            resumo_segmento = (
-                df_historico
-                .groupby("segmento", dropna=False)
-                .agg(
-                    orcamentos=("id", "count"),
-                    contratos=(
-                        "status_comercial",
-                        lambda serie: (
-                            serie == "Contrato fechado"
-                        ).sum(),
-                    ),
+    st.subheader(
+        "Funil comercial"
+    )
+
+    df_funil = pd.DataFrame({
+        "Etapa": [
+            "Leads recebidos",
+            "Orçamentos",
+            "Contratos fechados",
+        ],
+        "Quantidade": [
+            total_leads,
+            total_orcamentos,
+            total_contratos,
+        ],
+    })
+
+    st.bar_chart(
+        df_funil.set_index(
+            "Etapa"
+        )
+    )
+
+    st.divider()
+
+    # =========================================================
+    # INDICADORES POR SEGMENTO
+    # =========================================================
+
+    st.subheader(
+        "Índices por setor / segmento"
+    )
+
+    if not historico:
+        st.info(
+            "Ainda não existem dados no histórico "
+            "de vendas para calcular os índices "
+            "por segmento."
+        )
+        return
+
+    df_historico = pd.DataFrame(
+        historico
+    )
+
+    resumo_segmento = (
+        _montar_indicadores_segmento(
+            df_historico
+        )
+    )
+
+    if resumo_segmento.empty:
+        st.info(
+            "Não foi possível calcular os "
+            "indicadores por segmento."
+        )
+        return
+
+    # =========================================================
+    # GRÁFICO DE CONVERSÃO
+    # =========================================================
+
+    st.markdown(
+        "#### Taxa de conversão por segmento"
+    )
+
+    grafico_conversao = (
+        resumo_segmento[
+            [
+                "Segmento",
+                "Taxa de conversão (%)",
+            ]
+        ]
+        .set_index(
+            "Segmento"
+        )
+    )
+
+    st.bar_chart(
+        grafico_conversao
+    )
+
+    # =========================================================
+    # TABELA COMPLETA
+    # =========================================================
+
+    st.markdown(
+        "#### Desempenho comercial por segmento"
+    )
+
+    st.dataframe(
+        resumo_segmento,
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "Taxa de conversão (%)": (
+                st.column_config.NumberColumn(
+                    "Taxa de conversão (%)",
+                    format="%.1f%%",
                 )
-                .reset_index()
-            )
+            ),
+            "Prazo médio (dias)": (
+                st.column_config.NumberColumn(
+                    "Prazo médio (dias)",
+                    format="%.1f",
+                )
+            ),
+        },
+    )
 
+    # =========================================================
+    # DESTAQUES
+    # =========================================================
+
+    segmentos_com_venda = (
+        resumo_segmento[
             resumo_segmento[
-                "taxa_conversao"
-            ] = (
-                resumo_segmento["contratos"]
-                / resumo_segmento["orcamentos"]
-                * 100
-            ).round(1)
+                "Contratos fechados"
+            ] > 0
+        ]
+    )
 
-            resumo_segmento = (
-                resumo_segmento
-                .sort_values(
-                    "taxa_conversao",
-                    ascending=False,
-                )
-            )
+    if not segmentos_com_venda.empty:
+        melhor = (
+            segmentos_com_venda.iloc[0]
+        )
 
-            st.subheader(
-                "Conversão por segmento"
-            )
+        st.success(
+            "Melhor taxa de conversão: "
+            f"{melhor['Segmento']} — "
+            f"{melhor['Taxa de conversão (%)']:.1f}% "
+            f"({int(melhor['Contratos fechados'])} "
+            "contrato(s) fechado(s))."
+        )
 
-            st.bar_chart(
-                resumo_segmento.set_index(
-                    "segmento"
-                )[["taxa_conversao"]]
-            )
-
-            st.dataframe(
-                resumo_segmento.rename(
-                    columns={
-                        "segmento": "Segmento",
-                        "orcamentos": "Orçamentos",
-                        "contratos": "Contratos",
-                        "taxa_conversao": (
-                            "Taxa de conversão (%)"
-                        ),
-                    }
-                ),
-                use_container_width=True,
-                hide_index=True,
-            )
+    st.caption(
+        "Os indicadores utilizam os dados registrados "
+        "no histórico comercial. Segmentos sem fechamento "
+        "permanecem com taxa de conversão igual a 0%."
+    )
