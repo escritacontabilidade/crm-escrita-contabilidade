@@ -453,6 +453,9 @@ if is_cliente:
     }
     </style>
     """, unsafe_allow_html=True)
+if is_constituicao:
+    renderizar_formulario_constituicao()
+    st.stop()
 
 if is_site:
     tela_lead_site()
