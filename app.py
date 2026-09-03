@@ -347,6 +347,7 @@ query_params = st.query_params
 is_cliente = query_params.get("modo") == "cliente"
 is_site = query_params.get("modo") == "site"
 is_cliente_radar = query_params.get("modo") == "cliente_radar"
+is_constituicao = query_params.get("modo") == "constituicao"
 
 # Correção exclusiva do formulário externo para celulares em modo escuro.
 if is_cliente:
