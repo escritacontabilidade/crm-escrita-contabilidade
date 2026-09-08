@@ -2,10 +2,14 @@ import pandas as pd
 import streamlit as st
 
 
+STATUS_FECHADO = "Contrato fechado"
+
+
 def calcular_indicadores_leads(supabase):
     """
     Calcula indicadores comerciais usando:
     - leads_externos
+    - orcamentos ativos
     - historico_vendas
     """
 
@@ -13,6 +17,14 @@ def calcular_indicadores_leads(supabase):
         supabase
         .table("leads_externos")
         .select("id,segmento,status,created_at,ativo")
+        .execute()
+    )
+
+    res_orcamentos = (
+        supabase
+        .table("orcamentos")
+        .select("id,segmento,ativo")
+        .eq("ativo", True)
         .execute()
     )
 
@@ -27,6 +39,7 @@ def calcular_indicadores_leads(supabase):
     )
 
     df_leads = pd.DataFrame(res_leads.data or [])
+    df_orcamentos = pd.DataFrame(res_orcamentos.data or [])
     df_historico = pd.DataFrame(res_historico.data or [])
 
     total_leads = len(df_leads)
@@ -44,7 +57,7 @@ def calcular_indicadores_leads(supabase):
         df_historico["status_comercial"] = ""
 
     convertidos = df_historico[
-        df_historico["status_comercial"] == "Contrato fechado"
+        df_historico["status_comercial"] == STATUS_FECHADO
     ].copy()
 
     total_convertidos = len(convertidos)
@@ -96,48 +109,140 @@ def calcular_indicadores_leads(supabase):
                     ].mean()
                 )
 
-    if "segmento" not in df_historico.columns:
-        df_historico["segmento"] = "Não informado"
+    # =========================================================
+    # ORÇAMENTOS ATIVOS POR SEGMENTO
+    # =========================================================
 
-    df_historico["segmento"] = (
-        df_historico["segmento"]
-        .fillna("Não informado")
-        .replace("", "Não informado")
-    )
-
-    resumo_segmento = (
-        df_historico
-        .groupby("segmento", dropna=False)
-        .agg(
-            total_orcamentos=("id", "count"),
-            convertidos=(
-                "status_comercial",
-                lambda serie: (
-                    serie == "Contrato fechado"
-                ).sum(),
-            ),
+    if df_orcamentos.empty:
+        resumo_orcamentos = pd.DataFrame(
+            columns=[
+                "Segmento",
+                "Orçamentos",
+            ]
         )
-        .reset_index()
+    else:
+        if "segmento" not in df_orcamentos.columns:
+            df_orcamentos["segmento"] = "Não informado"
+
+        df_orcamentos["segmento"] = (
+            df_orcamentos["segmento"]
+            .fillna("Não informado")
+            .astype(str)
+            .str.strip()
+            .replace("", "Não informado")
+        )
+
+        resumo_orcamentos = (
+            df_orcamentos
+            .groupby(
+                "segmento",
+                dropna=False,
+            )
+            .agg(
+                Orçamentos=("id", "count")
+            )
+            .reset_index()
+            .rename(
+                columns={
+                    "segmento": "Segmento",
+                }
+            )
+        )
+
+    # =========================================================
+    # CONVERTIDOS POR SEGMENTO
+    # =========================================================
+
+    if convertidos.empty:
+        resumo_convertidos = pd.DataFrame(
+            columns=[
+                "Segmento",
+                "Convertidos",
+            ]
+        )
+    else:
+        if "segmento" not in convertidos.columns:
+            convertidos["segmento"] = "Não informado"
+
+        convertidos["segmento"] = (
+            convertidos["segmento"]
+            .fillna("Não informado")
+            .astype(str)
+            .str.strip()
+            .replace("", "Não informado")
+        )
+
+        resumo_convertidos = (
+            convertidos
+            .groupby(
+                "segmento",
+                dropna=False,
+            )
+            .agg(
+                Convertidos=("id", "count")
+            )
+            .reset_index()
+            .rename(
+                columns={
+                    "segmento": "Segmento",
+                }
+            )
+        )
+
+    # =========================================================
+    # JUNTA ORÇAMENTOS + CONVERTIDOS
+    # =========================================================
+
+    resumo_segmento = pd.merge(
+        resumo_orcamentos,
+        resumo_convertidos,
+        on="Segmento",
+        how="outer",
     )
 
-    resumo_segmento["taxa_conversao"] = (
-        resumo_segmento["convertidos"]
-        / resumo_segmento["total_orcamentos"]
-        * 100
+    if resumo_segmento.empty:
+        return {
+            "total_leads": total_leads,
+            "total_convertidos": total_convertidos,
+            "taxa_conversao": taxa_conversao,
+            "prazo_medio_dias": prazo_medio_dias,
+            "conversao_por_segmento": pd.DataFrame(),
+        }
+
+    resumo_segmento["Orçamentos"] = (
+        resumo_segmento["Orçamentos"]
+        .fillna(0)
+        .astype(int)
+    )
+
+    resumo_segmento["Convertidos"] = (
+        resumo_segmento["Convertidos"]
+        .fillna(0)
+        .astype(int)
+    )
+
+    resumo_segmento["Taxa de conversão (%)"] = (
+        resumo_segmento.apply(
+            lambda linha: (
+                linha["Convertidos"]
+                / linha["Orçamentos"]
+                * 100
+                if linha["Orçamentos"] > 0
+                else 0.0
+            ),
+            axis=1,
+        )
     ).round(1)
 
     resumo_segmento = resumo_segmento.sort_values(
-        "taxa_conversao",
-        ascending=False,
-    )
-
-    resumo_segmento = resumo_segmento.rename(
-        columns={
-            "segmento": "Segmento",
-            "total_orcamentos": "Orçamentos",
-            "convertidos": "Convertidos",
-            "taxa_conversao": "Taxa de conversão (%)",
-        }
+        [
+            "Taxa de conversão (%)",
+            "Convertidos",
+        ],
+        ascending=[
+            False,
+            False,
+        ],
     )
 
     return {
