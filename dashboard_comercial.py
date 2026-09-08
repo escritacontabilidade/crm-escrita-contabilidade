@@ -164,10 +164,14 @@ def tela_dashboard_comercial(
             or []
         )
 
+        # =====================================================
+        # SOMENTE ORÇAMENTOS ATIVOS
+        # =====================================================
         orcamentos = (
             supabase
             .table("orcamentos")
             .select("*")
+            .eq("ativo", True)
             .execute()
             .data
             or []
