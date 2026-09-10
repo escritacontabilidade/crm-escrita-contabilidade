@@ -684,7 +684,7 @@ else:
         "Grupos Econômicos",
         "Matriz de Precificação",
         "Administração da Precificação",
-        "Histórico de Vendas",
+        "Pipeline Comercial",,
         "Analista IA",
         "Link para Cliente"
     ]
