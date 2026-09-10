@@ -290,8 +290,10 @@ def _renderizar_card(row):
         or "Não informado"
     )
 
-    valor = _formatar_moeda(
-        row.get("valor_total")
+    valor = html.escape(
+        _formatar_moeda(
+            row.get("valor_total")
+        )
     )
 
     dias = row.get("dias_etapa")
@@ -303,6 +305,8 @@ def _renderizar_card(row):
             f"Tempo na etapa: {int(dias)} dia(s)"
         )
 
+    texto_dias = html.escape(texto_dias)
+
     observacao = html.escape(
         _texto(row.get("observacao_status"))
     )
@@ -310,72 +314,34 @@ def _renderizar_card(row):
     bloco_observacao = ""
 
     if observacao:
-        bloco_observacao = f"""
-        <div style="
-            margin-top:8px;
-            font-size:11px;
-            color:#5f6670;
-            border-top:1px solid rgba(0,0,0,0.08);
-            padding-top:6px;
-        ">
-            {observacao}
-        </div>
-        """
+        bloco_observacao = (
+            '<div style="margin-top:8px;font-size:11px;color:#5f6670;'
+            'border-top:1px solid rgba(0,0,0,0.08);padding-top:6px;">'
+            f'{observacao}'
+            '</div>'
+        )
+
+    card_html = (
+        f'<div style="background:{cores["fundo"]};'
+        f'border:1px solid {cores["borda"]};'
+        'border-radius:10px;padding:12px;margin-bottom:10px;'
+        'box-shadow:0 1px 3px rgba(0,0,0,0.08);">'
+        '<div style="font-weight:700;font-size:14px;color:#111827;'
+        f'margin-bottom:8px;">{cliente}</div>'
+        '<div style="font-size:12px;color:#4b5563;margin-bottom:3px;">'
+        f'{segmento}</div>'
+        '<div style="font-size:12px;color:#4b5563;margin-bottom:8px;">'
+        f'{regime}</div>'
+        f'<div style="font-weight:700;font-size:15px;color:{cores["titulo"]};'
+        f'margin-bottom:7px;">{valor}</div>'
+        '<div style="font-size:11px;color:#6b7280;">'
+        f'{texto_dias}</div>'
+        f'{bloco_observacao}'
+        '</div>'
+    )
 
     st.markdown(
-        f"""
-        <div style="
-            background:{cores['fundo']};
-            border:1px solid {cores['borda']};
-            border-radius:10px;
-            padding:12px;
-            margin-bottom:10px;
-            box-shadow:0 1px 3px rgba(0,0,0,0.08);
-        ">
-            <div style="
-                font-weight:700;
-                font-size:14px;
-                color:#111827;
-                margin-bottom:8px;
-            ">
-                {cliente}
-            </div>
-
-            <div style="
-                font-size:12px;
-                color:#4b5563;
-                margin-bottom:3px;
-            ">
-                {segmento}
-            </div>
-
-            <div style="
-                font-size:12px;
-                color:#4b5563;
-                margin-bottom:8px;
-            ">
-                {regime}
-            </div>
-
-            <div style="
-                font-weight:700;
-                font-size:15px;
-                color:{cores['titulo']};
-                margin-bottom:7px;
-            ">
-                {valor}
-            </div>
-
-            <div style="
-                font-size:11px;
-                color:#6b7280;
-            ">
-                {texto_dias}
-            </div>
-
-            {bloco_observacao}
-        </div>
-        """,
+        card_html,
         unsafe_allow_html=True,
     )
 
@@ -412,42 +378,22 @@ def _renderizar_kanban(df):
                 else 0
             )
 
+            cabecalho_html = (
+                f'<div style="background:{cores["fundo"]};'
+                f'border:1px solid {cores["borda"]};'
+                'border-radius:10px;padding:10px;margin-bottom:12px;'
+                'text-align:center;">'
+                f'<div style="font-size:14px;font-weight:700;color:{cores["titulo"]};">'
+                f'{html.escape(status)}</div>'
+                '<div style="font-size:20px;font-weight:800;color:#111827;'
+                f'margin-top:4px;">{quantidade}</div>'
+                '<div style="font-size:11px;color:#5f6670;margin-top:2px;">'
+                f'{html.escape(_formatar_moeda(valor_status))}</div>'
+                '</div>'
+            )
+
             st.markdown(
-                f"""
-                <div style="
-                    background:{cores['fundo']};
-                    border:1px solid {cores['borda']};
-                    border-radius:10px;
-                    padding:10px;
-                    margin-bottom:12px;
-                    text-align:center;
-                ">
-                    <div style="
-                        font-size:14px;
-                        font-weight:700;
-                        color:{cores['titulo']};
-                    ">
-                        {html.escape(status)}
-                    </div>
-
-                    <div style="
-                        font-size:20px;
-                        font-weight:800;
-                        color:#111827;
-                        margin-top:4px;
-                    ">
-                        {quantidade}
-                    </div>
-
-                    <div style="
-                        font-size:11px;
-                        color:#5f6670;
-                        margin-top:2px;
-                    ">
-                        {_formatar_moeda(valor_status)}
-                    </div>
-                </div>
-                """,
+                cabecalho_html,
                 unsafe_allow_html=True,
             )
 
