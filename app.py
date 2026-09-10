@@ -1864,8 +1864,11 @@ else:
         st.title("📊 Histórico de Orçamentos")
 
         try:
-            res_h = supabase.table("historico_vendas").select("*").order("data_criacao", desc=True).execute()
-
+            res_h = supabase.table("historico_vendas") \
+                .select("*") \
+                .eq("ativo", True) \
+                .order("data_criacao", desc=True) \
+                .execute()
             if not res_h.data:
                 st.info("Nenhum orçamento salvo ainda.")
             else:
