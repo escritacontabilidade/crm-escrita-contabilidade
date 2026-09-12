@@ -1058,7 +1058,19 @@ else:
                 try:
                     origem_perguntas = get_origem_perguntas(seg_sel)
                     res_perg_data = get_perguntas_por_origem(origem_perguntas)
+            
+                    # Regra específica:
+                    # Agente de Carga utiliza a base de perguntas de Prestadoras de Serviço,
+                    # porém não deve receber a pergunta de alocação de mão de obra por CNO.
+                    if str(seg_sel).strip().lower() == "agente de carga":
+                        res_perg_data = [
+                            p for p in res_perg_data
+                            if "alocação de mão de obra por cno"
+                            not in str(p.get("pergunta", "")).strip().lower()
+                        ]
+            
                     st.caption(f"Origem das perguntas utilizada: {origem_perguntas}")
+            
                 except Exception as e:
                     st.error(f"Erro ao carregar perguntas do segmento: {e}")
                     origem_perguntas = seg_sel
