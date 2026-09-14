@@ -498,23 +498,23 @@ if is_cliente:
     res_perg_data = []
 
     if f_segmento:
-    try:
-        origem_perguntas = get_origem_perguntas(f_segmento)
-
-        res_perg_data = get_perguntas_por_origem(origem_perguntas)
-
-        # Regra específica:
-        # Agente de Carga utiliza a base de perguntas de Prestadoras de Serviço,
-        # porém não deve receber a pergunta de alocação de mão de obra por CNO.
-        if str(f_segmento).strip().lower() == "agente de carga":
-            res_perg_data = [
-                p for p in res_perg_data
-                if "alocação de mão de obra por cno"
-                not in str(p.get("pergunta", "")).strip().lower()
-            ]
-
-    except Exception as e:
-        st.error(f"Erro ao carregar perguntas do segmento: {e}")
+        try:
+            origem_perguntas = get_origem_perguntas(f_segmento)
+    
+            res_perg_data = get_perguntas_por_origem(origem_perguntas)
+    
+            # Regra específica:
+            # Agente de Carga utiliza a base de perguntas de Prestadoras de Serviço,
+            # porém não deve receber a pergunta de alocação de mão de obra por CNO.
+            if str(f_segmento).strip().lower() == "agente de carga":
+                res_perg_data = [
+                    p for p in res_perg_data
+                    if "alocação de mão de obra por cno"
+                    not in str(p.get("pergunta", "")).strip().lower()
+                ]
+    
+        except Exception as e:
+            st.error(f"Erro ao carregar perguntas do segmento: {e}")
 
     with st.form("form_externo"):
         f_empresa = st.text_input("Nome da Empresa")
