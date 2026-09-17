@@ -691,6 +691,7 @@ else:
         "Dashboard Comercial",
         "Análise do Balancete",
         "Orçamentos",
+        "Propostas Arquivadas",
         "Radar",
         "Grupos Econômicos",
         "Matriz de Precificação",
