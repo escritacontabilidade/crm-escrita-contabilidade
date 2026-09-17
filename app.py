@@ -1577,6 +1577,67 @@ else:
                                 st.session_state["orcamento_atual_id"] = orcamento_id
                         
                         if res_orc.data and orcamento_id:
+
+                            # =========================================================
+                            # SINCRONIZA ORÇAMENTO COM HISTÓRICO / PIPELINE COMERCIAL
+                            # =========================================================
+                            try:
+                                res_hist = (
+                                    supabase
+                                    .table("historico_vendas")
+                                    .select("id")
+                                    .eq("orcamento_id", orcamento_id)
+                                    .limit(1)
+                                    .execute()
+                                )
+                        
+                                dados_historico = {
+                                    "orcamento_id": orcamento_id,
+                                    "cliente": nome_empresa,
+                                    "segmento": segmento,
+                                    "valor_total": valor_final_proposta,
+                                    "lead_id": proposta_atual.get("lead_id"),
+                                    "responsavel": responsavel_cliente,
+                                    "descricao_atividades": proposta_atual.get(
+                                        "descricao_atividades",
+                                        ""
+                                    ),
+                                    "faturamento_medio": proposta_atual.get(
+                                        "faturamento_medio",
+                                        0
+                                    ),
+                                    "regime": regime,
+                                    "ativo": True
+                                }
+                        
+                                if res_hist.data:
+                                    # Já existe no pipeline: atualiza sem duplicar
+                                    historico_id = res_hist.data[0]["id"]
+                        
+                                    (
+                                        supabase
+                                        .table("historico_vendas")
+                                        .update(dados_historico)
+                                        .eq("id", historico_id)
+                                        .execute()
+                                    )
+                        
+                                else:
+                                    # Ainda não existe: cria no pipeline
+                                    dados_historico["status_comercial"] = "Em aberto"
+                        
+                                    (
+                                        supabase
+                                        .table("historico_vendas")
+                                        .insert(dados_historico)
+                                        .execute()
+                                    )
+                        
+                            except Exception as erro_historico:
+                                st.warning(
+                                    "Orçamento salvo, mas houve erro ao sincronizar "
+                                    f"com o Pipeline Comercial: {erro_historico}"
+                                )
                         
                             try:
                                 pasta_drive_id = st.secrets["drive_propostas_folder_id"]
