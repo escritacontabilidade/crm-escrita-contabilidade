@@ -1866,20 +1866,60 @@ else:
                     st.rerun()
                 
 
-                if st.button("Salvar alterações do orçamento"):
-                    supabase.table("orcamentos").update({
-                        "status": novo_status,
-                        "valor_final": novo_valor,
-                        "servicos_contratados": novos_servicos,
-                        "updated_at": pd.Timestamp.now().isoformat()
-                    }).eq("id", orcamento_id).execute()
+                col_salvar, col_arquivar = st.columns(2)
 
-                    st.success("Orçamento atualizado com sucesso.")
-                    st.rerun()
-
+                with col_salvar:
+                    if st.button(
+                        "💾 Salvar alterações do orçamento",
+                        use_container_width=True
+                    ):
+                        try:
+                            supabase.table("orcamentos").update({
+                                "status": novo_status,
+                                "valor_final": novo_valor,
+                                "servicos_contratados": novos_servicos,
+                                "updated_at": pd.Timestamp.now().isoformat()
+                            }).eq("id", orcamento_id).execute()
+                
+                            # Mantém o valor do Pipeline sincronizado
+                            supabase.table("historico_vendas").update({
+                                "valor_total": novo_valor
+                            }).eq("orcamento_id", orcamento_id).execute()
+                
+                            st.success("Orçamento atualizado com sucesso.")
+                            st.rerun()
+                
+                        except Exception as e:
+                            st.error(f"Erro ao atualizar orçamento: {e}")
+                
+                with col_arquivar:
+                    if st.button(
+                        "📦 Arquivar proposta",
+                        use_container_width=True
+                    ):
+                        try:
+                            # Arquiva a proposta
+                            supabase.table("orcamentos").update({
+                                "ativo": False,
+                                "updated_at": pd.Timestamp.now().isoformat()
+                            }).eq("id", orcamento_id).execute()
+                
+                            # Retira a mesma proposta do Pipeline
+                            supabase.table("historico_vendas").update({
+                                "ativo": False
+                            }).eq("orcamento_id", orcamento_id).execute()
+                
+                            st.success("Proposta arquivada com sucesso.")
+                            st.rerun()
+                
+                        except Exception as e:
+                            st.error(f"Erro ao arquivar proposta: {e}")
+                
                 if orc.get("pdf_drive_link"):
-                    st.link_button("Abrir PDF no Drive", orc.get("pdf_drive_link"))
-
+                    st.link_button(
+                        "Abrir PDF no Drive",
+                        orc.get("pdf_drive_link")
+                    )
         except Exception as e:
             st.error(f"Erro ao carregar orçamentos: {e}")
     
