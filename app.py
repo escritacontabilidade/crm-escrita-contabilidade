@@ -105,17 +105,22 @@ def estilo_status_linha(row):
 def normalizar_regime_para_tabela(regime):
     if not regime:
         return ""
+
     regime = str(regime).strip()
 
     mapa = {
         "Simples": "Simples",
         "Simples Nacional": "Simples",
+
         "Presumido": "Lucro Presumido",
         "Lucro Presumido": "Lucro Presumido",
-        "Real": "Lucro Real",
-        "Lucro Real": "Lucro Real",
+
+        "Lucro Real Trimestral": "Lucro Real Trimestral",
+        "Lucro Real Anual": "Lucro Real Anual",
+
         "Não sei": "Simples",
     }
+
     return mapa.get(regime, regime)
 
 
