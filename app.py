@@ -2074,7 +2074,157 @@ else:
                     )
         except Exception as e:
             st.error(f"Erro ao carregar orçamentos: {e}")
-    
+            
+    elif menu == "Propostas Arquivadas":
+        st.title("📦 Propostas Arquivadas")
+
+        try:
+            # Busca somente propostas arquivadas
+            res_orc = (
+                supabase.table("orcamentos")
+                .select("*")
+                .eq("ativo", False)
+                .order("updated_at", desc=True)
+                .execute()
+            )
+
+            if not res_orc.data:
+                st.info("Nenhuma proposta arquivada.")
+
+            else:
+                df_arq = pd.DataFrame(res_orc.data)
+
+                # Colunas exibidas na tabela
+                colunas = [
+                    "id",
+                    "cliente",
+                    "cnpj",
+                    "responsavel",
+                    "segmento",
+                    "regime",
+                    "plano",
+                    "valor_final",
+                    "status",
+                    "created_at",
+                    "updated_at",
+                ]
+
+                colunas = [
+                    c for c in colunas
+                    if c in df_arq.columns
+                ]
+
+                st.dataframe(
+                    df_arq[colunas],
+                    use_container_width=True
+                )
+
+                st.divider()
+
+                # Seleção da proposta arquivada
+                opcoes = [
+                    (
+                        f"{row['id']} | "
+                        f"{row.get('cliente', '')} | "
+                        f"{row.get('status', '')}"
+                    )
+                    for _, row in df_arq.iterrows()
+                ]
+
+                escolhido = st.selectbox(
+                    "Selecione uma proposta arquivada",
+                    opcoes,
+                    key="proposta_arquivada_selecionada"
+                )
+
+                orcamento_id = int(
+                    escolhido.split("|")[0].strip()
+                )
+
+                orc = (
+                    df_arq[
+                        df_arq["id"] == orcamento_id
+                    ]
+                    .iloc[0]
+                    .to_dict()
+                )
+
+                st.subheader("Proposta selecionada")
+
+                col1, col2, col3 = st.columns(3)
+
+                with col1:
+                    st.write(
+                        f"**Cliente:** "
+                        f"{orc.get('cliente', '')}"
+                    )
+
+                with col2:
+                    st.write(
+                        f"**Plano:** "
+                        f"{orc.get('plano', '')}"
+                    )
+
+                with col3:
+                    st.write(
+                        f"**Valor:** "
+                        f"{formatar_moeda(orc.get('valor_final') or 0)}"
+                    )
+
+                st.divider()
+
+                st.warning(
+                    "Ao restaurar esta proposta, ela voltará para "
+                    "o menu Orçamentos e também para o Pipeline Comercial."
+                )
+
+                if st.button(
+                    "♻️ Restaurar proposta",
+                    type="primary",
+                    use_container_width=True,
+                    key=f"restaurar_proposta_{orcamento_id}"
+                ):
+                    try:
+                        # Reativa o orçamento
+                        supabase.table("orcamentos").update({
+                            "ativo": True,
+                            "updated_at": pd.Timestamp.now().isoformat()
+                        }).eq(
+                            "id",
+                            orcamento_id
+                        ).execute()
+
+                        # Reativa também o registro correspondente
+                        # no Pipeline Comercial
+                        supabase.table("historico_vendas").update({
+                            "ativo": True
+                        }).eq(
+                            "orcamento_id",
+                            orcamento_id
+                        ).execute()
+
+                        st.success(
+                            "Proposta restaurada com sucesso. "
+                            "Ela voltou para Orçamentos e para o Pipeline Comercial."
+                        )
+
+                        st.rerun()
+
+                    except Exception as e:
+                        st.error(
+                            f"Erro ao restaurar proposta: {e}"
+                        )
+
+                if orc.get("pdf_drive_link"):
+                    st.link_button(
+                        "📄 Abrir PDF arquivado no Drive",
+                        orc.get("pdf_drive_link")
+                    )
+
+        except Exception as e:
+            st.error(
+                f"Erro ao carregar propostas arquivadas: {e}"
+            )
     elif menu == "Dashboard de Custos":
         st.title("💰 Configuração de Custos Operacionais")
         
