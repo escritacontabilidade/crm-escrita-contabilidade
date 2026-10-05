@@ -1170,7 +1170,14 @@ else:
                         faturamento=faturamento_medio
                     )
 
-                    regras_precificacao = buscar_regras_precificacao(origem_perguntas)
+                    # Para Agente de Carga, a precificação é própria,
+                    # embora o questionário venha de Prestadoras de Serviço.
+                    if str(seg_sel).strip().lower() == "agente de carga":
+                        origem_precificacao = "Agente de Carga"
+                    else:
+                        origem_precificacao = origem_perguntas
+                    
+                    regras_precificacao = buscar_regras_precificacao(origem_precificacao)
                     
 
                     preco_base_calculado, total_acrescimos, detalhamento_acrescimos = calcular_preco_completo(
