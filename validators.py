@@ -22,8 +22,9 @@ def validar_formulario_lead(nome_empresa, responsavel, whatsapp, segmento):
     if not responsavel or not str(responsavel).strip():
         erros.append("Informe o nome do responsável.")
 
-    if not whatsapp or not str(whatsapp).strip():
-        erros.append("Informe o WhatsApp.")
+    # WhatsApp não é mais obrigatório isoladamente.
+    # A regra "WhatsApp OU e-mail" e a validação de formato
+    # são tratadas no app.py, onde os dois campos estão disponíveis.
 
     if not segmento:
         erros.append("Selecione ao menos um segmento.")
