@@ -534,7 +534,16 @@ if is_cliente:
         f_cnpj = st.text_input("CNPJ")
         f_resp = st.text_input("Seu Nome")
         f_whatsapp = st.text_input("WhatsApp (com DDD)")
-        f_regime = st.selectbox("Regime Atual", ["Simples", "Presumido", "Real", "Não sei"])
+        f_regime = st.selectbox(
+            "Regime Atual",
+            [
+                "Simples",
+                "Presumido",
+                "Lucro Real Trimestral",
+                "Lucro Real Anual",
+                "Não sei",
+            ]
+        )
     
         st.divider()
         st.subheader("Informações Gerais")
