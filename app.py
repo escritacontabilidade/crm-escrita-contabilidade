@@ -961,7 +961,12 @@ else:
                 value=lead_em_analise.get("nome_empresa", "")
             )
             
-            opcoes_regime = ["Simples", "Presumido", "Real"]
+            opcoes_regime = [
+                "Simples",
+                "Presumido",
+                "Lucro Real Trimestral",
+                "Lucro Real Anual",
+            ]
             regime_padrao = lead_em_analise.get("regime", "Simples")
             if regime_padrao not in opcoes_regime:
                 regime_padrao = "Simples"
