@@ -685,18 +685,54 @@ if is_cliente:
                 st.write("")
 
         if st.form_submit_button("Enviar Solicitação"):
-            erros = validar_formulario_lead(f_empresa, f_resp, f_whatsapp, f_segmento)
+
+            # =====================================================
+            # VALIDAÇÕES DO FORMULÁRIO EXTERNO
+            # =====================================================
+        
+            erros = validar_formulario_lead(
+                f_empresa,
+                f_resp,
+                f_whatsapp,
+                f_segmento
+            )
+        
+            whatsapp_informado = str(f_whatsapp or "").strip()
+            email_informado = str(f_email or "").strip()
+        
+            # É obrigatório informar pelo menos um meio de contato
+            if not whatsapp_informado and not email_informado:
+                erros.append(
+                    "Informe pelo menos um meio de contato: WhatsApp ou E-mail."
+                )
+        
+            # Se informou WhatsApp, precisa ser válido
+            if whatsapp_informado and not telefone_valido(whatsapp_informado):
+                erros.append(
+                    "O WhatsApp informado não é válido. "
+                    "Informe o DDD e o número. Exemplo: (41) 99999-9999."
+                )
+        
+            # Se informou e-mail, precisa ser válido
+            if email_informado and not email_valido(email_informado):
+                erros.append(
+                    "O e-mail informado não é válido. "
+                    "Exemplo: contato@empresa.com.br."
+                )
         
             if erros:
                 for erro in erros:
                     st.warning(erro)
+        
             else:
                 try:
                     obj = {
                         "nome_empresa": f_empresa,
                         "cnpj": f_cnpj,
                         "responsavel": f_resp,
-                        "whatsapp": f_whatsapp,
+                        "whatsapp": whatsapp_informado,
+                        "telefone": whatsapp_informado,
+                        "email": email_informado,
                         "regime": f_regime,
                         "segmento": f_segmento,
                         "faturamento_medio": faturamento_medio,
