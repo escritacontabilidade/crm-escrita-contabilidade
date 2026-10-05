@@ -302,7 +302,15 @@ def tela_lead_site():
         with col7:
             forma_tributacao = st.selectbox(
                 "Forma de Tributação",
-                ["", "Simples Nacional", "Lucro Presumido", "Lucro Real", "MEI", "Não sei"]
+                [
+                    "",
+                    "Simples Nacional",
+                    "Lucro Presumido",
+                    "Lucro Real Trimestral",
+                    "Lucro Real Anual",
+                    "MEI",
+                    "Não sei",
+                ]
             )
 
         detalhes_empresa = st.text_area("Detalhes sobre a empresa")
