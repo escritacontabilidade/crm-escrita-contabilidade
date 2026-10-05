@@ -48,11 +48,22 @@ def get_config_val(chave):
 
 def get_peso_esforco(regime, item):
     supabase = get_supabase()
+
+    # Lucro Real Trimestral e Anual utilizam,
+    # por enquanto, os mesmos pesos de esforço do Lucro Real.
+    mapa_regime = {
+        "Lucro Real Trimestral": "Real",
+        "Lucro Real Anual": "Real",
+        "Lucro Real": "Real",
+    }
+
+    regime_consulta = mapa_regime.get(regime, regime)
+
     res = (
         supabase
         .table("pesos_esforco")
         .select("horas_esforco")
-        .eq("regime", regime)
+        .eq("regime", regime_consulta)
         .eq("item", item)
         .execute()
     )
