@@ -598,7 +598,24 @@ if is_cliente:
         f_empresa = st.text_input("Nome da Empresa")
         f_cnpj = st.text_input("CNPJ")
         f_resp = st.text_input("Seu Nome")
-        f_whatsapp = st.text_input("WhatsApp (com DDD)")
+        
+        st.markdown("**Contato**")
+        st.caption("Informe pelo menos um dos dois: WhatsApp ou E-mail.")
+        
+        col_contato1, col_contato2 = st.columns(2)
+        
+        with col_contato1:
+            f_whatsapp = st.text_input(
+                "WhatsApp (com DDD)",
+                placeholder="Ex: (41) 99999-9999"
+            )
+        
+        with col_contato2:
+            f_email = st.text_input(
+                "E-mail",
+                placeholder="Ex: contato@empresa.com.br"
+            )
+        
         f_regime = st.selectbox(
             "Regime Atual",
             [
