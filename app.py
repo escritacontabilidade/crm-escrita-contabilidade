@@ -55,6 +55,71 @@ from constituicao_module import renderizar_formulario_constituicao
 from theme_escrita import aplicar_tema_escrita
 from ui_escrita import cabecalho_pagina, badge_status
 
+def email_valido(email):
+    """
+    Valida a estrutura básica de um endereço de e-mail.
+    Exemplos aceitos:
+    nome@empresa.com
+    nome@empresa.com.br
+    nome.sobrenome@empresa.com.br
+    financeiro@empresa.contabil.br
+    """
+    if not email:
+        return False
+
+    email = str(email).strip()
+
+    padrao = r"^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$"
+
+    return re.fullmatch(padrao, email) is not None
+
+
+def telefone_valido(telefone):
+    """
+    Valida telefone brasileiro com DDD.
+    Aceita telefone fixo ou celular, com ou sem formatação.
+
+    Exemplos:
+    (41) 3333-4444
+    (41) 99999-9999
+    4133334444
+    41999999999
+    +55 41 99999-9999
+    """
+    if not telefone:
+        return False
+
+    numeros = re.sub(r"\D", "", str(telefone))
+
+    # Remove código do Brasil quando informado
+    if numeros.startswith("55") and len(numeros) in (12, 13):
+        numeros = numeros[2:]
+
+    # DDD + 8 dígitos (fixo) ou DDD + 9 dígitos (celular)
+    if len(numeros) not in (10, 11):
+        return False
+
+    ddd = numeros[:2]
+    numero = numeros[2:]
+
+    # DDD não pode começar com zero
+    if ddd[0] == "0":
+        return False
+
+    # Evita números evidentemente inválidos
+    if len(set(numeros)) == 1:
+        return False
+
+    # Celular brasileiro deve começar com 9
+    if len(numero) == 9 and not numero.startswith("9"):
+        return False
+
+    # Telefone fixo normalmente começa entre 2 e 5
+    if len(numero) == 8 and numero[0] not in "2345":
+        return False
+
+    return True
+
 def autenticar_usuario(usuario, senha):
     try:
         for perfil, dados in st.secrets["auth"].items():
