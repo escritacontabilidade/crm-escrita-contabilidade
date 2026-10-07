@@ -19,29 +19,26 @@ MESES = {
 }
 
 
-COLUNAS_ESPERADAS = [
-    "Cliente",
-    "Folha de Pagamento",
-    "Admissão",
-    "Rescisão",
-    "Contábil",
-    "Entradas",
-    "Saídas",
-    "Processos",
-    "Faturamento",
-]
+COLUNAS_QUESTOR = {
+    "Folha Pgto. Questor": "folha_pagamento",
+    "Admissão  Questor": "admissoes",
+    "Rescisão  Questor": "rescisoes",
+    "Contábil  Questor": "contabil",
+    "Entradas  Questor": "entradas",
+    "Saídas  Questor": "saidas",
+    "Processos  Questor": "processos",
+    "Faturamento  Questor": "faturamento",
+}
 
-
-COLUNAS_NUMERICAS = [
-    "Folha de Pagamento",
-    "Admissão",
-    "Rescisão",
-    "Contábil",
-    "Entradas",
-    "Saídas",
-    "Processos",
-    "Faturamento",
-]
+COLUNAS_CONTABIT = {
+    "Folha Pgto. Contabit": "folha_pagamento",
+    "Admissão Contabit": "admissoes",
+    "Rescisão Contabit": "rescisoes",
+    "Contábil Contabit": "contabil",
+    "Entradas Contabit": "entradas",
+    "Saídas Contabit": "saidas",
+    "Faturamento Contabit": "faturamento",
+}
 
 
 # ============================================================
@@ -141,180 +138,100 @@ def formatar_moeda(valor):
 # LEITURA E TRATAMENTO DO EXCEL
 # ============================================================
 
-def preparar_arquivo_questor(arquivo):
-
+def preparar_arquivo_producao(arquivo):
+    """
+    Lê o arquivo mensal e separa fisicamente os blocos Questor e Contabit.
+    Retorna dois DataFrames independentes.
+    """
     try:
-        df = pd.read_excel(
-            arquivo,
-            sheet_name="Export",
-        )
-
+        df = pd.read_excel(arquivo, sheet_name="Export")
     except ValueError:
-        raise ValueError(
-            "Não foi encontrada a aba 'Export' no arquivo."
-        )
-
+        raise ValueError("Não foi encontrada a aba 'Export' no arquivo.")
     except Exception as erro:
+        raise ValueError(f"Não foi possível ler o arquivo Excel: {erro}")
+
+    df.columns = [str(coluna).strip() for coluna in df.columns]
+
+    # Como o Excel pode trazer espaços duplos nos títulos, fazemos a
+    # correspondência ignorando diferenças de espaços.
+    def chave_coluna(nome):
+        return " ".join(str(nome).strip().split()).lower()
+
+    mapa_real = {chave_coluna(c): c for c in df.columns}
+
+    def localizar(nome_esperado):
+        return mapa_real.get(chave_coluna(nome_esperado))
+
+    cliente_real = localizar("Cliente")
+    if not cliente_real:
+        raise ValueError("A coluna 'Cliente' não foi encontrada.")
+
+    faltantes = []
+    for nome in list(COLUNAS_QUESTOR.keys()) + list(COLUNAS_CONTABIT.keys()):
+        if localizar(nome) is None:
+            faltantes.append(nome)
+
+    if faltantes:
         raise ValueError(
-            f"Não foi possível ler o arquivo Excel: {erro}"
+            "O arquivo não possui todas as colunas esperadas do novo layout. "
+            "Colunas ausentes: " + ", ".join(faltantes)
         )
 
-    # --------------------------------------------------------
-    # LIMPAR NOMES DAS COLUNAS
-    # --------------------------------------------------------
-
-    df.columns = [
-        str(coluna).strip()
-        for coluna in df.columns
-    ]
-
-    # --------------------------------------------------------
-    # VALIDAR COLUNAS
-    # --------------------------------------------------------
-
-    colunas_faltantes = [
-        coluna
-        for coluna in COLUNAS_ESPERADAS
-        if coluna not in df.columns
-    ]
-
-    if colunas_faltantes:
-        raise ValueError(
-            "O arquivo não possui todas as colunas esperadas. "
-            "Colunas ausentes: "
-            + ", ".join(colunas_faltantes)
-        )
-
-    df = df[COLUNAS_ESPERADAS].copy()
-
-    # --------------------------------------------------------
-    # REMOVER LINHAS VAZIAS
-    # --------------------------------------------------------
-
-    df = df.dropna(how="all")
-
-    df["Cliente"] = (
-        df["Cliente"]
-        .astype(str)
-        .str.strip()
-    )
-
-    df = df[
-        ~df["Cliente"]
-        .str.lower()
-        .isin(["", "nan", "none"])
+    base = df.copy()
+    base = base.dropna(how="all")
+    base["Cliente"] = base[cliente_real].astype(str).str.strip()
+    base = base[
+        ~base["Cliente"].str.lower().isin(["", "nan", "none"])
+    ].copy()
+    base = base[
+        ~base["Cliente"].str.lower().str.startswith("total")
     ].copy()
 
-    # --------------------------------------------------------
-    # REMOVER TOTAL
-    # --------------------------------------------------------
+    clientes_separados = base["Cliente"].apply(separar_codigo_cliente)
+    base["codigo_questor"] = clientes_separados.apply(lambda x: x[0])
+    base["razao_social"] = clientes_separados.apply(lambda x: x[1])
 
-    df = df[
-        ~df["Cliente"]
-        .str.lower()
-        .str.startswith("total")
+    base = base[base["codigo_questor"].notna()].copy()
+    base["codigo_questor"] = base["codigo_questor"].astype(str).str.strip()
+    base = base[
+        base["codigo_questor"].str.match(r"^\d+$", na=False)
     ].copy()
 
-    # --------------------------------------------------------
-    # SEPARAR CÓDIGO E NOME
-    # --------------------------------------------------------
+    def montar_bloco(mapeamento, sistema):
+        saida = base[["codigo_questor", "razao_social"]].copy()
 
-    clientes_separados = df["Cliente"].apply(
-        separar_codigo_cliente
-    )
+        for coluna_excel, coluna_interna in mapeamento.items():
+            coluna_real = localizar(coluna_excel)
+            saida[coluna_interna] = base[coluna_real].apply(converter_numero)
 
-    df["codigo_questor"] = clientes_separados.apply(
-        lambda x: x[0]
-    )
+        # Contabit não possui Processos no arquivo.
+        if "processos" not in saida.columns:
+            saida["processos"] = 0.0
 
-    df["razao_social"] = clientes_separados.apply(
-        lambda x: x[1]
-    )
+        saida["notas_fiscais"] = saida["entradas"] + saida["saidas"]
+        saida["sistema"] = sistema
 
-    # --------------------------------------------------------
-    # VALIDAR CÓDIGO QUESTOR
-    # --------------------------------------------------------
-
-    df = df[
-        df["codigo_questor"].notna()
-    ].copy()
-
-    df["codigo_questor"] = (
-        df["codigo_questor"]
-        .astype(str)
-        .str.strip()
-    )
-
-    df = df[
-        df["codigo_questor"]
-        .str.match(r"^\d+$", na=False)
-    ].copy()
-
-    # --------------------------------------------------------
-    # CONVERTER NÚMEROS
-    # --------------------------------------------------------
-
-    for coluna in COLUNAS_NUMERICAS:
-        df[coluna] = df[coluna].apply(
-            converter_numero
-        )
-
-    # --------------------------------------------------------
-    # NOTAS FISCAIS
-    # --------------------------------------------------------
-
-    df["notas_fiscais"] = (
-        df["Entradas"]
-        + df["Saídas"]
-    )
-
-    # --------------------------------------------------------
-    # REORGANIZAR
-    # --------------------------------------------------------
-
-    df = df[
-        [
-            "codigo_questor",
-            "razao_social",
-            "Folha de Pagamento",
-            "Admissão",
-            "Rescisão",
-            "Contábil",
-            "Entradas",
-            "Saídas",
-            "notas_fiscais",
-            "Processos",
-            "Faturamento",
+        colunas_movimento = [
+            "folha_pagamento", "admissoes", "rescisoes", "contabil",
+            "entradas", "saidas", "notas_fiscais", "processos", "faturamento"
         ]
-    ].copy()
 
-    # --------------------------------------------------------
-    # NOMES INTERNOS
-    # --------------------------------------------------------
+        # Não cria registro de uma origem que esteja totalmente zerada
+        # para aquele cliente.
+        saida = saida[
+            saida[colunas_movimento].abs().sum(axis=1) > 0
+        ].copy()
 
-    df = df.rename(
-        columns={
-            "Folha de Pagamento": "folha_pagamento",
-            "Admissão": "admissoes",
-            "Rescisão": "rescisoes",
-            "Contábil": "contabil",
-            "Entradas": "entradas",
-            "Saídas": "saidas",
-            "Processos": "processos",
-            "Faturamento": "faturamento",
-        }
+        saida = saida.drop_duplicates(
+            subset=["codigo_questor"], keep="last"
+        )
+
+        return saida.reset_index(drop=True)
+
+    return (
+        montar_bloco(COLUNAS_QUESTOR, "Questor"),
+        montar_bloco(COLUNAS_CONTABIT, "Contabit"),
     )
-
-    # --------------------------------------------------------
-    # EVITAR CÓDIGO DUPLICADO NO MESMO ARQUIVO
-    # --------------------------------------------------------
-
-    df = df.drop_duplicates(
-        subset=["codigo_questor"],
-        keep="last",
-    )
-
-    return df.reset_index(drop=True)
 
 
 # ============================================================
@@ -347,6 +264,7 @@ def preparar_registros_banco(
     df,
     competencia,
     arquivo_nome,
+    sistema,
 ):
     """
     Converte o DataFrame validado em registros
@@ -358,7 +276,7 @@ def preparar_registros_banco(
     for _, linha in df.iterrows():
 
         registro = {
-            "sistema": "Questor",
+            "sistema": sistema,
             "codigo_cliente": str(
                 linha["codigo_questor"]
             ),
@@ -562,49 +480,98 @@ def buscar_historico_importacoes(supabase, sistema="Questor"):
     return historico
 
 
+def buscar_historico_consolidado(supabase):
+    campos = (
+        "sistema,competencia,codigo_cliente,folha_pagamento,"
+        "admissao,rescisao,contabil,entradas,saidas,"
+        "notas_fiscais,processos,faturamento"
+    )
+    todos = []
+    inicio = 0
+    tamanho = 1000
+
+    while True:
+        resultado = (
+            supabase.table("producao_clientes")
+            .select(campos)
+            .in_("sistema", ["Questor", "Contabit"])
+            .order("competencia", desc=True)
+            .range(inicio, inicio + tamanho - 1)
+            .execute()
+        )
+        lote = resultado.data or []
+        todos.extend(lote)
+        if len(lote) < tamanho:
+            break
+        inicio += tamanho
+
+    if not todos:
+        return pd.DataFrame()
+
+    df = pd.DataFrame(todos)
+    df["competencia"] = pd.to_datetime(df["competencia"], errors="coerce")
+    df = df.dropna(subset=["competencia"])
+
+    numericas = [
+        "folha_pagamento", "admissao", "rescisao", "contabil",
+        "entradas", "saidas", "notas_fiscais", "processos", "faturamento"
+    ]
+    for coluna in numericas:
+        df[coluna] = pd.to_numeric(df[coluna], errors="coerce").fillna(0)
+
+    return (
+        df.groupby("competencia", as_index=False)
+        .agg(
+            clientes=("codigo_cliente", "nunique"),
+            folha_pagamento=("folha_pagamento", "sum"),
+            admissao=("admissao", "sum"),
+            rescisao=("rescisao", "sum"),
+            contabil=("contabil", "sum"),
+            entradas=("entradas", "sum"),
+            saidas=("saidas", "sum"),
+            notas_fiscais=("notas_fiscais", "sum"),
+            processos=("processos", "sum"),
+            faturamento=("faturamento", "sum"),
+        )
+        .sort_values("competencia", ascending=False)
+        .reset_index(drop=True)
+    )
+
+
 def exibir_historico_importacoes(supabase):
     st.subheader("Histórico de Importações")
 
+    origem = st.radio(
+        "Visão do histórico",
+        options=["Consolidado", "Questor", "Contabit"],
+        horizontal=True,
+        key="historico_origem",
+    )
+
     try:
-        historico = buscar_historico_importacoes(
-            supabase,
-            "Questor",
-        )
+        if origem == "Consolidado":
+            historico = buscar_historico_consolidado(supabase)
+        else:
+            historico = buscar_historico_importacoes(supabase, origem)
     except Exception as erro:
-        st.error(
-            "Não foi possível carregar o histórico de importações."
-        )
+        st.error("Não foi possível carregar o histórico de importações.")
         st.exception(erro)
         return
 
     if historico.empty:
-        st.info(
-            "Ainda não existem competências do Questor "
-            "importadas no banco de dados."
-        )
+        st.info(f"Ainda não existem competências para a visão {origem}.")
         return
 
     nomes_meses = {
-        1: "Janeiro",
-        2: "Fevereiro",
-        3: "Março",
-        4: "Abril",
-        5: "Maio",
-        6: "Junho",
-        7: "Julho",
-        8: "Agosto",
-        9: "Setembro",
-        10: "Outubro",
-        11: "Novembro",
-        12: "Dezembro",
+        1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril",
+        5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto",
+        9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro",
     }
 
     visual = historico.copy()
-
     visual["Competência"] = visual["competencia"].apply(
         lambda data: f"{nomes_meses[data.month]}/{data.year}"
     )
-
     visual["Clientes"] = visual["clientes"].apply(formatar_numero)
     visual["Folha"] = visual["folha_pagamento"].apply(formatar_numero)
     visual["Admissões"] = visual["admissao"].apply(formatar_numero)
@@ -616,42 +583,24 @@ def exibir_historico_importacoes(supabase):
     visual["Processos"] = visual["processos"].apply(formatar_numero)
     visual["Faturamento"] = visual["faturamento"].apply(formatar_moeda)
 
-    visual = visual[
-        [
-            "Competência",
-            "Clientes",
-            "Folha",
-            "Admissões",
-            "Rescisões",
-            "Contábil",
-            "Entradas",
-            "Saídas",
-            "Notas Fiscais",
-            "Processos",
-            "Faturamento",
-        ]
-    ]
+    visual = visual[[
+        "Competência", "Clientes", "Folha", "Admissões", "Rescisões",
+        "Contábil", "Entradas", "Saídas", "Notas Fiscais",
+        "Processos", "Faturamento"
+    ]]
 
-    st.dataframe(
-        visual,
-        use_container_width=True,
-        hide_index=True,
-    )
-
-    st.caption(
-        f"{len(visual)} competência(s) importada(s) do Questor."
-    )
-
+    st.dataframe(visual, use_container_width=True, hide_index=True)
+    st.caption(f"{len(visual)} competência(s) exibida(s) — visão {origem}.")
 
 
 # ============================================================
 # ANÁLISE DE CRESCIMENTO POR CLIENTE
 # ============================================================
 
-def buscar_dados_analise_clientes(supabase, sistema="Questor"):
-    """Busca todo o histórico necessário para comparação cliente a cliente."""
+def buscar_dados_analise_clientes(supabase, sistema="Consolidado"):
+    """Busca histórico por origem ou consolida Questor + Contabit por cliente/mês."""
     campos = (
-        "competencia,codigo_cliente,cliente,"
+        "sistema,competencia,codigo_cliente,cliente,"
         "folha_pagamento,processos,notas_fiscais,contabil,faturamento"
     )
 
@@ -660,11 +609,19 @@ def buscar_dados_analise_clientes(supabase, sistema="Questor"):
     tamanho_pagina = 1000
 
     while True:
-        resultado = (
+        consulta = (
             supabase
             .table("producao_clientes")
             .select(campos)
-            .eq("sistema", sistema)
+        )
+
+        if sistema in ["Questor", "Contabit"]:
+            consulta = consulta.eq("sistema", sistema)
+        else:
+            consulta = consulta.in_("sistema", ["Questor", "Contabit"])
+
+        resultado = (
+            consulta
             .order("competencia")
             .range(inicio, inicio + tamanho_pagina - 1)
             .execute()
@@ -675,7 +632,6 @@ def buscar_dados_analise_clientes(supabase, sistema="Questor"):
 
         if len(lote) < tamanho_pagina:
             break
-
         inicio += tamanho_pagina
 
     if not todos_registros:
@@ -685,11 +641,34 @@ def buscar_dados_analise_clientes(supabase, sistema="Questor"):
     df["competencia"] = pd.to_datetime(df["competencia"], errors="coerce")
     df = df.dropna(subset=["competencia"])
 
-    for coluna in ["folha_pagamento", "processos", "notas_fiscais", "contabil", "faturamento"]:
+    numericas = [
+        "folha_pagamento", "processos", "notas_fiscais",
+        "contabil", "faturamento"
+    ]
+    for coluna in numericas:
         df[coluna] = pd.to_numeric(df[coluna], errors="coerce").fillna(0)
 
     df["codigo_cliente"] = df["codigo_cliente"].astype(str)
+
+    if sistema == "Consolidado":
+        # Soma as duas origens sem gravar uma terceira linha no banco.
+        df = (
+            df.groupby(
+                ["competencia", "codigo_cliente"],
+                as_index=False
+            )
+            .agg(
+                cliente=("cliente", "first"),
+                folha_pagamento=("folha_pagamento", "sum"),
+                processos=("processos", "sum"),
+                notas_fiscais=("notas_fiscais", "sum"),
+                contabil=("contabil", "sum"),
+                faturamento=("faturamento", "sum"),
+            )
+        )
+
     return df
+
 
 
 def calcular_variacao_percentual(atual, referencia):
@@ -714,8 +693,15 @@ def exibir_analise_crescimento_clientes(supabase):
         "Nesta etapa a análise é diagnóstica: ainda não gera reajustes automáticos."
     )
 
+    origem_analise = st.radio(
+        "Origem dos dados",
+        options=["Consolidado", "Questor", "Contabit"],
+        horizontal=True,
+        key="analise_origem_dados",
+    )
+
     try:
-        df = buscar_dados_analise_clientes(supabase, "Questor")
+        df = buscar_dados_analise_clientes(supabase, origem_analise)
     except Exception as erro:
         st.error("Não foi possível carregar os dados para análise por cliente.")
         st.exception(erro)
@@ -1303,8 +1289,15 @@ def exibir_radar_reajuste(supabase):
         "o novo honorário."
     )
 
+    origem_radar = st.radio(
+        "Origem dos dados do radar",
+        options=["Consolidado", "Questor", "Contabit"],
+        horizontal=True,
+        key="radar_origem_dados",
+    )
+
     try:
-        df = buscar_dados_analise_clientes(supabase, "Questor")
+        df = buscar_dados_analise_clientes(supabase, origem_radar)
     except Exception as erro:
         st.error("Não foi possível carregar os dados do Radar de Revisão.")
         st.exception(erro)
@@ -1562,7 +1555,7 @@ def tela_monitoramento_producao(supabase):
 
     st.write(
         "Importação e acompanhamento da movimentação mensal "
-        "dos clientes da Escrita Contabilidade."
+        "dos clientes da Escrita Contabilidade, separando Questor e Contabit."
     )
 
     st.divider()
@@ -1591,23 +1584,17 @@ def tela_monitoramento_producao(supabase):
 
     st.divider()
 
-    st.subheader("Importar produção do Questor")
+    st.subheader("Importar produção — Questor + Contabit")
 
     st.info(
-        "Informe a competência correspondente aos dados do arquivo. "
-        "Exemplo: se o arquivo contém a produção de setembro de 2026, "
-        "selecione Setembro e 2026, mesmo que a importação esteja "
-        "sendo realizada em outubro."
+        "O novo arquivo mensal contém dois blocos de produção. "
+        "O sistema separará Questor e Contabit automaticamente e gravará "
+        "cada origem de forma independente."
     )
-
-    # ========================================================
-    # COMPETÊNCIA
-    # ========================================================
 
     col_mes, col_ano = st.columns(2)
 
     with col_mes:
-
         mes_nome = st.selectbox(
             "Mês da competência *",
             options=list(MESES.keys()),
@@ -1616,16 +1603,8 @@ def tela_monitoramento_producao(supabase):
         )
 
     with col_ano:
-
         ano_atual = datetime.now().year
-
-        anos = list(
-            range(
-                ano_atual - 5,
-                ano_atual + 2,
-            )
-        )
-
+        anos = list(range(ano_atual - 5, ano_atual + 2))
         ano = st.selectbox(
             "Ano da competência *",
             options=anos,
@@ -1634,432 +1613,178 @@ def tela_monitoramento_producao(supabase):
         )
 
     mes_numero = MESES[mes_nome]
-
-    competencia = (
-        f"{ano}-{mes_numero:02d}-01"
-    )
-
-    st.caption(
-        f"Competência selecionada: "
-        f"**{mes_nome}/{ano}**"
-    )
-
-    # ========================================================
-    # SISTEMA
-    # ========================================================
-
-    st.text_input(
-        "Sistema de origem",
-        value="Questor",
-        disabled=True,
-        key="producao_sistema_origem",
-    )
-
-    # ========================================================
-    # ARQUIVO
-    # ========================================================
+    competencia = f"{ano}-{mes_numero:02d}-01"
+    st.caption(f"Competência selecionada: **{mes_nome}/{ano}**")
 
     arquivo = st.file_uploader(
-        "Arquivo de produção do Questor *",
+        "Arquivo mensal de produção *",
         type=["xlsx", "xls"],
-        key="arquivo_producao_questor",
-        help=(
-            "Selecione o arquivo mensal "
-            "exportado do Questor."
-        ),
+        key="arquivo_producao_questor_contabit",
+        help="Selecione o arquivo que contém os blocos Questor e Contabit.",
     )
 
     if arquivo is None:
-
-        st.warning(
-            "Selecione o arquivo correspondente "
-            "à competência informada."
-        )
-
+        st.warning("Selecione o arquivo correspondente à competência informada.")
         return
 
     st.success("Arquivo selecionado.")
-
-    st.write(
-        f"**Arquivo:** {arquivo.name}"
-    )
-
-    st.write(
-        "**Sistema:** Questor"
-    )
-
-    st.write(
-        f"**Competência:** {mes_nome}/{ano}"
-    )
+    st.write(f"**Arquivo:** {arquivo.name}")
+    st.write(f"**Competência:** {mes_nome}/{ano}")
 
     st.divider()
-
-    # ========================================================
-    # VALIDAÇÃO
-    # ========================================================
-
     st.subheader("Validação do arquivo")
 
     try:
-
-        df = preparar_arquivo_questor(
-            arquivo
-        )
-
+        df_questor, df_contabit = preparar_arquivo_producao(arquivo)
     except Exception as erro:
-
-        st.error(
-            f"Erro ao validar o arquivo: {erro}"
-        )
-
+        st.error(f"Erro ao validar o arquivo: {erro}")
         return
 
-    if df.empty:
-
-        st.error(
-            "Nenhum cliente válido foi encontrado."
-        )
-
+    if df_questor.empty and df_contabit.empty:
+        st.error("Nenhum cliente com movimentação foi encontrado.")
         return
 
-    st.success(
-        "Arquivo validado com sucesso."
+    st.success("Arquivo validado e separado por origem com sucesso.")
+
+    def resumo_bloco(df_bloco, titulo):
+        st.markdown(f"#### {titulo}")
+        if df_bloco.empty:
+            st.info(f"Nenhuma movimentação encontrada para {titulo}.")
+            return
+        c1, c2, c3, c4, c5 = st.columns(5)
+        c1.metric("Clientes", formatar_numero(df_bloco["codigo_questor"].nunique()))
+        c2.metric("Folha", formatar_numero(df_bloco["folha_pagamento"].sum()))
+        c3.metric("Notas Fiscais", formatar_numero(df_bloco["notas_fiscais"].sum()))
+        c4.metric("Contábil", formatar_numero(df_bloco["contabil"].sum()))
+        c5.metric("Faturamento", formatar_moeda(df_bloco["faturamento"].sum()))
+
+        if titulo == "Questor":
+            st.caption(
+                f"Processos Questor: {formatar_numero(df_bloco['processos'].sum())}"
+            )
+        else:
+            st.caption("Contabit não possui a coluna Processos neste layout.")
+
+    resumo_bloco(df_questor, "Questor")
+    resumo_bloco(df_contabit, "Contabit")
+
+    # Consolidado apenas para conferência visual.
+    codigos_consolidados = set(df_questor["codigo_questor"].astype(str))
+    codigos_consolidados.update(df_contabit["codigo_questor"].astype(str))
+
+    st.markdown("#### Consolidado para conferência")
+    cc1, cc2, cc3, cc4, cc5 = st.columns(5)
+    cc1.metric("Clientes únicos", formatar_numero(len(codigos_consolidados)))
+    cc2.metric(
+        "Folha",
+        formatar_numero(
+            df_questor["folha_pagamento"].sum() +
+            df_contabit["folha_pagamento"].sum()
+        ),
     )
-
-    # ========================================================
-    # INDICADORES
-    # ========================================================
-
-    st.subheader("Resumo da produção")
-
-    quantidade_clientes = len(df)
-
-    total_folha = df[
-        "folha_pagamento"
-    ].sum()
-
-    total_processos = df[
-        "processos"
-    ].sum()
-
-    total_faturamento = df[
-        "faturamento"
-    ].sum()
-
-    col1, col2, col3, col4 = st.columns(4)
-
-    with col1:
-        st.metric(
-            "Clientes",
-            formatar_numero(
-                quantidade_clientes
-            ),
-        )
-
-    with col2:
-        st.metric(
-            "Folha de pagamento",
-            formatar_numero(
-                total_folha
-            ),
-        )
-
-    with col3:
-        st.metric(
-            "Processos",
-            formatar_numero(
-                total_processos
-            ),
-        )
-
-    with col4:
-        st.metric(
-            "Faturamento",
-            formatar_moeda(
-                total_faturamento
-            ),
-        )
-
-    # ========================================================
-    # DEMAIS MOVIMENTAÇÕES
-    # ========================================================
-
-    st.markdown(
-        "#### Demais movimentações"
+    cc3.metric(
+        "Notas Fiscais",
+        formatar_numero(
+            df_questor["notas_fiscais"].sum() +
+            df_contabit["notas_fiscais"].sum()
+        ),
     )
-
-    total_admissoes = df[
-        "admissoes"
-    ].sum()
-
-    total_rescisoes = df[
-        "rescisoes"
-    ].sum()
-
-    total_contabil = df[
-        "contabil"
-    ].sum()
-
-    total_entradas = df[
-        "entradas"
-    ].sum()
-
-    total_saidas = df[
-        "saidas"
-    ].sum()
-
-    total_notas = df[
-        "notas_fiscais"
-    ].sum()
-
-    col5, col6, col7 = st.columns(3)
-
-    with col5:
-
-        st.metric(
-            "Admissões",
-            formatar_numero(
-                total_admissoes
-            ),
-        )
-
-        st.metric(
-            "Entradas",
-            formatar_numero(
-                total_entradas
-            ),
-        )
-
-    with col6:
-
-        st.metric(
-            "Rescisões",
-            formatar_numero(
-                total_rescisoes
-            ),
-        )
-
-        st.metric(
-            "Saídas",
-            formatar_numero(
-                total_saidas
-            ),
-        )
-
-    with col7:
-
-        st.metric(
-            "Lançamentos contábeis",
-            formatar_numero(
-                total_contabil
-            ),
-        )
-
-        st.metric(
-            "Notas fiscais",
-            formatar_numero(
-                total_notas
-            ),
-        )
-
-    st.divider()
-
-    # ========================================================
-    # PRÉ-VISUALIZAÇÃO
-    # ========================================================
-
-    st.subheader(
-        "Pré-visualização dos clientes"
+    cc4.metric(
+        "Contábil",
+        formatar_numero(
+            df_questor["contabil"].sum() +
+            df_contabit["contabil"].sum()
+        ),
     )
-
-    df_visualizacao = df.copy()
-
-    df_visualizacao = df_visualizacao.rename(
-        columns={
-            "codigo_questor": "Código Questor",
-            "razao_social": "Cliente",
-            "folha_pagamento": "Folha",
-            "admissoes": "Admissões",
-            "rescisoes": "Rescisões",
-            "contabil": "Contábil",
-            "entradas": "Entradas",
-            "saidas": "Saídas",
-            "notas_fiscais": "Notas",
-            "processos": "Processos",
-            "faturamento": "Faturamento",
-        }
-    )
-
-    st.dataframe(
-        df_visualizacao,
-        use_container_width=True,
-        hide_index=True,
+    cc5.metric(
+        "Faturamento",
+        formatar_moeda(
+            df_questor["faturamento"].sum() +
+            df_contabit["faturamento"].sum()
+        ),
     )
 
     st.divider()
+    st.subheader("Pré-visualização")
 
-    # ========================================================
-    # VERIFICAR SE A COMPETÊNCIA JÁ EXISTE
-    # ========================================================
+    aba_q, aba_c = st.tabs(["Questor", "Contabit"])
 
+    with aba_q:
+        st.dataframe(df_questor, use_container_width=True, hide_index=True)
+
+    with aba_c:
+        st.dataframe(df_contabit, use_container_width=True, hide_index=True)
+
+    st.divider()
     st.subheader("Importação para o banco de dados")
 
     try:
-
-        registros_existentes = (
-            contar_registros_competencia(
-                supabase,
-                "Questor",
-                competencia,
-            )
+        existentes_q = contar_registros_competencia(
+            supabase, "Questor", competencia
         )
-
+        existentes_c = contar_registros_competencia(
+            supabase, "Contabit", competencia
+        )
     except Exception as erro:
-
-        st.error(
-            "Não foi possível consultar o banco de dados."
-        )
-
+        st.error("Não foi possível consultar o banco de dados.")
         st.exception(erro)
-
         return
 
-    # ========================================================
-    # COMPETÊNCIA NOVA
-    # ========================================================
+    st.write(
+        f"Registros existentes em **{mes_nome}/{ano}** — "
+        f"Questor: **{existentes_q}** | Contabit: **{existentes_c}**"
+    )
 
-    if registros_existentes == 0:
+    registros_q = preparar_registros_banco(
+        df_questor, competencia, arquivo.name, "Questor"
+    )
+    registros_c = preparar_registros_banco(
+        df_contabit, competencia, arquivo.name, "Contabit"
+    )
 
-        st.success(
-            f"A competência {mes_nome}/{ano} "
-            "ainda não foi importada."
-        )
+    existe_algum = existentes_q > 0 or existentes_c > 0
 
-        st.write(
-            f"Serão gravados **{quantidade_clientes} clientes**."
-        )
-
-        registros = preparar_registros_banco(
-            df,
-            competencia,
-            arquivo.name,
-        )
-
-        if st.button(
-            f"Importar {mes_nome}/{ano}",
-            type="primary",
-            use_container_width=True,
-        ):
-
-            try:
-
-                with st.spinner(
-                    "Importando dados para o banco..."
-                ):
-
-                    total_inseridos = (
-                        inserir_registros_em_lotes(
-                            supabase,
-                            registros,
-                        )
-                    )
-
-                st.success(
-                    f"Importação concluída. "
-                    f"{total_inseridos} registros "
-                    f"foram gravados para "
-                    f"{mes_nome}/{ano}."
-                )
-
-                st.balloons()
-
-                st.rerun()
-
-            except Exception as erro:
-
-                st.error(
-                    "A importação não foi concluída."
-                )
-
-                st.exception(erro)
-
-    # ========================================================
-    # COMPETÊNCIA JÁ EXISTENTE
-    # ========================================================
-
-    else:
-
+    if existe_algum:
         st.warning(
-            f"A competência **{mes_nome}/{ano}** "
-            f"já possui **{registros_existentes} registros** "
-            "do Questor no banco de dados."
+            "Esta competência já possui dados. Para migrar para o novo padrão, "
+            "a substituição apagará somente Questor e Contabit da competência "
+            "selecionada e gravará novamente os dois blocos."
         )
-
-        st.info(
-            "Para evitar duplicidades, uma nova importação "
-            "não será realizada automaticamente. "
-            "Se este arquivo deve substituir o arquivo anterior, "
-            "utilize a opção abaixo."
-        )
-
         confirmar = st.checkbox(
-            f"Confirmo que desejo substituir completamente "
-            f"os dados de {mes_nome}/{ano}.",
-            key=(
-                f"confirmar_substituicao_"
-                f"{ano}_{mes_numero}"
-            ),
+            f"Confirmo a substituição completa de Questor + Contabit em {mes_nome}/{ano}.",
+            key=f"confirmar_substituicao_dupla_{ano}_{mes_numero}",
         )
+        texto_botao = f"Substituir {mes_nome}/{ano}"
+    else:
+        st.success("Esta competência ainda não possui dados Questor/Contabit.")
+        confirmar = True
+        texto_botao = f"Importar {mes_nome}/{ano}"
 
-        registros = preparar_registros_banco(
-            df,
-            competencia,
-            arquivo.name,
-        )
+    if confirmar and st.button(
+        texto_botao,
+        type="primary",
+        use_container_width=True,
+    ):
+        try:
+            with st.spinner("Gravando Questor e Contabit separadamente..."):
+                if existe_algum:
+                    excluir_competencia(supabase, "Questor", competencia)
+                    excluir_competencia(supabase, "Contabit", competencia)
 
-        if confirmar:
+                total_q = inserir_registros_em_lotes(supabase, registros_q) if registros_q else 0
+                total_c = inserir_registros_em_lotes(supabase, registros_c) if registros_c else 0
 
-            if st.button(
-                f"Substituir {mes_nome}/{ano}",
-                type="primary",
-                use_container_width=True,
-            ):
+            st.success(
+                f"Importação concluída: {total_q} registros Questor + "
+                f"{total_c} registros Contabit."
+            )
+            st.balloons()
+            st.rerun()
 
-                try:
+        except Exception as erro:
+            st.error(
+                "A importação não foi concluída. Verifique a mensagem abaixo. "
+                "Se houve exclusão antes do erro, não importe outro mês até corrigirmos."
+            )
+            st.exception(erro)
 
-                    with st.spinner(
-                        "Substituindo a competência..."
-                    ):
-
-                        # Apaga SOMENTE:
-                        # Questor + competência selecionada
-                        excluir_competencia(
-                            supabase,
-                            "Questor",
-                            competencia,
-                        )
-
-                        total_inseridos = (
-                            inserir_registros_em_lotes(
-                                supabase,
-                                registros,
-                            )
-                        )
-
-                    st.success(
-                        f"{mes_nome}/{ano} foi substituído "
-                        f"com sucesso. "
-                        f"{total_inseridos} registros "
-                        "foram gravados."
-                    )
-
-                    st.rerun()
-
-                except Exception as erro:
-
-                    st.error(
-                        "Não foi possível concluir "
-                        "a substituição."
-                    )
-
-                    st.exception(erro)
