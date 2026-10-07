@@ -472,6 +472,178 @@ def excluir_competencia(
 
 
 # ============================================================
+# HISTÓRICO DE IMPORTAÇÕES
+# ============================================================
+
+def buscar_historico_importacoes(supabase, sistema="Questor"):
+    """
+    Busca todos os registros de produção do sistema informado,
+    usando paginação para não ficar limitado aos primeiros 1.000 registros,
+    e consolida os totais por competência.
+    """
+    campos = (
+        "competencia,codigo_cliente,folha_pagamento,"
+        "admissao,rescisao,contabil,entradas,saidas,"
+        "notas_fiscais,processos,faturamento"
+    )
+
+    todos_registros = []
+    inicio = 0
+    tamanho_pagina = 1000
+
+    while True:
+        resultado = (
+            supabase
+            .table("producao_clientes")
+            .select(campos)
+            .eq("sistema", sistema)
+            .order("competencia", desc=True)
+            .range(inicio, inicio + tamanho_pagina - 1)
+            .execute()
+        )
+
+        lote = resultado.data or []
+        todos_registros.extend(lote)
+
+        if len(lote) < tamanho_pagina:
+            break
+
+        inicio += tamanho_pagina
+
+    if not todos_registros:
+        return pd.DataFrame()
+
+    df_hist = pd.DataFrame(todos_registros)
+
+    colunas_numericas = [
+        "folha_pagamento",
+        "admissao",
+        "rescisao",
+        "contabil",
+        "entradas",
+        "saidas",
+        "notas_fiscais",
+        "processos",
+        "faturamento",
+    ]
+
+    for coluna in colunas_numericas:
+        df_hist[coluna] = pd.to_numeric(
+            df_hist[coluna],
+            errors="coerce",
+        ).fillna(0)
+
+    df_hist["competencia"] = pd.to_datetime(
+        df_hist["competencia"],
+        errors="coerce",
+    )
+
+    df_hist = df_hist.dropna(subset=["competencia"])
+
+    historico = (
+        df_hist
+        .groupby("competencia", as_index=False)
+        .agg(
+            clientes=("codigo_cliente", "nunique"),
+            folha_pagamento=("folha_pagamento", "sum"),
+            admissao=("admissao", "sum"),
+            rescisao=("rescisao", "sum"),
+            contabil=("contabil", "sum"),
+            entradas=("entradas", "sum"),
+            saidas=("saidas", "sum"),
+            notas_fiscais=("notas_fiscais", "sum"),
+            processos=("processos", "sum"),
+            faturamento=("faturamento", "sum"),
+        )
+        .sort_values("competencia", ascending=False)
+        .reset_index(drop=True)
+    )
+
+    return historico
+
+
+def exibir_historico_importacoes(supabase):
+    st.subheader("Histórico de Importações")
+
+    try:
+        historico = buscar_historico_importacoes(
+            supabase,
+            "Questor",
+        )
+    except Exception as erro:
+        st.error(
+            "Não foi possível carregar o histórico de importações."
+        )
+        st.exception(erro)
+        return
+
+    if historico.empty:
+        st.info(
+            "Ainda não existem competências do Questor "
+            "importadas no banco de dados."
+        )
+        return
+
+    nomes_meses = {
+        1: "Janeiro",
+        2: "Fevereiro",
+        3: "Março",
+        4: "Abril",
+        5: "Maio",
+        6: "Junho",
+        7: "Julho",
+        8: "Agosto",
+        9: "Setembro",
+        10: "Outubro",
+        11: "Novembro",
+        12: "Dezembro",
+    }
+
+    visual = historico.copy()
+
+    visual["Competência"] = visual["competencia"].apply(
+        lambda data: f"{nomes_meses[data.month]}/{data.year}"
+    )
+
+    visual["Clientes"] = visual["clientes"].apply(formatar_numero)
+    visual["Folha"] = visual["folha_pagamento"].apply(formatar_numero)
+    visual["Admissões"] = visual["admissao"].apply(formatar_numero)
+    visual["Rescisões"] = visual["rescisao"].apply(formatar_numero)
+    visual["Contábil"] = visual["contabil"].apply(formatar_numero)
+    visual["Entradas"] = visual["entradas"].apply(formatar_numero)
+    visual["Saídas"] = visual["saidas"].apply(formatar_numero)
+    visual["Notas Fiscais"] = visual["notas_fiscais"].apply(formatar_numero)
+    visual["Processos"] = visual["processos"].apply(formatar_numero)
+    visual["Faturamento"] = visual["faturamento"].apply(formatar_moeda)
+
+    visual = visual[
+        [
+            "Competência",
+            "Clientes",
+            "Folha",
+            "Admissões",
+            "Rescisões",
+            "Contábil",
+            "Entradas",
+            "Saídas",
+            "Notas Fiscais",
+            "Processos",
+            "Faturamento",
+        ]
+    ]
+
+    st.dataframe(
+        visual,
+        use_container_width=True,
+        hide_index=True,
+    )
+
+    st.caption(
+        f"{len(visual)} competência(s) importada(s) do Questor."
+    )
+
+
+# ============================================================
 # TELA
 # ============================================================
 
@@ -483,6 +655,14 @@ def tela_monitoramento_producao(supabase):
         "Importação e acompanhamento da movimentação mensal "
         "dos clientes da Escrita Contabilidade."
     )
+
+    st.divider()
+
+    # ========================================================
+    # HISTÓRICO DE IMPORTAÇÕES
+    # ========================================================
+
+    exibir_historico_importacoes(supabase)
 
     st.divider()
 
