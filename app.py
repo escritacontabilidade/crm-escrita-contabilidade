@@ -833,6 +833,7 @@ else:
         "Análise do Balancete",
         "Orçamentos",
         "Propostas Arquivadas",
+        "Monitoramento de Produção",
         "Radar",
         "Grupos Econômicos",
         "Matriz de Precificação",
