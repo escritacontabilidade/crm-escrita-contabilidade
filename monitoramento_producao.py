@@ -643,6 +643,343 @@ def exibir_historico_importacoes(supabase):
     )
 
 
+
+# ============================================================
+# ANÁLISE DE CRESCIMENTO POR CLIENTE
+# ============================================================
+
+def buscar_dados_analise_clientes(supabase, sistema="Questor"):
+    """Busca todo o histórico necessário para comparação cliente a cliente."""
+    campos = (
+        "competencia,codigo_cliente,cliente,"
+        "folha_pagamento,processos,faturamento"
+    )
+
+    todos_registros = []
+    inicio = 0
+    tamanho_pagina = 1000
+
+    while True:
+        resultado = (
+            supabase
+            .table("producao_clientes")
+            .select(campos)
+            .eq("sistema", sistema)
+            .order("competencia")
+            .range(inicio, inicio + tamanho_pagina - 1)
+            .execute()
+        )
+
+        lote = resultado.data or []
+        todos_registros.extend(lote)
+
+        if len(lote) < tamanho_pagina:
+            break
+
+        inicio += tamanho_pagina
+
+    if not todos_registros:
+        return pd.DataFrame()
+
+    df = pd.DataFrame(todos_registros)
+    df["competencia"] = pd.to_datetime(df["competencia"], errors="coerce")
+    df = df.dropna(subset=["competencia"])
+
+    for coluna in ["folha_pagamento", "processos", "faturamento"]:
+        df[coluna] = pd.to_numeric(df[coluna], errors="coerce").fillna(0)
+
+    df["codigo_cliente"] = df["codigo_cliente"].astype(str)
+    return df
+
+
+def calcular_variacao_percentual(atual, referencia):
+    """Calcula variação percentual, evitando divisão por zero."""
+    if pd.isna(referencia) or float(referencia) == 0:
+        return None
+    return ((float(atual) - float(referencia)) / abs(float(referencia))) * 100
+
+
+def formatar_percentual(valor):
+    if valor is None or pd.isna(valor):
+        return "—"
+    sinal = "+" if float(valor) > 0 else ""
+    return f"{sinal}{float(valor):.1f}%".replace(".", ",")
+
+
+def exibir_analise_crescimento_clientes(supabase):
+    st.subheader("Análise de Crescimento por Cliente")
+
+    st.caption(
+        "Compare cada cliente com seu próprio histórico. "
+        "Nesta etapa a análise é diagnóstica: ainda não gera reajustes automáticos."
+    )
+
+    try:
+        df = buscar_dados_analise_clientes(supabase, "Questor")
+    except Exception as erro:
+        st.error("Não foi possível carregar os dados para análise por cliente.")
+        st.exception(erro)
+        return
+
+    if df.empty:
+        st.info("Ainda não existem dados suficientes para realizar a análise.")
+        return
+
+    competencias = sorted(df["competencia"].dropna().unique(), reverse=True)
+
+    if len(competencias) < 2:
+        st.info(
+            "É necessário ter pelo menos duas competências importadas "
+            "para comparar a evolução dos clientes."
+        )
+        return
+
+    nomes_meses = {
+        1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril",
+        5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto",
+        9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro",
+    }
+
+    opcoes = {
+        f"{nomes_meses[pd.Timestamp(data).month]}/{pd.Timestamp(data).year}":
+        pd.Timestamp(data)
+        for data in competencias
+    }
+
+    competencia_label = st.selectbox(
+        "Competência para análise",
+        options=list(opcoes.keys()),
+        index=0,
+        key="analise_crescimento_competencia",
+    )
+    competencia_atual = opcoes[competencia_label]
+
+    historico_anterior = df[df["competencia"] < competencia_atual].copy()
+    atual = df[df["competencia"] == competencia_atual].copy()
+
+    if historico_anterior.empty:
+        st.info(
+            f"{competencia_label} é a primeira competência disponível. "
+            "Selecione um mês posterior para realizar comparações."
+        )
+        return
+
+    # Diagnóstico global da competência antes de analisar clientes.
+    total_clientes_atual = atual["codigo_cliente"].nunique()
+    clientes_por_mes = (
+        historico_anterior.groupby("competencia")["codigo_cliente"].nunique()
+    )
+    mediana_clientes = float(clientes_por_mes.median()) if not clientes_por_mes.empty else 0
+
+    totais_atual = atual[["folha_pagamento", "processos", "faturamento"]].sum()
+    totais_hist = (
+        historico_anterior
+        .groupby("competencia")[["folha_pagamento", "processos", "faturamento"]]
+        .sum()
+    )
+    medianas_hist = totais_hist.median() if not totais_hist.empty else pd.Series(dtype=float)
+
+    alertas_competencia = []
+
+    if mediana_clientes > 0 and total_clientes_atual < mediana_clientes * 0.85:
+        alertas_competencia.append(
+            f"quantidade de clientes {((total_clientes_atual / mediana_clientes) - 1) * 100:.1f}% "
+            "abaixo da mediana dos meses anteriores"
+        )
+
+    for coluna, rotulo in [
+        ("folha_pagamento", "Folha"),
+        ("processos", "Processos"),
+        ("faturamento", "Faturamento"),
+    ]:
+        referencia = float(medianas_hist.get(coluna, 0) or 0)
+        atual_total = float(totais_atual.get(coluna, 0) or 0)
+        if referencia > 0 and atual_total < referencia * 0.50:
+            alertas_competencia.append(
+                f"{rotulo} total mais de 50% abaixo da mediana histórica"
+            )
+
+    col_a, col_b, col_c = st.columns(3)
+    col_a.metric("Clientes no mês", formatar_numero(total_clientes_atual))
+    col_b.metric(
+        "Meses anteriores usados",
+        formatar_numero(historico_anterior["competencia"].nunique()),
+    )
+    col_c.metric(
+        "Confiabilidade da competência",
+        "Atenção" if alertas_competencia else "Normal",
+    )
+
+    if alertas_competencia:
+        st.warning(
+            "A competência selecionada apresenta sinais de possível anormalidade: "
+            + "; ".join(alertas_competencia)
+            + ". Analise os resultados com cautela antes de qualquer decisão comercial."
+        )
+    else:
+        st.success(
+            "A competência não apresentou indícios globais fortes de arquivo incompleto "
+            "nos critérios preliminares de validação."
+        )
+
+    # Estatísticas históricas por cliente.
+    hist_ordenado = historico_anterior.sort_values("competencia")
+
+    medias = (
+        hist_ordenado
+        .groupby("codigo_cliente", as_index=False)
+        .agg(
+            media_folha=("folha_pagamento", "mean"),
+            media_processos=("processos", "mean"),
+            media_faturamento=("faturamento", "mean"),
+            meses_historico=("competencia", "nunique"),
+        )
+    )
+
+    primeiros = (
+        hist_ordenado
+        .groupby("codigo_cliente", as_index=False)
+        .first()[
+            [
+                "codigo_cliente",
+                "competencia",
+                "folha_pagamento",
+                "processos",
+                "faturamento",
+            ]
+        ]
+        .rename(
+            columns={
+                "competencia": "primeira_competencia",
+                "folha_pagamento": "primeira_folha",
+                "processos": "primeiros_processos",
+                "faturamento": "primeiro_faturamento",
+            }
+        )
+    )
+
+    analise = (
+        atual[
+            [
+                "codigo_cliente",
+                "cliente",
+                "folha_pagamento",
+                "processos",
+                "faturamento",
+            ]
+        ]
+        .merge(medias, on="codigo_cliente", how="left")
+        .merge(primeiros, on="codigo_cliente", how="left")
+    )
+
+    for metrica in ["folha", "processos", "faturamento"]:
+        atual_col = {
+            "folha": "folha_pagamento",
+            "processos": "processos",
+            "faturamento": "faturamento",
+        }[metrica]
+        media_col = {
+            "folha": "media_folha",
+            "processos": "media_processos",
+            "faturamento": "media_faturamento",
+        }[metrica]
+        primeiro_col = {
+            "folha": "primeira_folha",
+            "processos": "primeiros_processos",
+            "faturamento": "primeiro_faturamento",
+        }[metrica]
+
+        analise[f"var_{metrica}_media"] = analise.apply(
+            lambda linha: calcular_variacao_percentual(
+                linha[atual_col], linha[media_col]
+            ),
+            axis=1,
+        )
+        analise[f"var_{metrica}_inicio"] = analise.apply(
+            lambda linha: calcular_variacao_percentual(
+                linha[atual_col], linha[primeiro_col]
+            ),
+            axis=1,
+        )
+
+    st.markdown("#### Comparativo individual")
+
+    metrica_escolhida = st.radio(
+        "Indicador principal",
+        options=["Folha", "Processos", "Faturamento"],
+        horizontal=True,
+        key="analise_crescimento_metrica",
+    )
+
+    mapa = {
+        "Folha": (
+            "folha_pagamento", "media_folha", "primeira_folha",
+            "var_folha_media", "var_folha_inicio"
+        ),
+        "Processos": (
+            "processos", "media_processos", "primeiros_processos",
+            "var_processos_media", "var_processos_inicio"
+        ),
+        "Faturamento": (
+            "faturamento", "media_faturamento", "primeiro_faturamento",
+            "var_faturamento_media", "var_faturamento_inicio"
+        ),
+    }
+
+    atual_col, media_col, primeiro_col, var_media_col, var_inicio_col = mapa[metrica_escolhida]
+
+    visual = analise[
+        [
+            "codigo_cliente", "cliente", "meses_historico",
+            atual_col, media_col, primeiro_col,
+            var_media_col, var_inicio_col,
+        ]
+    ].copy()
+
+    visual = visual.sort_values(
+        var_media_col,
+        ascending=False,
+        na_position="last",
+    )
+
+    if metrica_escolhida == "Faturamento":
+        for coluna in [atual_col, media_col, primeiro_col]:
+            visual[coluna] = visual[coluna].apply(formatar_moeda)
+    else:
+        for coluna in [atual_col, media_col, primeiro_col]:
+            visual[coluna] = visual[coluna].apply(formatar_numero)
+
+    visual[var_media_col] = visual[var_media_col].apply(formatar_percentual)
+    visual[var_inicio_col] = visual[var_inicio_col].apply(formatar_percentual)
+    visual["meses_historico"] = visual["meses_historico"].fillna(0).apply(formatar_numero)
+
+    visual = visual.rename(
+        columns={
+            "codigo_cliente": "Código",
+            "cliente": "Cliente",
+            "meses_historico": "Meses anteriores",
+            atual_col: competencia_label,
+            media_col: "Média anterior",
+            primeiro_col: "Primeiro mês",
+            var_media_col: "Variação x média",
+            var_inicio_col: "Variação x início",
+        }
+    )
+
+    st.dataframe(
+        visual,
+        use_container_width=True,
+        hide_index=True,
+    )
+
+    st.caption(
+        "A média considera somente competências anteriores à selecionada. "
+        "Quando a referência histórica é zero, a variação percentual é exibida como “—” "
+        "para evitar conclusões matematicamente enganosas."
+    )
+
+
+
 # ============================================================
 # TELA
 # ============================================================
@@ -663,6 +1000,14 @@ def tela_monitoramento_producao(supabase):
     # ========================================================
 
     exibir_historico_importacoes(supabase)
+
+    st.divider()
+
+    # ========================================================
+    # ANÁLISE DE CRESCIMENTO POR CLIENTE
+    # ========================================================
+
+    exibir_analise_crescimento_clientes(supabase)
 
     st.divider()
 
