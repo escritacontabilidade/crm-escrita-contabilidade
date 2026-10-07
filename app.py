@@ -2227,6 +2227,10 @@ else:
             st.error(
                 f"Erro ao carregar propostas arquivadas: {e}"
             )
+
+    elif menu == "Monitoramento de Produção":
+        tela_monitoramento_producao(supabase)
+        
     elif menu == "Dashboard de Custos":
         st.title("💰 Configuração de Custos Operacionais")
         
