@@ -980,6 +980,470 @@ def exibir_analise_crescimento_clientes(supabase):
 
 
 
+
+# ============================================================
+# RADAR DE REVISÃO DE HONORÁRIOS
+# ============================================================
+
+def _valor_seguro(valor):
+    try:
+        if pd.isna(valor):
+            return 0.0
+        return float(valor)
+    except Exception:
+        return 0.0
+
+
+def _crescimento_material(atual, referencia, percentual_minimo, aumento_minimo):
+    """
+    Evita alertas causados apenas por bases históricas muito pequenas.
+    Retorna (atingiu_criterio, variacao_percentual).
+    """
+    atual = _valor_seguro(atual)
+    referencia = _valor_seguro(referencia)
+
+    if referencia <= 0:
+        return False, None
+
+    variacao_abs = atual - referencia
+    variacao_pct = ((atual - referencia) / abs(referencia)) * 100
+
+    atingiu = (
+        variacao_pct >= percentual_minimo
+        and variacao_abs >= aumento_minimo
+    )
+
+    return atingiu, variacao_pct
+
+
+def calcular_radar_reajuste(analise):
+    """
+    Classifica clientes conforme crescimento de carga operacional.
+
+    IMPORTANTE:
+    O radar NÃO calcula reajuste de preço e NÃO afirma que o honorário
+    está incorreto. Ele identifica clientes que merecem revisão comercial.
+
+    Regras:
+    - mínimo de 3 meses anteriores para classificação conclusiva;
+    - compara mês atual com a média dos meses anteriores;
+    - usa também o primeiro mês como evidência de crescimento sustentado;
+    - exige crescimento percentual + crescimento absoluto mínimo;
+    - Folha, Processos e Faturamento são tratados como proxies de esforço.
+    """
+    if analise.empty:
+        return analise.copy()
+
+    radar = analise.copy()
+
+    resultados = []
+
+    for _, linha in radar.iterrows():
+        meses = int(_valor_seguro(linha.get("meses_historico", 0)))
+
+        atual_folha = _valor_seguro(linha.get("folha_pagamento"))
+        media_folha = _valor_seguro(linha.get("media_folha"))
+        primeira_folha = _valor_seguro(linha.get("primeira_folha"))
+
+        atual_processos = _valor_seguro(linha.get("processos"))
+        media_processos = _valor_seguro(linha.get("media_processos"))
+        primeiros_processos = _valor_seguro(linha.get("primeiros_processos"))
+
+        atual_faturamento = _valor_seguro(linha.get("faturamento"))
+        media_faturamento = _valor_seguro(linha.get("media_faturamento"))
+        primeiro_faturamento = _valor_seguro(linha.get("primeiro_faturamento"))
+
+        if meses < 3:
+            resultados.append({
+                "classificacao": "Sem histórico suficiente",
+                "pontuacao": 0,
+                "motivos": f"Apenas {meses} mês(es) anterior(es) disponível(is).",
+                "indicadores_alerta": 0,
+            })
+            continue
+
+        pontos = 0
+        motivos = []
+        indicadores_alerta = 0
+
+        # ----------------------------------------------------
+        # FOLHA
+        # Materialidade: pelo menos +5 eventos e +20%.
+        # Crescimento forte: +50% e pelo menos +10 eventos.
+        # ----------------------------------------------------
+        folha_atencao, var_folha = _crescimento_material(
+            atual_folha, media_folha, 20, 5
+        )
+        folha_forte, _ = _crescimento_material(
+            atual_folha, media_folha, 50, 10
+        )
+
+        if folha_forte:
+            pontos += 2
+            indicadores_alerta += 1
+            motivos.append(
+                f"Folha {formatar_percentual(var_folha)} acima da média histórica"
+            )
+        elif folha_atencao:
+            pontos += 1
+            indicadores_alerta += 1
+            motivos.append(
+                f"Folha {formatar_percentual(var_folha)} acima da média histórica"
+            )
+
+        # ----------------------------------------------------
+        # PROCESSOS
+        # Materialidade: pelo menos +10 processos e +20%.
+        # Crescimento forte: +50% e pelo menos +25 processos.
+        # ----------------------------------------------------
+        proc_atencao, var_proc = _crescimento_material(
+            atual_processos, media_processos, 20, 10
+        )
+        proc_forte, _ = _crescimento_material(
+            atual_processos, media_processos, 50, 25
+        )
+
+        if proc_forte:
+            pontos += 2
+            indicadores_alerta += 1
+            motivos.append(
+                f"Processos {formatar_percentual(var_proc)} acima da média histórica"
+            )
+        elif proc_atencao:
+            pontos += 1
+            indicadores_alerta += 1
+            motivos.append(
+                f"Processos {formatar_percentual(var_proc)} acima da média histórica"
+            )
+
+        # ----------------------------------------------------
+        # FATURAMENTO DO CLIENTE
+        # É proxy de porte/complexidade, não honorário da Escrita.
+        # Materialidade: +20% e pelo menos R$ 50 mil.
+        # Forte: +50% e pelo menos R$ 100 mil.
+        # ----------------------------------------------------
+        fat_atencao, var_fat = _crescimento_material(
+            atual_faturamento, media_faturamento, 20, 50000
+        )
+        fat_forte, _ = _crescimento_material(
+            atual_faturamento, media_faturamento, 50, 100000
+        )
+
+        if fat_forte:
+            pontos += 2
+            indicadores_alerta += 1
+            motivos.append(
+                f"Faturamento {formatar_percentual(var_fat)} acima da média histórica"
+            )
+        elif fat_atencao:
+            pontos += 1
+            indicadores_alerta += 1
+            motivos.append(
+                f"Faturamento {formatar_percentual(var_fat)} acima da média histórica"
+            )
+
+        # ----------------------------------------------------
+        # CRESCIMENTO SUSTENTADO DESDE O PRIMEIRO MÊS
+        # Só adiciona 1 ponto total, evitando dupla contagem excessiva.
+        # ----------------------------------------------------
+        sustentados = []
+
+        folha_inicio, var_folha_inicio = _crescimento_material(
+            atual_folha, primeira_folha, 30, 5
+        )
+        if folha_inicio:
+            sustentados.append(f"Folha {formatar_percentual(var_folha_inicio)}")
+
+        proc_inicio, var_proc_inicio = _crescimento_material(
+            atual_processos, primeiros_processos, 30, 10
+        )
+        if proc_inicio:
+            sustentados.append(f"Processos {formatar_percentual(var_proc_inicio)}")
+
+        fat_inicio, var_fat_inicio = _crescimento_material(
+            atual_faturamento, primeiro_faturamento, 30, 50000
+        )
+        if fat_inicio:
+            sustentados.append(f"Faturamento {formatar_percentual(var_fat_inicio)}")
+
+        if sustentados:
+            pontos += 1
+            motivos.append(
+                "Crescimento desde o início: " + ", ".join(sustentados)
+            )
+
+        # ----------------------------------------------------
+        # CLASSIFICAÇÃO
+        # ----------------------------------------------------
+        if pontos >= 5 or indicadores_alerta >= 3:
+            classificacao = "Prioridade"
+        elif pontos >= 3 or indicadores_alerta >= 2:
+            classificacao = "Revisar honorários"
+        elif pontos >= 1:
+            classificacao = "Atenção"
+        else:
+            classificacao = "Normal"
+            motivos.append("Sem crescimento material nos critérios do radar.")
+
+        resultados.append({
+            "classificacao": classificacao,
+            "pontuacao": pontos,
+            "motivos": "; ".join(motivos),
+            "indicadores_alerta": indicadores_alerta,
+        })
+
+    resultado_df = pd.DataFrame(resultados, index=radar.index)
+
+    for coluna in resultado_df.columns:
+        radar[coluna] = resultado_df[coluna]
+
+    return radar
+
+
+def exibir_radar_reajuste(supabase):
+    st.subheader("Radar de Revisão de Honorários")
+
+    st.caption(
+        "Prioriza clientes cuja movimentação cresceu em relação ao próprio histórico. "
+        "O radar é um instrumento de triagem comercial: ele não calcula automaticamente "
+        "o novo honorário."
+    )
+
+    try:
+        df = buscar_dados_analise_clientes(supabase, "Questor")
+    except Exception as erro:
+        st.error("Não foi possível carregar os dados do Radar de Revisão.")
+        st.exception(erro)
+        return
+
+    if df.empty:
+        st.info("Ainda não existem dados suficientes para o radar.")
+        return
+
+    competencias = sorted(df["competencia"].dropna().unique(), reverse=True)
+
+    if len(competencias) < 2:
+        st.info("É necessário ter pelo menos duas competências importadas.")
+        return
+
+    nomes_meses = {
+        1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril",
+        5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto",
+        9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro",
+    }
+
+    opcoes = {
+        f"{nomes_meses[pd.Timestamp(data).month]}/{pd.Timestamp(data).year}":
+        pd.Timestamp(data)
+        for data in competencias
+    }
+
+    competencia_label = st.selectbox(
+        "Competência do radar",
+        options=list(opcoes.keys()),
+        index=0,
+        key="radar_reajuste_competencia",
+    )
+    competencia_atual = opcoes[competencia_label]
+
+    historico_anterior = df[df["competencia"] < competencia_atual].copy()
+    atual = df[df["competencia"] == competencia_atual].copy()
+
+    if historico_anterior.empty:
+        st.info(
+            f"{competencia_label} é a primeira competência disponível. "
+            "Selecione um mês posterior."
+        )
+        return
+
+    hist_ordenado = historico_anterior.sort_values("competencia")
+
+    medias = (
+        hist_ordenado
+        .groupby("codigo_cliente", as_index=False)
+        .agg(
+            media_folha=("folha_pagamento", "mean"),
+            media_processos=("processos", "mean"),
+            media_faturamento=("faturamento", "mean"),
+            meses_historico=("competencia", "nunique"),
+        )
+    )
+
+    primeiros = (
+        hist_ordenado
+        .groupby("codigo_cliente", as_index=False)
+        .first()[
+            [
+                "codigo_cliente",
+                "folha_pagamento",
+                "processos",
+                "faturamento",
+            ]
+        ]
+        .rename(
+            columns={
+                "folha_pagamento": "primeira_folha",
+                "processos": "primeiros_processos",
+                "faturamento": "primeiro_faturamento",
+            }
+        )
+    )
+
+    analise = (
+        atual[
+            [
+                "codigo_cliente",
+                "cliente",
+                "folha_pagamento",
+                "processos",
+                "faturamento",
+            ]
+        ]
+        .merge(medias, on="codigo_cliente", how="left")
+        .merge(primeiros, on="codigo_cliente", how="left")
+    )
+
+    radar = calcular_radar_reajuste(analise)
+
+    ordem = {
+        "Prioridade": 1,
+        "Revisar honorários": 2,
+        "Atenção": 3,
+        "Normal": 4,
+        "Sem histórico suficiente": 5,
+    }
+
+    radar["ordem"] = radar["classificacao"].map(ordem).fillna(99)
+    radar = radar.sort_values(
+        ["ordem", "pontuacao", "cliente"],
+        ascending=[True, False, True],
+    )
+
+    cont_prioridade = int((radar["classificacao"] == "Prioridade").sum())
+    cont_revisar = int((radar["classificacao"] == "Revisar honorários").sum())
+    cont_atencao = int((radar["classificacao"] == "Atenção").sum())
+    cont_normal = int((radar["classificacao"] == "Normal").sum())
+
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric("Prioridade", formatar_numero(cont_prioridade))
+    col2.metric("Revisar honorários", formatar_numero(cont_revisar))
+    col3.metric("Atenção", formatar_numero(cont_atencao))
+    col4.metric("Normal", formatar_numero(cont_normal))
+
+    st.markdown("#### Filtros do radar")
+
+    col_filtro1, col_filtro2 = st.columns([1, 2])
+
+    with col_filtro1:
+        classificacoes_disponiveis = [
+            "Prioridade",
+            "Revisar honorários",
+            "Atenção",
+            "Normal",
+            "Sem histórico suficiente",
+        ]
+
+        classificacoes = st.multiselect(
+            "Classificação",
+            options=classificacoes_disponiveis,
+            default=[
+                "Prioridade",
+                "Revisar honorários",
+                "Atenção",
+            ],
+            key="radar_filtro_classificacao",
+        )
+
+    with col_filtro2:
+        busca_cliente = st.text_input(
+            "Buscar cliente",
+            placeholder="Digite parte do nome ou o código Questor",
+            key="radar_busca_cliente",
+        )
+
+    filtrado = radar.copy()
+
+    if classificacoes:
+        filtrado = filtrado[
+            filtrado["classificacao"].isin(classificacoes)
+        ]
+    else:
+        filtrado = filtrado.iloc[0:0]
+
+    if busca_cliente.strip():
+        termo = busca_cliente.strip().lower()
+        filtrado = filtrado[
+            filtrado["cliente"].astype(str).str.lower().str.contains(
+                termo, regex=False
+            )
+            |
+            filtrado["codigo_cliente"].astype(str).str.lower().str.contains(
+                termo, regex=False
+            )
+        ]
+
+    st.markdown("#### Clientes sinalizados")
+
+    if filtrado.empty:
+        st.info("Nenhum cliente encontrado com os filtros selecionados.")
+        return
+
+    visual = filtrado[
+        [
+            "classificacao",
+            "codigo_cliente",
+            "cliente",
+            "meses_historico",
+            "folha_pagamento",
+            "processos",
+            "faturamento",
+            "pontuacao",
+            "motivos",
+        ]
+    ].copy()
+
+    visual["meses_historico"] = (
+        visual["meses_historico"].fillna(0).apply(formatar_numero)
+    )
+    visual["folha_pagamento"] = visual["folha_pagamento"].apply(formatar_numero)
+    visual["processos"] = visual["processos"].apply(formatar_numero)
+    visual["faturamento"] = visual["faturamento"].apply(formatar_moeda)
+
+    visual = visual.rename(
+        columns={
+            "classificacao": "Classificação",
+            "codigo_cliente": "Código",
+            "cliente": "Cliente",
+            "meses_historico": "Meses anteriores",
+            "folha_pagamento": "Folha atual",
+            "processos": "Processos atuais",
+            "faturamento": "Faturamento atual",
+            "pontuacao": "Pontos",
+            "motivos": "Motivo do alerta",
+        }
+    )
+
+    st.dataframe(
+        visual,
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "Motivo do alerta": st.column_config.TextColumn(
+                "Motivo do alerta",
+                width="large",
+            ),
+        },
+    )
+
+    st.caption(
+        f"{len(filtrado)} cliente(s) exibido(s). "
+        "Use o radar como fila de revisão. A decisão de reajuste deve considerar "
+        "também honorário atual, escopo contratado, regime tributário, particularidades "
+        "operacionais e rentabilidade do cliente."
+    )
+
+
+
 # ============================================================
 # TELA
 # ============================================================
@@ -1008,6 +1472,14 @@ def tela_monitoramento_producao(supabase):
     # ========================================================
 
     exibir_analise_crescimento_clientes(supabase)
+
+    st.divider()
+
+    # ========================================================
+    # RADAR DE REVISÃO DE HONORÁRIOS
+    # ========================================================
+
+    exibir_radar_reajuste(supabase)
 
     st.divider()
 
