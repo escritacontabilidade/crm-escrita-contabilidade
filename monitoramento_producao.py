@@ -652,7 +652,7 @@ def buscar_dados_analise_clientes(supabase, sistema="Questor"):
     """Busca todo o histórico necessário para comparação cliente a cliente."""
     campos = (
         "competencia,codigo_cliente,cliente,"
-        "folha_pagamento,processos,faturamento"
+        "folha_pagamento,processos,notas_fiscais,contabil,faturamento"
     )
 
     todos_registros = []
@@ -685,7 +685,7 @@ def buscar_dados_analise_clientes(supabase, sistema="Questor"):
     df["competencia"] = pd.to_datetime(df["competencia"], errors="coerce")
     df = df.dropna(subset=["competencia"])
 
-    for coluna in ["folha_pagamento", "processos", "faturamento"]:
+    for coluna in ["folha_pagamento", "processos", "notas_fiscais", "contabil", "faturamento"]:
         df[coluna] = pd.to_numeric(df[coluna], errors="coerce").fillna(0)
 
     df["codigo_cliente"] = df["codigo_cliente"].astype(str)
@@ -771,10 +771,10 @@ def exibir_analise_crescimento_clientes(supabase):
     )
     mediana_clientes = float(clientes_por_mes.median()) if not clientes_por_mes.empty else 0
 
-    totais_atual = atual[["folha_pagamento", "processos", "faturamento"]].sum()
+    totais_atual = atual[["folha_pagamento", "processos", "notas_fiscais", "contabil", "faturamento"]].sum()
     totais_hist = (
         historico_anterior
-        .groupby("competencia")[["folha_pagamento", "processos", "faturamento"]]
+        .groupby("competencia")[["folha_pagamento", "processos", "notas_fiscais", "contabil", "faturamento"]]
         .sum()
     )
     medianas_hist = totais_hist.median() if not totais_hist.empty else pd.Series(dtype=float)
@@ -790,6 +790,8 @@ def exibir_analise_crescimento_clientes(supabase):
     for coluna, rotulo in [
         ("folha_pagamento", "Folha"),
         ("processos", "Processos"),
+        ("notas_fiscais", "Notas Fiscais"),
+        ("contabil", "Contábil"),
         ("faturamento", "Faturamento"),
     ]:
         referencia = float(medianas_hist.get(coluna, 0) or 0)
@@ -831,6 +833,8 @@ def exibir_analise_crescimento_clientes(supabase):
         .agg(
             media_folha=("folha_pagamento", "mean"),
             media_processos=("processos", "mean"),
+            media_notas_fiscais=("notas_fiscais", "mean"),
+            media_contabil=("contabil", "mean"),
             media_faturamento=("faturamento", "mean"),
             meses_historico=("competencia", "nunique"),
         )
@@ -845,6 +849,8 @@ def exibir_analise_crescimento_clientes(supabase):
                 "competencia",
                 "folha_pagamento",
                 "processos",
+                "notas_fiscais",
+                "contabil",
                 "faturamento",
             ]
         ]
@@ -853,6 +859,8 @@ def exibir_analise_crescimento_clientes(supabase):
                 "competencia": "primeira_competencia",
                 "folha_pagamento": "primeira_folha",
                 "processos": "primeiros_processos",
+                "notas_fiscais": "primeiras_notas_fiscais",
+                "contabil": "primeiro_contabil",
                 "faturamento": "primeiro_faturamento",
             }
         )
@@ -865,6 +873,8 @@ def exibir_analise_crescimento_clientes(supabase):
                 "cliente",
                 "folha_pagamento",
                 "processos",
+                "notas_fiscais",
+                "contabil",
                 "faturamento",
             ]
         ]
@@ -872,20 +882,26 @@ def exibir_analise_crescimento_clientes(supabase):
         .merge(primeiros, on="codigo_cliente", how="left")
     )
 
-    for metrica in ["folha", "processos", "faturamento"]:
+    for metrica in ["folha", "processos", "notas_fiscais", "contabil", "faturamento"]:
         atual_col = {
             "folha": "folha_pagamento",
             "processos": "processos",
+            "notas_fiscais": "notas_fiscais",
+            "contabil": "contabil",
             "faturamento": "faturamento",
         }[metrica]
         media_col = {
             "folha": "media_folha",
             "processos": "media_processos",
+            "notas_fiscais": "media_notas_fiscais",
+            "contabil": "media_contabil",
             "faturamento": "media_faturamento",
         }[metrica]
         primeiro_col = {
             "folha": "primeira_folha",
             "processos": "primeiros_processos",
+            "notas_fiscais": "primeiras_notas_fiscais",
+            "contabil": "primeiro_contabil",
             "faturamento": "primeiro_faturamento",
         }[metrica]
 
@@ -906,7 +922,7 @@ def exibir_analise_crescimento_clientes(supabase):
 
     metrica_escolhida = st.radio(
         "Indicador principal",
-        options=["Folha", "Processos", "Faturamento"],
+        options=["Folha", "Processos", "Notas Fiscais", "Contábil", "Faturamento"],
         horizontal=True,
         key="analise_crescimento_metrica",
     )
@@ -919,6 +935,14 @@ def exibir_analise_crescimento_clientes(supabase):
         "Processos": (
             "processos", "media_processos", "primeiros_processos",
             "var_processos_media", "var_processos_inicio"
+        ),
+        "Notas Fiscais": (
+            "notas_fiscais", "media_notas_fiscais", "primeiras_notas_fiscais",
+            "var_notas_fiscais_media", "var_notas_fiscais_inicio"
+        ),
+        "Contábil": (
+            "contabil", "media_contabil", "primeiro_contabil",
+            "var_contabil_media", "var_contabil_inicio"
         ),
         "Faturamento": (
             "faturamento", "media_faturamento", "primeiro_faturamento",
@@ -1029,7 +1053,7 @@ def calcular_radar_reajuste(analise):
     - compara mês atual com a média dos meses anteriores;
     - usa também o primeiro mês como evidência de crescimento sustentado;
     - exige crescimento percentual + crescimento absoluto mínimo;
-    - Folha, Processos e Faturamento são tratados como proxies de esforço.
+    - Folha, Processos, Notas Fiscais, Contábil e Faturamento são tratados como indicadores de crescimento.
     """
     if analise.empty:
         return analise.copy()
@@ -1048,6 +1072,14 @@ def calcular_radar_reajuste(analise):
         atual_processos = _valor_seguro(linha.get("processos"))
         media_processos = _valor_seguro(linha.get("media_processos"))
         primeiros_processos = _valor_seguro(linha.get("primeiros_processos"))
+
+        atual_notas = _valor_seguro(linha.get("notas_fiscais"))
+        media_notas = _valor_seguro(linha.get("media_notas_fiscais"))
+        primeiras_notas = _valor_seguro(linha.get("primeiras_notas_fiscais"))
+
+        atual_contabil = _valor_seguro(linha.get("contabil"))
+        media_contabil = _valor_seguro(linha.get("media_contabil"))
+        primeiro_contabil = _valor_seguro(linha.get("primeiro_contabil"))
 
         atual_faturamento = _valor_seguro(linha.get("faturamento"))
         media_faturamento = _valor_seguro(linha.get("media_faturamento"))
@@ -1117,6 +1149,56 @@ def calcular_radar_reajuste(analise):
             )
 
         # ----------------------------------------------------
+        # NOTAS FISCAIS (Entradas + Saídas)
+        # Materialidade: +20% e pelo menos +20 notas.
+        # Forte: +50% e pelo menos +50 notas.
+        # ----------------------------------------------------
+        notas_atencao, var_notas = _crescimento_material(
+            atual_notas, media_notas, 20, 20
+        )
+        notas_forte, _ = _crescimento_material(
+            atual_notas, media_notas, 50, 50
+        )
+
+        if notas_forte:
+            pontos += 2
+            indicadores_alerta += 1
+            motivos.append(
+                f"Notas Fiscais {formatar_percentual(var_notas)} acima da média histórica"
+            )
+        elif notas_atencao:
+            pontos += 1
+            indicadores_alerta += 1
+            motivos.append(
+                f"Notas Fiscais {formatar_percentual(var_notas)} acima da média histórica"
+            )
+
+        # ----------------------------------------------------
+        # CONTÁBIL
+        # Materialidade: +20% e pelo menos +50 lançamentos.
+        # Forte: +50% e pelo menos +100 lançamentos.
+        # ----------------------------------------------------
+        contabil_atencao, var_contabil = _crescimento_material(
+            atual_contabil, media_contabil, 20, 50
+        )
+        contabil_forte, _ = _crescimento_material(
+            atual_contabil, media_contabil, 50, 100
+        )
+
+        if contabil_forte:
+            pontos += 2
+            indicadores_alerta += 1
+            motivos.append(
+                f"Contábil {formatar_percentual(var_contabil)} acima da média histórica"
+            )
+        elif contabil_atencao:
+            pontos += 1
+            indicadores_alerta += 1
+            motivos.append(
+                f"Contábil {formatar_percentual(var_contabil)} acima da média histórica"
+            )
+
+        # ----------------------------------------------------
         # FATURAMENTO DO CLIENTE
         # É proxy de porte/complexidade, não honorário da Escrita.
         # Materialidade: +20% e pelo menos R$ 50 mil.
@@ -1159,6 +1241,18 @@ def calcular_radar_reajuste(analise):
         )
         if proc_inicio:
             sustentados.append(f"Processos {formatar_percentual(var_proc_inicio)}")
+
+        notas_inicio, var_notas_inicio = _crescimento_material(
+            atual_notas, primeiras_notas, 30, 20
+        )
+        if notas_inicio:
+            sustentados.append(f"Notas Fiscais {formatar_percentual(var_notas_inicio)}")
+
+        contabil_inicio, var_contabil_inicio = _crescimento_material(
+            atual_contabil, primeiro_contabil, 30, 50
+        )
+        if contabil_inicio:
+            sustentados.append(f"Contábil {formatar_percentual(var_contabil_inicio)}")
 
         fat_inicio, var_fat_inicio = _crescimento_material(
             atual_faturamento, primeiro_faturamento, 30, 50000
@@ -1264,6 +1358,8 @@ def exibir_radar_reajuste(supabase):
         .agg(
             media_folha=("folha_pagamento", "mean"),
             media_processos=("processos", "mean"),
+            media_notas_fiscais=("notas_fiscais", "mean"),
+            media_contabil=("contabil", "mean"),
             media_faturamento=("faturamento", "mean"),
             meses_historico=("competencia", "nunique"),
         )
@@ -1277,6 +1373,8 @@ def exibir_radar_reajuste(supabase):
                 "codigo_cliente",
                 "folha_pagamento",
                 "processos",
+                "notas_fiscais",
+                "contabil",
                 "faturamento",
             ]
         ]
@@ -1284,6 +1382,8 @@ def exibir_radar_reajuste(supabase):
             columns={
                 "folha_pagamento": "primeira_folha",
                 "processos": "primeiros_processos",
+                "notas_fiscais": "primeiras_notas_fiscais",
+                "contabil": "primeiro_contabil",
                 "faturamento": "primeiro_faturamento",
             }
         )
@@ -1296,6 +1396,8 @@ def exibir_radar_reajuste(supabase):
                 "cliente",
                 "folha_pagamento",
                 "processos",
+                "notas_fiscais",
+                "contabil",
                 "faturamento",
             ]
         ]
@@ -1396,6 +1498,8 @@ def exibir_radar_reajuste(supabase):
             "meses_historico",
             "folha_pagamento",
             "processos",
+            "notas_fiscais",
+            "contabil",
             "faturamento",
             "pontuacao",
             "motivos",
@@ -1407,6 +1511,8 @@ def exibir_radar_reajuste(supabase):
     )
     visual["folha_pagamento"] = visual["folha_pagamento"].apply(formatar_numero)
     visual["processos"] = visual["processos"].apply(formatar_numero)
+    visual["notas_fiscais"] = visual["notas_fiscais"].apply(formatar_numero)
+    visual["contabil"] = visual["contabil"].apply(formatar_numero)
     visual["faturamento"] = visual["faturamento"].apply(formatar_moeda)
 
     visual = visual.rename(
@@ -1417,6 +1523,8 @@ def exibir_radar_reajuste(supabase):
             "meses_historico": "Meses anteriores",
             "folha_pagamento": "Folha atual",
             "processos": "Processos atuais",
+            "notas_fiscais": "Notas Fiscais atuais",
+            "contabil": "Contábil atual",
             "faturamento": "Faturamento atual",
             "pontuacao": "Pontos",
             "motivos": "Motivo do alerta",
