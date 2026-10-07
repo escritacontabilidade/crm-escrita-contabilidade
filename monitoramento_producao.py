@@ -44,10 +44,12 @@ COLUNAS_NUMERICAS = [
 ]
 
 
+# ============================================================
+# FUNÇÕES AUXILIARES
+# ============================================================
+
 def separar_codigo_cliente(valor):
     """
-    Separa o código Questor da razão social.
-
     Exemplo:
     16 - CLINMEDI CLINICA MEDICA ITAJAI LTDA
 
@@ -82,10 +84,8 @@ def separar_codigo_cliente(valor):
 
 def converter_numero(valor):
     """
-    Converte valores numéricos vindos do Excel.
-
-    Aceita números reais do Excel e também textos
-    com formatação brasileira.
+    Converte valores numéricos do Excel.
+    Aceita número real e texto em padrão brasileiro.
     """
 
     if pd.isna(valor):
@@ -101,8 +101,6 @@ def converter_numero(valor):
 
     texto = texto.replace("R$", "").strip()
 
-    # Formato brasileiro:
-    # 1.234.567,89
     if "," in texto:
         texto = texto.replace(".", "")
         texto = texto.replace(",", ".")
@@ -139,40 +137,40 @@ def formatar_moeda(valor):
         return "R$ 0,00"
 
 
-def preparar_arquivo_questor(arquivo):
-    """
-    Lê e valida o arquivo mensal exportado do Questor.
+# ============================================================
+# LEITURA E TRATAMENTO DO EXCEL
+# ============================================================
 
-    Esta função NÃO grava dados no Supabase.
-    Apenas prepara e valida os dados.
-    """
+def preparar_arquivo_questor(arquivo):
 
     try:
         df = pd.read_excel(
             arquivo,
             sheet_name="Export",
         )
+
     except ValueError:
         raise ValueError(
             "Não foi encontrada a aba 'Export' no arquivo."
         )
+
     except Exception as erro:
         raise ValueError(
             f"Não foi possível ler o arquivo Excel: {erro}"
         )
 
-    # ---------------------------------------------------------
-    # LIMPEZA DOS NOMES DAS COLUNAS
-    # ---------------------------------------------------------
+    # --------------------------------------------------------
+    # LIMPAR NOMES DAS COLUNAS
+    # --------------------------------------------------------
 
     df.columns = [
         str(coluna).strip()
         for coluna in df.columns
     ]
 
-    # ---------------------------------------------------------
-    # VALIDAÇÃO DAS COLUNAS
-    # ---------------------------------------------------------
+    # --------------------------------------------------------
+    # VALIDAR COLUNAS
+    # --------------------------------------------------------
 
     colunas_faltantes = [
         coluna
@@ -187,36 +185,39 @@ def preparar_arquivo_questor(arquivo):
             + ", ".join(colunas_faltantes)
         )
 
-    # Trabalhamos somente com as colunas que conhecemos.
     df = df[COLUNAS_ESPERADAS].copy()
 
-    # ---------------------------------------------------------
-    # REMOVER LINHAS COMPLETAMENTE VAZIAS
-    # ---------------------------------------------------------
+    # --------------------------------------------------------
+    # REMOVER LINHAS VAZIAS
+    # --------------------------------------------------------
 
     df = df.dropna(how="all")
 
-    # ---------------------------------------------------------
-    # LIMPEZA DO CAMPO CLIENTE
-    # ---------------------------------------------------------
+    df["Cliente"] = (
+        df["Cliente"]
+        .astype(str)
+        .str.strip()
+    )
 
-    df["Cliente"] = df["Cliente"].astype(str).str.strip()
-
-    # Remove linhas vazias convertidas para string.
     df = df[
-        ~df["Cliente"].str.lower().isin(
-            ["", "nan", "none"]
-        )
+        ~df["Cliente"]
+        .str.lower()
+        .isin(["", "nan", "none"])
     ].copy()
 
-    # Remove linha Total.
+    # --------------------------------------------------------
+    # REMOVER TOTAL
+    # --------------------------------------------------------
+
     df = df[
-        ~df["Cliente"].str.lower().str.startswith("total")
+        ~df["Cliente"]
+        .str.lower()
+        .str.startswith("total")
     ].copy()
 
-    # ---------------------------------------------------------
-    # SEPARAR CÓDIGO E RAZÃO SOCIAL
-    # ---------------------------------------------------------
+    # --------------------------------------------------------
+    # SEPARAR CÓDIGO E NOME
+    # --------------------------------------------------------
 
     clientes_separados = df["Cliente"].apply(
         separar_codigo_cliente
@@ -230,9 +231,9 @@ def preparar_arquivo_questor(arquivo):
         lambda x: x[1]
     )
 
-    # ---------------------------------------------------------
-    # MANTER SOMENTE CLIENTES COM CÓDIGO QUESTOR VÁLIDO
-    # ---------------------------------------------------------
+    # --------------------------------------------------------
+    # VALIDAR CÓDIGO QUESTOR
+    # --------------------------------------------------------
 
     df = df[
         df["codigo_questor"].notna()
@@ -244,32 +245,32 @@ def preparar_arquivo_questor(arquivo):
         .str.strip()
     )
 
-    # O código Questor deve ser numérico.
     df = df[
-        df["codigo_questor"].str.match(r"^\d+$", na=False)
+        df["codigo_questor"]
+        .str.match(r"^\d+$", na=False)
     ].copy()
 
-    # ---------------------------------------------------------
-    # CONVERTER COLUNAS NUMÉRICAS
-    # ---------------------------------------------------------
+    # --------------------------------------------------------
+    # CONVERTER NÚMEROS
+    # --------------------------------------------------------
 
     for coluna in COLUNAS_NUMERICAS:
         df[coluna] = df[coluna].apply(
             converter_numero
         )
 
-    # ---------------------------------------------------------
-    # CRIAR NOTAS DE ENTRADA + SAÍDA
-    # ---------------------------------------------------------
+    # --------------------------------------------------------
+    # NOTAS FISCAIS
+    # --------------------------------------------------------
 
     df["notas_fiscais"] = (
         df["Entradas"]
         + df["Saídas"]
     )
 
-    # ---------------------------------------------------------
-    # REORGANIZAR COLUNAS
-    # ---------------------------------------------------------
+    # --------------------------------------------------------
+    # REORGANIZAR
+    # --------------------------------------------------------
 
     df = df[
         [
@@ -287,9 +288,9 @@ def preparar_arquivo_questor(arquivo):
         ]
     ].copy()
 
-    # ---------------------------------------------------------
-    # RENOMEAR PARA NOMES INTERNOS
-    # ---------------------------------------------------------
+    # --------------------------------------------------------
+    # NOMES INTERNOS
+    # --------------------------------------------------------
 
     df = df.rename(
         columns={
@@ -304,19 +305,175 @@ def preparar_arquivo_questor(arquivo):
         }
     )
 
-    # ---------------------------------------------------------
-    # REMOVER POSSÍVEIS DUPLICIDADES DO MESMO CÓDIGO
-    # ---------------------------------------------------------
+    # --------------------------------------------------------
+    # EVITAR CÓDIGO DUPLICADO NO MESMO ARQUIVO
+    # --------------------------------------------------------
 
     df = df.drop_duplicates(
         subset=["codigo_questor"],
         keep="last",
     )
 
-    df = df.reset_index(drop=True)
+    return df.reset_index(drop=True)
 
-    return df
 
+# ============================================================
+# BANCO DE DADOS
+# ============================================================
+
+def contar_registros_competencia(
+    supabase,
+    sistema,
+    competencia,
+):
+    """
+    Retorna quantos registros já existem para
+    sistema + competência.
+    """
+
+    resultado = (
+        supabase
+        .table("producao_clientes")
+        .select("id", count="exact")
+        .eq("sistema", sistema)
+        .eq("competencia", competencia)
+        .execute()
+    )
+
+    return resultado.count or 0
+
+
+def preparar_registros_banco(
+    df,
+    competencia,
+    arquivo_nome,
+):
+    """
+    Converte o DataFrame validado em registros
+    compatíveis com producao_clientes.
+    """
+
+    registros = []
+
+    for _, linha in df.iterrows():
+
+        registro = {
+            "sistema": "Questor",
+            "codigo_cliente": str(
+                linha["codigo_questor"]
+            ),
+            "cliente": str(
+                linha["razao_social"]
+            ),
+            "competencia": competencia,
+
+            "folha_pagamento": float(
+                linha["folha_pagamento"]
+            ),
+
+            "admissao": float(
+                linha["admissoes"]
+            ),
+
+            "rescisao": float(
+                linha["rescisoes"]
+            ),
+
+            "contabil": float(
+                linha["contabil"]
+            ),
+
+            "entradas": float(
+                linha["entradas"]
+            ),
+
+            "saidas": float(
+                linha["saidas"]
+            ),
+
+            "notas_fiscais": float(
+                linha["notas_fiscais"]
+            ),
+
+            "processos": float(
+                linha["processos"]
+            ),
+
+            "faturamento": float(
+                linha["faturamento"]
+            ),
+
+            "arquivo_origem": arquivo_nome,
+        }
+
+        registros.append(registro)
+
+    return registros
+
+
+def inserir_registros_em_lotes(
+    supabase,
+    registros,
+    tamanho_lote=100,
+):
+    """
+    Insere os registros em pequenos lotes.
+    Isso evita enviar centenas de linhas em
+    uma única requisição.
+    """
+
+    total_inseridos = 0
+
+    for inicio in range(
+        0,
+        len(registros),
+        tamanho_lote,
+    ):
+
+        lote = registros[
+            inicio:inicio + tamanho_lote
+        ]
+
+        resultado = (
+            supabase
+            .table("producao_clientes")
+            .insert(lote)
+            .execute()
+        )
+
+        if resultado.data:
+            total_inseridos += len(
+                resultado.data
+            )
+        else:
+            total_inseridos += len(lote)
+
+    return total_inseridos
+
+
+def excluir_competencia(
+    supabase,
+    sistema,
+    competencia,
+):
+    """
+    Exclui somente a competência informada
+    para o sistema informado.
+    """
+
+    return (
+        supabase
+        .table("producao_clientes")
+        .delete()
+        .eq("sistema", sistema)
+        .eq("competencia", competencia)
+        .execute()
+    )
+
+
+# ============================================================
+# TELA
+# ============================================================
 
 def tela_monitoramento_producao(supabase):
 
@@ -334,13 +491,13 @@ def tela_monitoramento_producao(supabase):
     st.info(
         "Informe a competência correspondente aos dados do arquivo. "
         "Exemplo: se o arquivo contém a produção de setembro de 2026, "
-        "selecione Setembro e 2026, mesmo que a importação esteja sendo "
-        "realizada em outubro."
+        "selecione Setembro e 2026, mesmo que a importação esteja "
+        "sendo realizada em outubro."
     )
 
-    # =========================================================
+    # ========================================================
     # COMPETÊNCIA
-    # =========================================================
+    # ========================================================
 
     col_mes, col_ano = st.columns(2)
 
@@ -382,9 +539,9 @@ def tela_monitoramento_producao(supabase):
         f"**{mes_nome}/{ano}**"
     )
 
-    # =========================================================
+    # ========================================================
     # SISTEMA
-    # =========================================================
+    # ========================================================
 
     st.text_input(
         "Sistema de origem",
@@ -393,9 +550,9 @@ def tela_monitoramento_producao(supabase):
         key="producao_sistema_origem",
     )
 
-    # =========================================================
+    # ========================================================
     # ARQUIVO
-    # =========================================================
+    # ========================================================
 
     arquivo = st.file_uploader(
         "Arquivo de produção do Questor *",
@@ -416,10 +573,6 @@ def tela_monitoramento_producao(supabase):
 
         return
 
-    # =========================================================
-    # IDENTIFICAÇÃO
-    # =========================================================
-
     st.success("Arquivo selecionado.")
 
     st.write(
@@ -436,9 +589,9 @@ def tela_monitoramento_producao(supabase):
 
     st.divider()
 
-    # =========================================================
-    # LEITURA E VALIDAÇÃO
-    # =========================================================
+    # ========================================================
+    # VALIDAÇÃO
+    # ========================================================
 
     st.subheader("Validação do arquivo")
 
@@ -459,20 +612,18 @@ def tela_monitoramento_producao(supabase):
     if df.empty:
 
         st.error(
-            "Nenhum cliente válido foi encontrado "
-            "no arquivo."
+            "Nenhum cliente válido foi encontrado."
         )
 
         return
 
     st.success(
-        "Arquivo validado com sucesso. "
-        "Nenhum dado foi gravado no banco de dados."
+        "Arquivo validado com sucesso."
     )
 
-    # =========================================================
-    # INDICADORES GERAIS
-    # =========================================================
+    # ========================================================
+    # INDICADORES
+    # ========================================================
 
     st.subheader("Resumo da produção")
 
@@ -493,7 +644,6 @@ def tela_monitoramento_producao(supabase):
     col1, col2, col3, col4 = st.columns(4)
 
     with col1:
-
         st.metric(
             "Clientes",
             formatar_numero(
@@ -502,7 +652,6 @@ def tela_monitoramento_producao(supabase):
         )
 
     with col2:
-
         st.metric(
             "Folha de pagamento",
             formatar_numero(
@@ -511,7 +660,6 @@ def tela_monitoramento_producao(supabase):
         )
 
     with col3:
-
         st.metric(
             "Processos",
             formatar_numero(
@@ -520,7 +668,6 @@ def tela_monitoramento_producao(supabase):
         )
 
     with col4:
-
         st.metric(
             "Faturamento",
             formatar_moeda(
@@ -528,9 +675,9 @@ def tela_monitoramento_producao(supabase):
             ),
         )
 
-    # =========================================================
-    # DEMAIS INDICADORES
-    # =========================================================
+    # ========================================================
+    # DEMAIS MOVIMENTAÇÕES
+    # ========================================================
 
     st.markdown(
         "#### Demais movimentações"
@@ -612,17 +759,12 @@ def tela_monitoramento_producao(supabase):
 
     st.divider()
 
-    # =========================================================
+    # ========================================================
     # PRÉ-VISUALIZAÇÃO
-    # =========================================================
+    # ========================================================
 
     st.subheader(
         "Pré-visualização dos clientes"
-    )
-
-    st.caption(
-        "A tabela abaixo mostra como os dados serão "
-        "tratados antes da futura importação."
     )
 
     df_visualizacao = df.copy()
@@ -649,42 +791,170 @@ def tela_monitoramento_producao(supabase):
         hide_index=True,
     )
 
-    # =========================================================
-    # INFORMAÇÕES PARA FUTURA GRAVAÇÃO
-    # =========================================================
-
     st.divider()
 
-    st.subheader(
-        "Dados preparados para importação"
-    )
+    # ========================================================
+    # VERIFICAR SE A COMPETÊNCIA JÁ EXISTE
+    # ========================================================
 
-    st.write(
-        f"**Sistema:** Questor"
-    )
+    st.subheader("Importação para o banco de dados")
 
-    st.write(
-        f"**Competência:** {competencia}"
-    )
+    try:
 
-    st.write(
-        f"**Clientes válidos:** "
-        f"{quantidade_clientes}"
-    )
+        registros_existentes = (
+            contar_registros_competencia(
+                supabase,
+                "Questor",
+                competencia,
+            )
+        )
 
-    st.write(
-        "**Identificador principal:** "
-        "Código Questor"
-    )
+    except Exception as erro:
 
-    st.write(
-        "**Notas fiscais:** "
-        "Entradas + Saídas"
-    )
+        st.error(
+            "Não foi possível consultar o banco de dados."
+        )
 
-    st.warning(
-        "Nesta etapa os dados ainda NÃO serão gravados "
-        "no Supabase. Estamos validando a leitura e o "
-        "tratamento do arquivo antes de habilitar a "
-        "importação definitiva."
-    )
+        st.exception(erro)
+
+        return
+
+    # ========================================================
+    # COMPETÊNCIA NOVA
+    # ========================================================
+
+    if registros_existentes == 0:
+
+        st.success(
+            f"A competência {mes_nome}/{ano} "
+            "ainda não foi importada."
+        )
+
+        st.write(
+            f"Serão gravados **{quantidade_clientes} clientes**."
+        )
+
+        registros = preparar_registros_banco(
+            df,
+            competencia,
+            arquivo.name,
+        )
+
+        if st.button(
+            f"Importar {mes_nome}/{ano}",
+            type="primary",
+            use_container_width=True,
+        ):
+
+            try:
+
+                with st.spinner(
+                    "Importando dados para o banco..."
+                ):
+
+                    total_inseridos = (
+                        inserir_registros_em_lotes(
+                            supabase,
+                            registros,
+                        )
+                    )
+
+                st.success(
+                    f"Importação concluída. "
+                    f"{total_inseridos} registros "
+                    f"foram gravados para "
+                    f"{mes_nome}/{ano}."
+                )
+
+                st.balloons()
+
+                st.rerun()
+
+            except Exception as erro:
+
+                st.error(
+                    "A importação não foi concluída."
+                )
+
+                st.exception(erro)
+
+    # ========================================================
+    # COMPETÊNCIA JÁ EXISTENTE
+    # ========================================================
+
+    else:
+
+        st.warning(
+            f"A competência **{mes_nome}/{ano}** "
+            f"já possui **{registros_existentes} registros** "
+            "do Questor no banco de dados."
+        )
+
+        st.info(
+            "Para evitar duplicidades, uma nova importação "
+            "não será realizada automaticamente. "
+            "Se este arquivo deve substituir o arquivo anterior, "
+            "utilize a opção abaixo."
+        )
+
+        confirmar = st.checkbox(
+            f"Confirmo que desejo substituir completamente "
+            f"os dados de {mes_nome}/{ano}.",
+            key=(
+                f"confirmar_substituicao_"
+                f"{ano}_{mes_numero}"
+            ),
+        )
+
+        registros = preparar_registros_banco(
+            df,
+            competencia,
+            arquivo.name,
+        )
+
+        if confirmar:
+
+            if st.button(
+                f"Substituir {mes_nome}/{ano}",
+                type="primary",
+                use_container_width=True,
+            ):
+
+                try:
+
+                    with st.spinner(
+                        "Substituindo a competência..."
+                    ):
+
+                        # Apaga SOMENTE:
+                        # Questor + competência selecionada
+                        excluir_competencia(
+                            supabase,
+                            "Questor",
+                            competencia,
+                        )
+
+                        total_inseridos = (
+                            inserir_registros_em_lotes(
+                                supabase,
+                                registros,
+                            )
+                        )
+
+                    st.success(
+                        f"{mes_nome}/{ano} foi substituído "
+                        f"com sucesso. "
+                        f"{total_inseridos} registros "
+                        "foram gravados."
+                    )
+
+                    st.rerun()
+
+                except Exception as erro:
+
+                    st.error(
+                        "Não foi possível concluir "
+                        "a substituição."
+                    )
+
+                    st.exception(erro)
