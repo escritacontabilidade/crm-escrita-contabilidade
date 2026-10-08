@@ -1551,23 +1551,22 @@ def exibir_radar_reajuste(supabase):
 
 def tela_monitoramento_producao(supabase):
     st.title("📊 Monitoramento de Produção")
-    admin = (
-        st.session_state.get("autenticado") is True
-        and st.session_state.get("perfil_usuario") == "admin"
-    )
-    if admin:
+    autenticado = st.session_state.get("autenticado") is True
+    perfil = st.session_state.get("perfil_usuario")
+    pode_consultar = autenticado and perfil in ("admin", "comercial")
+    admin = autenticado and perfil == "admin"
+    if pode_consultar:
         abas = st.tabs(["Produção e Radar", "Honorários", "Produção × Honorários"])
-    else:
-        abas = st.tabs(["Produção e Radar"])
-
-    if admin:
-        # Os dados financeiros nunca são consultados pelo cliente Supabase comum.
-        # O módulo administrativo revalida o perfil antes de cada consulta.
-        from monitoramento_honorarios import tela_honorarios, tela_cruzamento
+        from monitoramento_honorarios import tela_honorarios, tela_consulta_honorarios, tela_cruzamento
         with abas[1]:
-            tela_honorarios()
+            if admin:
+                tela_honorarios()
+            else:
+                tela_consulta_honorarios()
         with abas[2]:
             tela_cruzamento()
+    else:
+        abas = st.tabs(["Produção e Radar"])
 
     with abas[0]:
         st.write("Importação, histórico e acompanhamento de Questor e Contabit.")
