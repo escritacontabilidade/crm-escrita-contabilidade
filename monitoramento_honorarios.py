@@ -1,11 +1,11 @@
-"""Honorários do CRM Escrita. Uso exclusivo do perfil admin no servidor."""
+"""Honorários do CRM Escrita: leitura admin/comercial, alteração somente admin."""
 import re
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
 
 import pandas as pd
 import streamlit as st
-from database_admin import exigir_admin, get_supabase_admin
+from database_admin import exigir_admin, exigir_acesso_honorarios, get_supabase_admin, get_supabase_financeiro
 
 CAMPOS_VALORES = {
     'Vl. Recorrente': 'valor_recorrente',
@@ -69,8 +69,8 @@ def ler_honorarios(arquivo):
 
 
 def paginar(tabela, campos, **filtros):
-    exigir_admin()
-    db = get_supabase_admin()
+    exigir_acesso_honorarios()
+    db = get_supabase_financeiro()
     saida = []
     offset = 0
     while True:
@@ -106,10 +106,39 @@ def gravar_lotes(db, registros):
         db.table('honorarios_clientes').insert(registros[inicio:inicio+100]).execute()
 
 
+def tela_consulta_honorarios():
+    """Consulta financeira sem recursos de importação, exclusão ou substituição."""
+    exigir_acesso_honorarios()
+    st.subheader('Honorários — consulta')
+    st.caption('Consulta de honorários recorrentes, variáveis e adicionais anuais. Alterações são exclusivas do administrador.')
+    try:
+        registros = paginar('honorarios_clientes', 'id,competencia,codigo_cliente,cliente,estabelecimento,numero_documento,valor_recorrente,valor_variavel,valor_adicional_anual,valor_total')
+    except Exception as exc:
+        st.error(f'Não foi possível consultar os honorários: {exc}')
+        return
+    if not registros:
+        st.info('Ainda não existem honorários importados.')
+        return
+    df = pd.DataFrame(registros)
+    for c in ['valor_recorrente','valor_variavel','valor_adicional_anual','valor_total']:
+        df[c] = pd.to_numeric(df[c], errors='coerce').fillna(0)
+    opcoes = sorted(df['competencia'].dropna().unique().tolist(), reverse=True)
+    competencia = st.selectbox('Competência', opcoes, key='hon_consulta_comp')
+    atual = df[df['competencia'] == competencia].copy()
+    resumo = atual.groupby(['codigo_cliente','cliente'], as_index=False)[['valor_recorrente','valor_variavel','valor_adicional_anual','valor_total']].sum()
+    c1,c2,c3,c4 = st.columns(4)
+    c1.metric('Clientes', resumo['codigo_cliente'].nunique())
+    c2.metric('Honorários recorrentes', moeda(resumo['valor_recorrente'].sum()))
+    c3.metric('Receitas variáveis', moeda(resumo['valor_variavel'].sum()))
+    c4.metric('Receita total', moeda(resumo['valor_total'].sum()))
+    st.dataframe(resumo.sort_values('cliente'), use_container_width=True, hide_index=True)
+    st.caption(f'{len(atual)} documento(s) na competência. Adicional anual: {moeda(resumo["valor_adicional_anual"].sum())}.')
+
+
 def tela_honorarios():
     exigir_admin()
     st.subheader('Honorários — importação e conferência')
-    st.caption('Receita recorrente, variável e adicional anual permanecem separados. Valores financeiros exclusivos do administrador.')
+    st.caption('Receita recorrente, variável e adicional anual permanecem separados. Importação exclusiva do administrador.')
     db = get_supabase_admin()
     col1, col2 = st.columns(2)
     with col1:
@@ -148,6 +177,7 @@ def tela_honorarios():
         else:
             confirmar_substituicao = True
         if st.button('Importar honorários' if not existentes else 'Substituir honorários da competência', type='primary', disabled=not (confirmar and confirmar_substituicao), key='hon_gravar'):
+            exigir_admin()  # Revalidação no momento da gravação.
             registros = registros_importacao(df, competencia, arquivo.name)
             try:
                 if existentes:
@@ -165,7 +195,7 @@ def tela_honorarios():
 
 
 def tela_cruzamento():
-    exigir_admin()
+    exigir_acesso_honorarios()
     st.subheader('Produção × Honorários')
     st.caption('O faturamento da produção representa a movimentação do cliente; não é receita de honorários da Escrita.')
     try:
