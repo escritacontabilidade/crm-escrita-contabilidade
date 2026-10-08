@@ -54,7 +54,7 @@ from filiais_module import (
 from constituicao_module import renderizar_formulario_constituicao
 from theme_escrita import aplicar_tema_escrita
 from ui_escrita import cabecalho_pagina, badge_status
-from monitoramento_producao import tela_monitoramento_producao
+from monitoramento_producao_integrado import tela_monitoramento_producao
 
 def email_valido(email):
     """
