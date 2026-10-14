@@ -211,6 +211,10 @@ def _buscar_dados(supabase):
         .str.strip()
     )
 
+    if "classificacao_lead" not in df.columns:
+        df["classificacao_lead"] = ""
+    df["classificacao_lead"] = df["classificacao_lead"].fillna("").astype(str).str.strip()
+
     df["valor_total"] = pd.to_numeric(
         df["valor_total"],
         errors="coerce",
@@ -346,7 +350,42 @@ def _renderizar_card(row):
     )
 
 
-def _renderizar_kanban(df):
+def _renderizar_classificacao_lead(supabase, row):
+    """Editor persistente por oportunidade fechada; não modifica status."""
+    registro_id = int(row["id"])
+    atual = _texto(row.get("classificacao_lead"))
+    opcoes = ["Não classificado", "Novo", "Antigo", "Personalizado"]
+    selecionado_atual = atual if atual in ("Novo", "Antigo") else (
+        "Personalizado" if atual else "Não classificado"
+    )
+    escolha = st.selectbox(
+        "Lead Novo?", opcoes, index=opcoes.index(selecionado_atual),
+        key=f"pipeline_classificacao_{registro_id}",
+    )
+    personalizado = ""
+    if escolha == "Personalizado":
+        personalizado = st.text_input(
+            "Indicador", value=atual if selecionado_atual == "Personalizado" else "",
+            key=f"pipeline_indicador_{registro_id}",
+            placeholder="Ex.: Fenix, HKTC, Mauro",
+        )
+    novo_valor = (personalizado.strip() if escolha == "Personalizado" else
+                  "" if escolha == "Não classificado" else escolha)
+    if st.button("Salvar classificação", key=f"pipeline_salvar_classificacao_{registro_id}"):
+        if escolha == "Personalizado" and not novo_valor:
+            st.warning("Informe o indicador personalizado.")
+            return
+        try:
+            supabase.table("historico_vendas").update(
+                {"classificacao_lead": novo_valor or None}
+            ).eq("id", registro_id).eq("status_comercial", STATUS_FECHADO).execute()
+            st.success("Classificação salva.")
+            st.rerun()
+        except Exception as erro:
+            st.error(f"Não foi possível salvar a classificação: {erro}")
+
+
+def _renderizar_kanban(df, supabase):
     st.subheader("Pipeline por etapa")
 
     if df.empty:
@@ -410,7 +449,12 @@ def _renderizar_kanban(df):
                     )
                     .iterrows()
                 ):
-                    _renderizar_card(row)
+                    if status == STATUS_FECHADO:
+                        with st.container(border=True):
+                            _renderizar_card(row)
+                            _renderizar_classificacao_lead(supabase, row)
+                    else:
+                        _renderizar_card(row)
 
 
 def _atualizar_status(
@@ -543,6 +587,7 @@ def _preparar_excel(df):
     colunas = [
         "orcamento_id",
         "cliente",
+        "classificacao_lead",
         "segmento",
         "regime",
         "valor_total",
@@ -566,6 +611,7 @@ def _preparar_excel(df):
     nomes = {
         "orcamento_id": "Orçamento ID",
         "cliente": "Cliente",
+        "classificacao_lead": "Lead Novo?",
         "segmento": "Segmento",
         "regime": "Regime",
         "valor_total": "Valor",
@@ -1267,6 +1313,28 @@ def tela_pipeline_comercial(
                 use_container_width=True,
             )
 
+    st.subheader("Relatório de contratos fechados")
+    fechados = df[df["status_comercial"] == STATUS_FECHADO].copy()
+    classes = sorted(c for c in fechados["classificacao_lead"].dropna().unique() if c)
+    filtro_classificacao = st.selectbox(
+        "Classificação do lead", ["Todas", "Não classificado"] + classes,
+        key="pipeline_filtro_classificacao_fechados",
+    )
+    if filtro_classificacao == "Não classificado":
+        fechados = fechados[fechados["classificacao_lead"] == ""]
+    elif filtro_classificacao != "Todas":
+        fechados = fechados[fechados["classificacao_lead"] == filtro_classificacao]
+    st.caption(f"{len(fechados)} contrato(s) fechado(s) | "
+               f"Valor: {_formatar_moeda(fechados['valor_total'].sum())}")
+    if not fechados.empty:
+        st.download_button(
+            "Baixar contratos fechados (Excel)",
+            data=_preparar_excel(fechados),
+            file_name=f"Contratos_Fechados_{datetime.now().strftime('%Y%m%d')}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            key="pipeline_excel_fechados",
+        )
+
     st.divider()
 
     # =========================================================
@@ -1274,7 +1342,7 @@ def tela_pipeline_comercial(
     # =========================================================
 
     _renderizar_kanban(
-        df_filtrado
+        df_filtrado, supabase
     )
 
     st.divider()
