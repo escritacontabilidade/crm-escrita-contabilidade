@@ -134,6 +134,16 @@ def formatar_moeda(valor):
         return "R$ 0,00"
 
 
+
+
+def preparar_codigo_para_ordenacao(df, coluna="Código"):
+    """Ordena códigos numéricos como números, preservando códigos alfanuméricos."""
+    if coluna in df.columns:
+        numeros = pd.to_numeric(df[coluna], errors="coerce")
+        if numeros.notna().all():
+            df[coluna] = numeros.astype("int64")
+    return df
+
 # ============================================================
 # LEITURA E TRATAMENTO DO EXCEL
 # ============================================================
@@ -568,28 +578,29 @@ def exibir_historico_importacoes(supabase):
         9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro",
     }
 
-    visual = historico.copy()
-    visual["Competência"] = visual["competencia"].apply(
-        lambda data: f"{nomes_meses[data.month]}/{data.year}"
-    )
-    visual["Clientes"] = visual["clientes"].apply(formatar_numero)
-    visual["Folha"] = visual["folha_pagamento"].apply(formatar_numero)
-    visual["Admissões"] = visual["admissao"].apply(formatar_numero)
-    visual["Rescisões"] = visual["rescisao"].apply(formatar_numero)
-    visual["Contábil"] = visual["contabil"].apply(formatar_numero)
-    visual["Entradas"] = visual["entradas"].apply(formatar_numero)
-    visual["Saídas"] = visual["saidas"].apply(formatar_numero)
-    visual["Notas Fiscais"] = visual["notas_fiscais"].apply(formatar_numero)
-    visual["Processos"] = visual["processos"].apply(formatar_numero)
-    visual["Faturamento"] = visual["faturamento"].apply(formatar_moeda)
-
-    visual = visual[[
+    # Mantém tipos numéricos e datas para ordenação correta no cabeçalho.
+    visual = historico.rename(columns={
+        "competencia": "Competência", "clientes": "Clientes",
+        "folha_pagamento": "Folha", "admissao": "Admissões",
+        "rescisao": "Rescisões", "contabil": "Contábil",
+        "entradas": "Entradas", "saidas": "Saídas",
+        "notas_fiscais": "Notas Fiscais", "processos": "Processos",
+        "faturamento": "Faturamento",
+    })[[
         "Competência", "Clientes", "Folha", "Admissões", "Rescisões",
         "Contábil", "Entradas", "Saídas", "Notas Fiscais",
-        "Processos", "Faturamento"
-    ]]
+        "Processos", "Faturamento",
+    ]].copy()
 
-    st.dataframe(visual, use_container_width=True, hide_index=True)
+    formatos = {
+        "Competência": lambda data: (
+            f"{nomes_meses[data.month]}/{data.year}" if pd.notna(data) else "—"
+        ),
+        **{col: formatar_numero for col in visual.columns
+           if col not in ("Competência", "Faturamento")},
+        "Faturamento": formatar_moeda,
+    }
+    st.dataframe(visual.style.format(formatos), use_container_width=True, hide_index=True)
     st.caption(f"{len(visual)} competência(s) exibida(s) — visão {origem}.")
 
 
@@ -952,16 +963,16 @@ def exibir_analise_crescimento_clientes(supabase):
         na_position="last",
     )
 
-    if metrica_escolhida == "Faturamento":
-        for coluna in [atual_col, media_col, primeiro_col]:
-            visual[coluna] = visual[coluna].apply(formatar_moeda)
-    else:
-        for coluna in [atual_col, media_col, primeiro_col]:
-            visual[coluna] = visual[coluna].apply(formatar_numero)
-
-    visual[var_media_col] = visual[var_media_col].apply(formatar_percentual)
-    visual[var_inicio_col] = visual[var_inicio_col].apply(formatar_percentual)
-    visual["meses_historico"] = visual["meses_historico"].fillna(0).apply(formatar_numero)
+    # Formatar na apresentação, não converter valores em texto.
+    # Isso preserva ordenação numérica, inclusive de percentuais negativos.
+    formatos_comparativo = {
+        "Meses anteriores": formatar_numero,
+        competencia_label: formatar_moeda if metrica_escolhida == "Faturamento" else formatar_numero,
+        "Média anterior": formatar_moeda if metrica_escolhida == "Faturamento" else formatar_numero,
+        "Primeiro mês": formatar_moeda if metrica_escolhida == "Faturamento" else formatar_numero,
+        "Variação x média": formatar_percentual,
+        "Variação x início": formatar_percentual,
+    }
 
     visual = visual.rename(
         columns={
@@ -976,8 +987,9 @@ def exibir_analise_crescimento_clientes(supabase):
         }
     )
 
+    visual = preparar_codigo_para_ordenacao(visual)
     st.dataframe(
-        visual,
+        visual.style.format(formatos_comparativo),
         use_container_width=True,
         hide_index=True,
     )
@@ -1499,14 +1511,16 @@ def exibir_radar_reajuste(supabase):
         ]
     ].copy()
 
-    visual["meses_historico"] = (
-        visual["meses_historico"].fillna(0).apply(formatar_numero)
-    )
-    visual["folha_pagamento"] = visual["folha_pagamento"].apply(formatar_numero)
-    visual["processos"] = visual["processos"].apply(formatar_numero)
-    visual["notas_fiscais"] = visual["notas_fiscais"].apply(formatar_numero)
-    visual["contabil"] = visual["contabil"].apply(formatar_numero)
-    visual["faturamento"] = visual["faturamento"].apply(formatar_moeda)
+    # Preservar números para classificação correta em todas as colunas.
+    formatos_radar = {
+        "Meses anteriores": formatar_numero,
+        "Folha atual": formatar_numero,
+        "Processos atuais": formatar_numero,
+        "Notas Fiscais atuais": formatar_numero,
+        "Contábil atual": formatar_numero,
+        "Faturamento atual": formatar_moeda,
+        "Pontos": formatar_numero,
+    }
 
     visual = visual.rename(
         columns={
@@ -1524,8 +1538,9 @@ def exibir_radar_reajuste(supabase):
         }
     )
 
+    visual = preparar_codigo_para_ordenacao(visual)
     st.dataframe(
-        visual,
+        visual.style.format(formatos_radar),
         use_container_width=True,
         hide_index=True,
         column_config={
@@ -1779,4 +1794,3 @@ def tela_monitoramento_producao(supabase):
                     "Se houve exclusão antes do erro, não importe outro mês até corrigirmos."
                 )
                 st.exception(erro)
-
