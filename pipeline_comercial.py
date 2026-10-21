@@ -1031,6 +1031,24 @@ def _filtrar_data(df, coluna, inicio, fim):
     return df.loc[(datas.dt.date >= inicio) & (datas.dt.date <= fim)].copy()
 
 
+def _filtrar_movimentacoes(df, inicio, fim):
+    """Oportunidades com ao menos um evento datado no intervalo.
+
+    A mesma oportunidade aparece apenas uma vez, mesmo quando possui
+    apresentação e fechamento no período. Não se inventam datas.
+    """
+    if inicio is None and fim is None:
+        return df.copy()
+    if df.empty:
+        return df.copy()
+    mascara = pd.Series(False, index=df.index)
+    for coluna in ("data_apresentacao", "data_fechamento", "data_negativa"):
+        if coluna in df.columns:
+            datas = pd.to_datetime(df[coluna], errors="coerce", utc=True).dt.date
+            mascara = mascara | ((datas >= inicio) & (datas <= fim)).fillna(False)
+    return df.loc[mascara].copy()
+
+
 def _movimentacoes_pipeline(df, inicio, fim):
     """Eventos datados, separados do retrato atual da carteira."""
     if inicio is None:
@@ -1236,6 +1254,28 @@ def tela_pipeline_comercial(
 
     st.divider()
 
+    st.subheader("Visualização das oportunidades")
+    modo_visualizacao = st.radio(
+        "Critério para o Kanban, a lista de atualização e as exportações",
+        ["Carteira por criação", "Movimentações do período"],
+        horizontal=True,
+        key="pipeline_modo_visualizacao",
+    )
+    if modo_visualizacao == "Movimentações do período":
+        df_visualizacao = _filtrar_movimentacoes(df, inicio, fim)
+        st.caption(
+            "Exibe oportunidades com apresentação, fechamento ou negativa "
+            "registrada no período, mesmo que tenham sido criadas antes. "
+            "Cada oportunidade aparece uma única vez, em seu status atual. "
+            "Eventos sem data não entram nessa visualização."
+        )
+    else:
+        df_visualizacao = df_periodo
+        st.caption(
+            "Exibe oportunidades criadas no período selecionado, "
+            "com o status comercial atual."
+        )
+
     # =========================================================
     # FILTROS
     # =========================================================
@@ -1245,7 +1285,7 @@ def tela_pipeline_comercial(
     segmentos = sorted(
         [
             item
-            for item in df_periodo[
+            for item in df_visualizacao[
                 "segmento"
             ].dropna().unique()
             if _texto(item)
@@ -1255,7 +1295,7 @@ def tela_pipeline_comercial(
     responsaveis = sorted(
         [
             item
-            for item in df_periodo[
+            for item in df_visualizacao[
                 "responsavel"
             ].dropna().unique()
             if _texto(item)
@@ -1295,7 +1335,7 @@ def tela_pipeline_comercial(
         )
 
     df_filtrado = _aplicar_filtros(
-        df=df_periodo,
+        df=df_visualizacao,
         filtro_status=filtro_status,
         filtro_segmento=filtro_segmento,
         filtro_responsavel=filtro_responsavel,
@@ -1381,7 +1421,7 @@ def tela_pipeline_comercial(
             )
 
     st.subheader("Relatório de contratos fechados")
-    fechados = df_periodo[df_periodo["status_comercial"] == STATUS_FECHADO].copy()
+    fechados = df_filtrado[df_filtrado["status_comercial"] == STATUS_FECHADO].copy()
     classes = sorted(c for c in fechados["classificacao_lead"].dropna().unique() if c)
     filtro_classificacao = st.selectbox(
         "Classificação do lead", ["Todas", "Não classificado"] + classes,
