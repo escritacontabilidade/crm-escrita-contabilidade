@@ -6,6 +6,7 @@ import calendar
 import pandas as pd
 import streamlit as st
 from weasyprint import HTML
+from relacionamento_clientes import renderizar_relacionamento_clientes
 
 
 STATUS_EM_ABERTO = "Em aberto"
@@ -1462,3 +1463,6 @@ def tela_pipeline_comercial(
         supabase=supabase,
         df=df_filtrado,
     )
+
+    # Gestão de relacionamento: independente dos filtros do Kanban.
+    renderizar_relacionamento_clientes(supabase, oportunidades=df)
