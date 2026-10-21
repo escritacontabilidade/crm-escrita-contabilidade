@@ -1,6 +1,7 @@
 import html
 import io
-from datetime import datetime
+from datetime import datetime, date
+import calendar
 
 import pandas as pd
 import streamlit as st
@@ -972,6 +973,82 @@ def _preparar_pdf(df):
     ).write_pdf()
 
 
+MESES_PIPELINE = [
+    "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+]
+
+
+def _periodo_pipeline():
+    """Períodos idênticos aos do Dashboard, com chaves independentes."""
+    st.subheader("Período de análise")
+    opcoes = ["Todo o período", "Mês", "Bimestre", "Trimestre",
+              "Quadrimestre", "Semestre", "Ano", "Personalizado"]
+    c1, c2, c3 = st.columns([1.5, 1, 1.4])
+    with c1:
+        tipo = st.selectbox("Agrupamento", opcoes, key="pipeline_periodo_tipo")
+    if tipo == "Todo o período":
+        return None, None, "Todo o período"
+    hoje = date.today()
+    if tipo == "Personalizado":
+        with c2:
+            inicio = st.date_input("Data inicial", value=date(hoje.year, 1, 1),
+                                   key="pipeline_data_inicio")
+        with c3:
+            fim = st.date_input("Data final", value=hoje,
+                                key="pipeline_data_fim")
+        if inicio > fim:
+            st.error("A data inicial não pode ser posterior à data final.")
+            st.stop()
+        return inicio, fim, f"{inicio:%d/%m/%Y} a {fim:%d/%m/%Y}"
+    with c2:
+        ano = st.number_input("Ano", min_value=2000, max_value=2100,
+                              value=hoje.year, step=1, key="pipeline_ano")
+    if tipo == "Ano":
+        return date(ano, 1, 1), date(ano, 12, 31), str(ano)
+    tamanho = {"Mês": 1, "Bimestre": 2, "Trimestre": 3,
+               "Quadrimestre": 4, "Semestre": 6}[tipo]
+    with c3:
+        mes = st.selectbox(
+            tipo, list(range(1, 13, tamanho)),
+            format_func=lambda m: MESES_PIPELINE[m - 1] if tamanho == 1
+            else f"{MESES_PIPELINE[m - 1]} a {MESES_PIPELINE[m + tamanho - 2]}",
+            index=(hoje.month - 1) // tamanho,
+            key="pipeline_periodo_indice",
+        )
+    ultimo = mes + tamanho - 1
+    return (date(ano, mes, 1),
+            date(ano, ultimo, calendar.monthrange(ano, ultimo)[1]),
+            f"{MESES_PIPELINE[mes - 1]} a {MESES_PIPELINE[ultimo - 1]} / {ano}")
+
+
+def _filtrar_data(df, coluna, inicio, fim):
+    if inicio is None and fim is None:
+        return df.copy()
+    if coluna not in df.columns:
+        return df.iloc[0:0].copy()
+    datas = pd.to_datetime(df[coluna], errors="coerce", utc=True)
+    return df.loc[(datas.dt.date >= inicio) & (datas.dt.date <= fim)].copy()
+
+
+def _movimentacoes_pipeline(df, inicio, fim):
+    """Eventos datados, separados do retrato atual da carteira."""
+    if inicio is None:
+        return
+    apresentados = _filtrar_data(df, "data_apresentacao", inicio, fim)
+    fechados = _filtrar_data(df, "data_fechamento", inicio, fim)
+    fechados = fechados[fechados["status_comercial"] == STATUS_FECHADO]
+    negativas = _filtrar_data(df, "data_negativa", inicio, fim)
+    negativas = negativas[negativas["status_comercial"] == STATUS_NEGATIVA]
+    st.subheader("Movimentações comerciais no período")
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Apresentações registradas", len(apresentados))
+    c2.metric("Fechamentos no período", len(fechados))
+    c3.metric("Negativas no período", len(negativas))
+    st.caption("Contagem por datas registradas. Eventos sem data não são "
+               "atribuídos artificialmente a nenhum período.")
+
+
 def _renderizar_indicadores(df):
     """Indicadores da carteira ativa, com etapas atuais e avanço comercial separados."""
     total = len(df)
@@ -1146,13 +1223,16 @@ def tela_pipeline_comercial(
         )
         return
 
-    # =========================================================
-    # INDICADORES
-    # =========================================================
+    inicio, fim, periodo = _periodo_pipeline()
+    st.caption(f"Período selecionado: {periodo}.")
 
-    _renderizar_indicadores(
-        df
-    )
+    # A carteira é uma fotografia do status atual das oportunidades
+    # criadas no período; movimentações usam as datas dos eventos.
+    df_periodo = _filtrar_data(df, "data_criacao", inicio, fim)
+    st.caption("Carteira por data de criação da oportunidade; status e "
+               "valores representam a situação atual, não a situação histórica.")
+    _renderizar_indicadores(df_periodo)
+    _movimentacoes_pipeline(df, inicio, fim)
 
     st.divider()
 
@@ -1165,7 +1245,7 @@ def tela_pipeline_comercial(
     segmentos = sorted(
         [
             item
-            for item in df[
+            for item in df_periodo[
                 "segmento"
             ].dropna().unique()
             if _texto(item)
@@ -1175,7 +1255,7 @@ def tela_pipeline_comercial(
     responsaveis = sorted(
         [
             item
-            for item in df[
+            for item in df_periodo[
                 "responsavel"
             ].dropna().unique()
             if _texto(item)
@@ -1215,7 +1295,7 @@ def tela_pipeline_comercial(
         )
 
     df_filtrado = _aplicar_filtros(
-        df=df,
+        df=df_periodo,
         filtro_status=filtro_status,
         filtro_segmento=filtro_segmento,
         filtro_responsavel=filtro_responsavel,
@@ -1301,7 +1381,7 @@ def tela_pipeline_comercial(
             )
 
     st.subheader("Relatório de contratos fechados")
-    fechados = df[df["status_comercial"] == STATUS_FECHADO].copy()
+    fechados = df_periodo[df_periodo["status_comercial"] == STATUS_FECHADO].copy()
     classes = sorted(c for c in fechados["classificacao_lead"].dropna().unique() if c)
     filtro_classificacao = st.selectbox(
         "Classificação do lead", ["Todas", "Não classificado"] + classes,
