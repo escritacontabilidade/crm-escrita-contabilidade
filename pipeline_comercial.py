@@ -973,62 +973,49 @@ def _preparar_pdf(df):
 
 
 def _renderizar_indicadores(df):
+    """Indicadores da carteira ativa, com etapas atuais e avanço comercial separados."""
     total = len(df)
 
-    valor_total = (
-        df["valor_total"].sum()
-        if not df.empty
-        else 0
-    )
+    if df.empty:
+        valor_em_andamento = 0.0
+        propostas_apresentadas = 0
+        aguardando_decisao = 0
+        fechados = 0
+        negativas = 0
+    else:
+        status = df["status_comercial"]
+        # Pipeline em andamento: somente etapas Em aberto e Preço apresentado.
+        valor_em_andamento = df.loc[
+            status.isin([STATUS_EM_ABERTO, STATUS_APRESENTADO]),
+            "valor_total",
+        ].sum()
 
-    apresentados = len(
-        df[
-            df["status_comercial"]
-            == STATUS_APRESENTADO
-        ]
-    )
+        # Avançaram além de Em aberto, mesmo que já tenham sido encerradas.
+        propostas_apresentadas = int(status.isin([
+            STATUS_APRESENTADO,
+            STATUS_FECHADO,
+            STATUS_NEGATIVA,
+            STATUS_SEM_RESPOSTA,
+        ]).sum())
 
-    fechados = len(
-        df[
-            df["status_comercial"]
-            == STATUS_FECHADO
-        ]
-    )
+        # Fotografia da etapa atual, distinta do total acumulado apresentado.
+        aguardando_decisao = int((status == STATUS_APRESENTADO).sum())
+        fechados = int((status == STATUS_FECHADO).sum())
+        negativas = int((status == STATUS_NEGATIVA).sum())
 
-    negativas = len(
-        df[
-            df["status_comercial"]
-            == STATUS_NEGATIVA
-        ]
-    )
+    col1, col2, col3, col4, col5, col6 = st.columns(6)
+    col1.metric("Oportunidades", total)
+    col2.metric("Valor em pipeline", _formatar_moeda(valor_em_andamento))
+    col3.metric("Propostas apresentadas", propostas_apresentadas)
+    col4.metric("Aguardando decisão", aguardando_decisao)
+    col5.metric("Contratos fechados", fechados)
+    col6.metric("Negativas", negativas)
 
-    col1, col2, col3, col4, col5 = (
-        st.columns(5)
-    )
-
-    col1.metric(
-        "Oportunidades",
-        total,
-    )
-
-    col2.metric(
-        "Valor em pipeline",
-        _formatar_moeda(valor_total),
-    )
-
-    col3.metric(
-        "Preço apresentado",
-        apresentados,
-    )
-
-    col4.metric(
-        "Contratos fechados",
-        fechados,
-    )
-
-    col5.metric(
-        "Negativas",
-        negativas,
+    st.caption(
+        "Valor em pipeline: Em aberto + Preço apresentado. "
+        "Propostas apresentadas: oportunidades que avançaram além de Em aberto "
+        "(inclui fechadas, negativas e sem resposta). "
+        "Aguardando decisão: oportunidades atualmente em Preço apresentado."
     )
 
 
