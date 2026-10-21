@@ -4,9 +4,31 @@ from supabase import create_client
 
 @st.cache_resource
 def get_supabase():
+    """Conexão padrão, sujeita às políticas RLS do Supabase."""
     url = st.secrets["SUPABASE_URL"]
     key = st.secrets["SUPABASE_KEY"]
     return create_client(url, key)
+
+
+@st.cache_resource
+def _get_supabase_admin_client():
+    """Cliente privilegiado de uso exclusivamente interno no servidor."""
+    url = st.secrets["SUPABASE_URL"]
+    key = st.secrets["SUPABASE_SECRET_KEY"]
+    return create_client(url, key)
+
+
+def get_supabase_admin():
+    """Disponibiliza a conexão privilegiada somente após login interno.
+
+    IMPORTANTE: módulos que a utilizarem também devem verificar autorização
+    para a operação e não podem ser chamados por rotas/formulários públicos.
+    """
+    if not st.session_state.get("autenticado", False):
+        raise PermissionError("Acesso administrativo requer login interno.")
+    if not st.session_state.get("perfil_usuario"):
+        raise PermissionError("Perfil de usuário interno não identificado.")
+    return _get_supabase_admin_client()
 
 
 def fetch_table(table_name, select="*", order_by=None, desc=False):
@@ -78,6 +100,7 @@ def get_peso_esforco(regime, item):
 
     return float(valor)
 
+
 def get_origem_perguntas(segmento_escolhido):
     supabase = get_supabase()
 
@@ -108,7 +131,7 @@ def get_perguntas_por_origem(origem):
     )
     return res.data if res.data else []
 
-    
+
 def get_regras_precificacao():
     supabase = get_supabase()
 
@@ -151,6 +174,7 @@ def get_faixas_precificacao():
         faixas[regra_id].append(linha)
 
     return faixas
+
 
 def criar_backup_precificacao(
     supabase,
@@ -200,6 +224,7 @@ def criar_backup_precificacao(
         .execute()
     )
 
+
 @st.cache_data(ttl=60)
 def listar_versoes_precificacao(_supabase):
     """
@@ -227,6 +252,7 @@ def listar_versoes_precificacao(_supabase):
     )
 
     return resultado.data or []
+
 
 @st.cache_data(ttl=60)
 def obter_versao_precificacao(_supabase, versao_id):
