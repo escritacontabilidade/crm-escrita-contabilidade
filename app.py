@@ -1497,7 +1497,12 @@ else:
                         ),
                     }
             
-                    st.session_state["proposta_em_edicao"] = True
+                    # Mantém o modo de edição somente quando existe
+                    # um orçamento previamente aberto para edição.
+                    st.session_state["proposta_em_edicao"] = bool(
+                        st.session_state.get("proposta_em_edicao", False)
+                        and st.session_state.get("orcamento_atual_id")
+                    )
                     st.session_state["proximo_menu"] = "Nova Proposta"
             
                     st.rerun()
