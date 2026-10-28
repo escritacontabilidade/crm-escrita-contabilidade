@@ -1729,9 +1729,29 @@ else:
                             "ativo": True
                         }
                     
-                        # Somente uma proposta aberta expressamente para edição
-                        # pode reutilizar um orçamento existente.
+                        # =========================================================
+                        # PROTEÇÃO CONTRA TROCA INDEVIDA DE CLIENTE
+                        # =========================================================
+                        
                         em_edicao = st.session_state.get("proposta_em_edicao", False)
+                        
+                        lead_proposta = proposta_atual.get("lead_id")
+                        
+                        lead_carregado = (
+                            st.session_state.get("lead_em_analise") or {}
+                        ).get("id")
+                        
+                        if (
+                            em_edicao
+                            and lead_proposta is not None
+                            and lead_carregado is not None
+                            and str(lead_proposta) != str(lead_carregado)
+                        ):
+                            raise ValueError(
+                                "Operação bloqueada: o lead carregado não corresponde "
+                                "ao cliente da proposta em edição. "
+                                "Abra novamente o orçamento correto."
+                            )
                         
                         orcamento_id = (
                             st.session_state.get("orcamento_atual_id")
