@@ -1934,7 +1934,14 @@ else:
                             st.warning("PDF gerado, mas o orçamento não foi salvo no CRM.")
                     
                     except Exception as erro:
-                        st.error(f"Erro ao salvar orçamento no CRM: {erro}")
+                        st.error(
+                            "Não foi possível salvar o orçamento no CRM. "
+                            f"Detalhes: {erro}"
+                        )
+                    
+                        # Interrompe o processamento para evitar
+                        # uma confirmação incorreta de sucesso.
+                        st.stop()
                     
                     if versao_pdf == "email":
                         st.success("PDF leve para e-mail preparado com sucesso.")
