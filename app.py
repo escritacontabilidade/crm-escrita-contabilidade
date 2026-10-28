@@ -1796,7 +1796,13 @@ else:
                         
                             if res_orc.data:
                                 orcamento_id = res_orc.data[0]["id"]
+                            
+                                # Guarda o número do orçamento recém-criado.
                                 st.session_state["orcamento_atual_id"] = orcamento_id
+                            
+                                # A partir da primeira gravação, novas gerações
+                                # de PDF devem atualizar o mesmo orçamento.
+                                st.session_state["proposta_em_edicao"] = True
                         
                         if res_orc.data and orcamento_id:
 
