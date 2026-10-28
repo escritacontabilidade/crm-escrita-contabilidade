@@ -1719,15 +1719,61 @@ else:
                             )
                         
                         if orcamento_id:
-                            # Já existe orçamento desta proposta:
-                            # atualiza o mesmo registro, sem duplicar.
+                            # =========================================================
+                            # SEGURANÇA: VALIDAR ORÇAMENTO ANTES DE ATUALIZAR
+                            # =========================================================
+                        
+                            # Consulta o orçamento que será atualizado.
+                            consulta_orcamento = (
+                                supabase.table("orcamentos")
+                                .select("id, cliente, lead_id")
+                                .eq("id", orcamento_id)
+                                .limit(1)
+                                .execute()
+                            )
+                        
+                            if not consulta_orcamento.data:
+                                raise ValueError(
+                                    f"O orçamento nº {orcamento_id} não foi encontrado. "
+                                    "Nenhuma alteração foi realizada."
+                                )
+                        
+                            orcamento_existente = consulta_orcamento.data[0]
+                        
+                            # Identifica o lead da proposta atual.
+                            lead_atual = proposta_atual.get("lead_id")
+                            lead_existente = orcamento_existente.get("lead_id")
+                        
+                            # Se ambos possuem lead, os identificadores devem coincidir.
+                            if lead_atual is not None and lead_existente is not None:
+                                if str(lead_atual) != str(lead_existente):
+                                    raise ValueError(
+                                        f"Operação bloqueada: o orçamento nº {orcamento_id} "
+                                        "pertence a outro lead."
+                                    )
+                        
+                            # Também confere o nome da empresa.
+                            nome_existente = str(
+                                orcamento_existente.get("cliente") or ""
+                            ).strip().casefold()
+                        
+                            nome_atual = str(nome_empresa or "").strip().casefold()
+                        
+                            if nome_existente != nome_atual:
+                                raise ValueError(
+                                    f"Operação bloqueada: o orçamento nº {orcamento_id} "
+                                    f"está cadastrado para '{orcamento_existente.get('cliente')}', "
+                                    f"mas a proposta atual pertence a '{nome_empresa}'."
+                                )
+                        
+                            # Validação concluída: atualiza o orçamento existente.
                             res_orc = (
                                 supabase.table("orcamentos")
                                 .update(dados_orcamento)
                                 .eq("id", orcamento_id)
                                 .execute()
                             )
-
+                        
                             # A edição foi concluída.
                             # O orçamento continua com o mesmo ID.
                             st.session_state["proposta_em_edicao"] = False
