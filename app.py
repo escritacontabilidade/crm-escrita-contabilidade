@@ -1779,9 +1779,11 @@ else:
                                 .execute()
                             )
                         
-                            # A edição foi concluída.
-                            # O orçamento continua com o mesmo ID.
-                            st.session_state["proposta_em_edicao"] = False
+                            # Mantém o orçamento em modo de edição.
+                            # Assim, novas gerações de PDF atualizam o mesmo orçamento,
+                            # preservando seu número original.
+                            st.session_state["proposta_em_edicao"] = True
+                            st.session_state["orcamento_atual_id"] = orcamento_id
                             
                         else:
                             # Primeira gravação desta proposta:
