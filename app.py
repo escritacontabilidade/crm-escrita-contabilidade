@@ -1702,8 +1702,22 @@ else:
                             "ativo": True
                         }
                     
-                        orcamento_id = st.session_state.get("orcamento_atual_id")
-
+                        # Somente uma proposta aberta expressamente para edição
+                        # pode reutilizar um orçamento existente.
+                        em_edicao = st.session_state.get("proposta_em_edicao", False)
+                        
+                        orcamento_id = (
+                            st.session_state.get("orcamento_atual_id")
+                            if em_edicao
+                            else None
+                        )
+                        
+                        if em_edicao and not orcamento_id:
+                            raise ValueError(
+                                "A proposta está em modo de edição, mas não possui "
+                                "um orçamento identificado. Abra novamente o orçamento."
+                            )
+                        
                         if orcamento_id:
                             # Já existe orçamento desta proposta:
                             # atualiza o mesmo registro, sem duplicar.
