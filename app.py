@@ -1710,6 +1710,7 @@ else:
                                        
                     try:
                         dados_orcamento = {
+                            "lead_id": proposta_atual.get("lead_id"),
                             "cliente": nome_empresa,
                             "cnpj": cnpj_cliente,
                             "responsavel": responsavel_cliente,
