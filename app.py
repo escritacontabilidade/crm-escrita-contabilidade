@@ -991,6 +991,27 @@ else:
 
                 with col_btn1:
                     if st.button("Carregar para Precificação"):
+
+                        # Inicia uma proposta independente para o lead selecionado.
+                        # Impede a reutilização do orçamento de outro cliente.
+                        st.session_state["proposta_em_edicao"] = False
+                        st.session_state.pop("orcamento_atual_id", None)
+                        st.session_state.pop("proposta_atual", None)
+                    
+                        # Limpa dados de PDFs gerados anteriormente.
+                        st.session_state.pop("pdf_proposta_path", None)
+                        st.session_state.pop("pdf_proposta_versao", None)
+                    
+                        # Limpa os campos utilizados na proposta anterior.
+                        for chave in list(st.session_state.keys()):
+                            if (
+                                chave.startswith("np_")
+                                or chave.startswith("p_")
+                                or chave == "cli_descricao"
+                                or chave == "valor_final_proposta_txt"
+                            ):
+                                del st.session_state[chave]
+                    
                         st.session_state["lead_em_analise"] = lead_data
                         st.session_state["lead_balancete"] = lead_data
 
