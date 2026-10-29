@@ -2191,10 +2191,15 @@ else:
                         except Exception as e:
                             st.error(f"Erro ao arquivar proposta: {e}")
                 
-                if orc.get("pdf_drive_link"):
+                # Exibe o botão somente quando existe um link válido.
+                pdf_link = orc.get("pdf_drive_link")
+                
+                if isinstance(pdf_link, str) and pdf_link.strip().startswith(
+                    ("https://", "http://")
+                ):
                     st.link_button(
                         "Abrir PDF no Drive",
-                        orc.get("pdf_drive_link")
+                        pdf_link.strip()
                     )
         except Exception as e:
             import traceback
