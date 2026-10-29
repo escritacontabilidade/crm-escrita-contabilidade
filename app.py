@@ -2197,7 +2197,10 @@ else:
                         orc.get("pdf_drive_link")
                     )
         except Exception as e:
+            import traceback
+        
             st.error(f"Erro ao carregar orçamentos: {e}")
+            st.code(traceback.format_exc(), language="python")
             
     elif menu == "Propostas Arquivadas":
         st.title("📦 Propostas Arquivadas")
