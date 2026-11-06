@@ -45,6 +45,7 @@ from admin_precificacao import tela_admin_precificacao
 from dashboard_leads import renderizar_dashboard_leads
 from dashboard_comercial import tela_dashboard_comercial
 from pipeline_comercial import tela_pipeline_comercial
+from auditoria_comercial import tela_auditoria_comercial
 from analise_balancete import tela_analise_balancete
 from filiais_module import (
     eh_pergunta_filial,
@@ -839,6 +840,7 @@ else:
         "Matriz de Precificação",
         "Administração da Precificação",
         "Pipeline Comercial",
+        "Auditoria Comercial",
         "Analista IA",
         "Link para Cliente"
     ]
@@ -2426,6 +2428,9 @@ else:
     
     elif menu == "Pipeline Comercial":
         tela_pipeline_comercial(supabase)
+
+    elif menu == "Auditoria Comercial":
+        tela_auditoria_comercial(supabase)
     
     elif menu == "Configurações":
         st.title("⚙️ Painel de Controle e Cadastros")
