@@ -391,6 +391,12 @@ def tela_cruzamento():
     c1.metric('Clientes com honorários', atual['codigo_cliente'].nunique())
     c2.metric('Honorários recorrentes', moeda(atual['valor_recorrente'].sum()))
     c3.metric('Receita total', moeda(atual['valor_total'].sum()))
+    # Radar gerencial somente leitura: preserva o comparativo e a evolução existentes.
+    from radar_desvios import exibir_radar
+    if producao:
+        exibir_radar(h, p, escolha)
+    else:
+        st.info('Radar de desvios indisponível: não há produção importada.')
     faltantes = atual[atual['Situação'] != 'Conciliado']
     if not faltantes.empty:
         st.warning(f'{len(faltantes)} cliente(s) com honorários sem produção correspondente neste mês. Verifique códigos e importações.')
