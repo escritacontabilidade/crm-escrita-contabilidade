@@ -5,6 +5,7 @@ from decimal import Decimal, InvalidOperation
 
 import pandas as pd
 import streamlit as st
+from regime_tributario import normalizar_regime, consolidar_regime, selecionar_regimes, REGIMES
 from database_admin import exigir_admin, exigir_acesso_honorarios, get_supabase_admin, get_supabase_financeiro
 
 CAMPOS_VALORES = {
@@ -358,7 +359,7 @@ def tela_cruzamento():
     st.caption('O faturamento da produção representa a movimentação do cliente; não é receita de honorários da Escrita.')
     try:
         honorarios = paginar('honorarios_clientes', 'id,competencia,codigo_cliente,cliente,valor_recorrente,valor_variavel,valor_adicional_anual,valor_total')
-        producao = paginar('producao_clientes', 'id,competencia,codigo_cliente,cliente,sistema,folha_pagamento,admissao,rescisao,contabil,entradas,saidas,notas_fiscais,processos,faturamento')
+        producao = paginar('producao_clientes', 'id,competencia,codigo_cliente,cliente,sistema,folha_pagamento,admissao,rescisao,contabil,entradas,saidas,notas_fiscais,processos,faturamento,regime_tributario')
     except Exception as exc:
         st.error(f'Erro ao consultar dados: {exc}')
         return
@@ -377,7 +378,7 @@ def tela_cruzamento():
         metricas = ['folha_pagamento','admissao','rescisao','contabil','entradas','saidas','notas_fiscais','processos','faturamento']
         for c in metricas:
             p[c] = pd.to_numeric(p[c], errors='coerce').fillna(0)
-        p = p.groupby(['competencia','codigo_cliente'], as_index=False)[metricas].sum()
+        p = p.groupby(['competencia','codigo_cliente'], as_index=False).agg(**{c:(c,'sum') for c in metricas}, regime_tributario=('regime_tributario', consolidar_regime))
         unido = h.merge(p, on=['competencia','codigo_cliente'], how='left', indicator=True)
         unido['Situação'] = unido['_merge'].map({'left_only':'Sem produção correspondente','both':'Conciliado','right_only':'Sem honorários'}).astype(str)
         unido = unido.drop(columns=['_merge'])
@@ -387,6 +388,10 @@ def tela_cruzamento():
     opcoes = sorted(unido['competencia'].dropna().unique().tolist(), reverse=True)
     escolha = st.selectbox('Competência', opcoes, key='hon_cruz_comp')
     atual = unido[unido['competencia'] == escolha].copy()
+    atual['regime_tributario'] = atual.get('regime_tributario', pd.Series(index=atual.index, dtype=object)).map(normalizar_regime)
+    regimes = selecionar_regimes('hon_cruz_regime')
+    atual = atual[atual['regime_tributario'].isin(regimes)].copy()
+    codigos = set(atual['codigo_cliente'])
     c1,c2,c3 = st.columns(3)
     c1.metric('Clientes com honorários', atual['codigo_cliente'].nunique())
     c2.metric('Honorários recorrentes', moeda(atual['valor_recorrente'].sum()))
@@ -394,7 +399,7 @@ def tela_cruzamento():
     # Radar gerencial somente leitura: preserva o comparativo e a evolução existentes.
     from radar_desvios import exibir_radar
     if producao:
-        exibir_radar(h, p, escolha)
+        exibir_radar(h, p, escolha, codigos if set(regimes) != set(REGIMES) else None)
     else:
         st.info('Radar de desvios indisponível: não há produção importada.')
     faltantes = atual[atual['Situação'] != 'Conciliado']
@@ -408,4 +413,4 @@ def tela_cruzamento():
     historico.loc[historico['recorrente_anterior'].isna() | (historico['recorrente_anterior'] == 0), 'variacao_honorario_pct'] = float('nan')
     st.markdown('#### Evolução do honorário recorrente')
     st.caption('A variação compara com a competência anterior disponível do cliente. Não é uma sugestão automática de reajuste.')
-    st.dataframe(historico[historico['competencia'] == escolha][['codigo_cliente','cliente','valor_recorrente','recorrente_anterior','variacao_honorario_pct']].sort_values('cliente'), use_container_width=True, hide_index=True)
+    st.dataframe(historico[(historico['competencia'] == escolha) & historico['codigo_cliente'].isin(codigos)][['codigo_cliente','cliente','valor_recorrente','recorrente_anterior','variacao_honorario_pct']].sort_values('cliente'), use_container_width=True, hide_index=True)
