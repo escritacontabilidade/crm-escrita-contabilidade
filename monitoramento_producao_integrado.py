@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
+from regime_tributario import normalizar_regime, consolidar_regime, selecionar_regimes, filtrar_historico
 
 
 MESES = {
@@ -207,8 +208,11 @@ def preparar_arquivo_producao(arquivo):
         base["codigo_questor"].str.match(r"^\d+$", na=False)
     ].copy()
 
+    tributacao = localizar("Tributação")
+    base["regime_tributario"] = base[tributacao].map(normalizar_regime) if tributacao else None
+
     def montar_bloco(mapeamento, sistema):
-        saida = base[["codigo_questor", "razao_social"]].copy()
+        saida = base[["codigo_questor", "razao_social", "regime_tributario"]].copy()
 
         for coluna_excel, coluna_interna in mapeamento.items():
             coluna_real = localizar(coluna_excel)
@@ -332,6 +336,7 @@ def preparar_registros_banco(
             ),
 
             "arquivo_origem": arquivo_nome,
+            "regime_tributario": normalizar_regime(linha.get("regime_tributario")),
         }
 
         registros.append(registro)
@@ -611,7 +616,7 @@ def exibir_historico_importacoes(supabase):
 def buscar_dados_analise_clientes(supabase, sistema="Consolidado"):
     """Busca histórico por origem ou consolida Questor + Contabit por cliente/mês."""
     campos = (
-        "sistema,competencia,codigo_cliente,cliente,"
+        "sistema,competencia,codigo_cliente,cliente,regime_tributario,"
         "folha_pagamento,processos,notas_fiscais,contabil,faturamento"
     )
 
@@ -670,6 +675,7 @@ def buscar_dados_analise_clientes(supabase, sistema="Consolidado"):
             )
             .agg(
                 cliente=("cliente", "first"),
+                regime_tributario=("regime_tributario", consolidar_regime),
                 folha_pagamento=("folha_pagamento", "sum"),
                 processos=("processos", "sum"),
                 notas_fiscais=("notas_fiscais", "sum"),
@@ -750,6 +756,11 @@ def exibir_analise_crescimento_clientes(supabase):
         key="analise_crescimento_competencia",
     )
     competencia_atual = opcoes[competencia_label]
+    regimes = selecionar_regimes("analise_regime")
+    df = filtrar_historico(df, competencia_atual, regimes)
+    if df.empty:
+        st.info("Nenhum cliente para os regimes selecionados nesta competência.")
+        return
 
     historico_anterior = df[df["competencia"] < competencia_atual].copy()
     atual = df[df["competencia"] == competencia_atual].copy()
@@ -1344,6 +1355,11 @@ def exibir_radar_reajuste(supabase):
         key="radar_reajuste_competencia",
     )
     competencia_atual = opcoes[competencia_label]
+    regimes = selecionar_regimes("radar_regime")
+    df = filtrar_historico(df, competencia_atual, regimes)
+    if df.empty:
+        st.info("Nenhum cliente para os regimes selecionados nesta competência.")
+        return
 
     historico_anterior = df[df["competencia"] < competencia_atual].copy()
     atual = df[df["competencia"] == competencia_atual].copy()
