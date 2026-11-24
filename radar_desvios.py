@@ -71,7 +71,7 @@ def calcular_radar(h, p, competencia, meses=3, limiar_honorarios=10.0):
     return resultado, f'Base histórica: {", ".join(str(x)[:7] for x in meses_anteriores)}. Exigidos todos os meses da base para cada cliente.'
 
 
-def exibir_radar(h, p, competencia):
+def exibir_radar(h, p, competencia, codigos=None):
     st.markdown('### Radar de Desvios — Produção × Honorários')
     st.caption('Diagnóstico para revisão comercial, não cálculo automático de reajuste. Comparação de volumes operacionais com a média histórica e honorários recorrentes.')
     if p.empty:
@@ -84,6 +84,8 @@ def exibir_radar(h, p, competencia):
         limiar = st.number_input('Crescimento máximo dos honorários para alertar (%)', 0.0, 100.0, 10.0, 1.0, key='radar_limiar')
     alertas, diagnostico = calcular_radar(h, p, competencia, meses, limiar)
     st.caption(diagnostico)
+    if codigos is not None and not alertas.empty:
+        alertas = alertas[alertas["Código"].isin(codigos)].copy()
     if alertas.empty:
         st.info('Nenhum desvio elegível encontrado. Confira a disponibilidade de histórico e os limites utilizados; isso não comprova ausência de riscos.')
         return
