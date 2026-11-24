@@ -1587,7 +1587,7 @@ def tela_monitoramento_producao(supabase):
     pode_consultar = autenticado and perfil in ("admin", "comercial")
     admin = autenticado and perfil == "admin"
     if pode_consultar:
-        abas = st.tabs(["Produção e Radar", "Honorários", "Produção × Honorários"])
+        abas = st.tabs(["Produção e Radar", "Honorários", "Produção × Honorários", "Curva ABC de Clientes"])
         from monitoramento_honorarios import tela_honorarios, tela_consulta_honorarios, tela_cruzamento
         with abas[1]:
             if admin:
@@ -1596,6 +1596,9 @@ def tela_monitoramento_producao(supabase):
                 tela_consulta_honorarios()
         with abas[2]:
             tela_cruzamento()
+        with abas[3]:
+            from curva_abc import tela_curva_abc
+            tela_curva_abc()
     else:
         abas = st.tabs(["Produção e Radar"])
 
